@@ -573,6 +573,20 @@
             ).length;
         }
 
+        // 적 타입별 차등 점수 (소수점 단위)
+        function getEnemyScore(type) {
+            const scoreTable = {
+                'NORMAL': 1.0,
+                'ZIGZAG': 1.2,
+                'HOMING': 1.5,
+                'SHOOTER': 1.8,
+                'BOMBER': 2.0,
+                'LASER_ENEMY': 2.2,
+                'MINION': 0.5
+            };
+            return scoreTable[type] || 1.0;
+        }
+
         function takeDamage() {
             if (gameState.isInvincible || gameState.skillMode === 'SHIELD') return;
 
@@ -904,9 +918,10 @@
         }
 
         function showResultScreen(title) {
+            const finalScore = Math.round(gameState.score);  // 소수점 반올림
             document.getElementById('res-title').textContent = title;
             document.getElementById('res-stage').textContent = gameState.currentStage;
-            document.getElementById('res-score').textContent = gameState.score;
+            document.getElementById('res-score').textContent = finalScore;
 
             const screen = document.getElementById('rank-input-screen');
             screen.style.display = 'flex';
@@ -1141,7 +1156,9 @@
                 // 가비지 컬렉션 강화 - 화면 밖 적 즉시 제거
                 if (en.y > canvas.height + 50 || en.y < -100 || en.x < -80 || en.x > canvas.width + 80) {
                     gameState.enemies.splice(i, 1);
-                    if (en.type !== 'BULLET' && en.type !== 'SHOCKWAVE' && en.type !== 'ENEMY_BULLET' && en.type !== 'METEOR') gameState.score++;
+                    if (en.type !== 'BULLET' && en.type !== 'SHOCKWAVE' && en.type !== 'ENEMY_BULLET' && en.type !== 'METEOR') {
+                        gameState.score += getEnemyScore(en.type);
+                    }
                 }
             }
 
@@ -1727,7 +1744,8 @@
 
         function saveAndRestart() {
             const name = document.getElementById('initial-input').value.toUpperCase() || 'AAA';
-            saveToFirebase(name, gameState.score, gameState.currentStage);
+            const finalScore = Math.round(gameState.score);  // 소수점 반올림
+            saveToFirebase(name, finalScore, gameState.currentStage);
             setTimeout(() => location.reload(), 500);
         }
 
