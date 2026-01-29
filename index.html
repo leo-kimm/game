@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -514,7 +514,10 @@
             spawnDelay: 0,
             isLunarMode: false,
             lunarAngle: 0,
-            touchTarget: null  // 모바일 터치 목표 위치
+            touchTarget: null,
+            stageTimerEnded: false,
+            survivalTimer: 0,
+            pendingBoss: null
         };
 
         let firebaseReady = false;
@@ -556,6 +559,16 @@
                 lastSavedName = name;  // 신규 유저 하이라이트용
             }
             catch (e) { console.error(e); }
+        }
+
+        // 실제 적 기체만 카운트 (탄환 제외)
+        function getActiveEnemyCount() {
+            return gameState.enemies.filter(en =>
+                en.type !== 'BULLET' &&
+                en.type !== 'ENEMY_BULLET' &&
+                en.type !== 'SHOCKWAVE' &&
+                en.type !== 'METEOR'
+            ).length;
         }
 
         function takeDamage() {
@@ -844,10 +857,30 @@
         }
 
         function triggerStageClear() {
-            gameState.stageClearing = true; gameState.stageClearTimer = 2.0;
-            // enemies = [] 제거 - 적 자연 소멸 방식 유지
-            gameState.boss = null; gameState.survivalMode = false;
-            gameState.bossPhase = 'MINION'; gameState.bossResurrected = false;
+            gameState.stageClearing = true;
+            gameState.stageClearTimer = 1.0;  // 스테이지 문구 1초
+            gameState.boss = null;
+            gameState.survivalMode = false;
+            gameState.bossPhase = 'MINION';
+            gameState.bossResurrected = false;
+
+            // ★ 다음 스테이지 보스 사전 준비 (백그라운드)
+            const nextStage = gameState.currentStage + 1;
+            if (nextStage <= 10) {
+                const nextLvl = levels[nextStage - 1];
+                if (nextLvl.isBoss) {
+                    const isLunar = nextLvl.bossType === 'LUNAR';
+                    const w = isLunar ? 94 : 80, h = isLunar ? 92 : 80;
+                    gameState.pendingBoss = {
+                        x: canvas.width / 2 - w / 2, y: 50, w, h,
+                        hp: nextLvl.bossHP, maxHp: nextLvl.bossHP,
+                        moveDir: 1, shootTimer: 0, type: nextLvl.bossType,
+                        isSupernova: false, shockwaveTimer: 0
+                    };
+                } else {
+                    gameState.pendingBoss = null;
+                }
+            }
         }
 
         function advanceStage() {
@@ -855,9 +888,14 @@
             gameState.currentStage++;
             const lvl = levels[gameState.currentStage - 1];
             gameState.stageTimer = lvl.duration;
-            gameState.stageClearing = false; gameState.survivalMode = false;
-            gameState.spawnTimer = 0; gameState.bossPhase = 'MINION';
-            gameState.bossResurrected = false; gameState.progressDisplay = 0;
+            gameState.stageClearing = false;
+            gameState.survivalMode = false;
+            gameState.stageTimerEnded = false;  // ★ 추가
+            gameState.survivalTimer = 0;        // ★ 추가
+            gameState.spawnTimer = 0;
+            gameState.bossPhase = 'MINION';
+            gameState.bossResurrected = false;
+            gameState.progressDisplay = 0;
             gameState.enemies = [];
             gameState.items = [];
             gameState.spawnDelay = 0.8;
@@ -918,23 +956,52 @@
                             gameState.survivalStartCount = Math.max(gameState.enemies.length, 1);
                         }
                     } else if (gameState.bossPhase === 'SURVIVAL') {
-                        gameState.survivalMode = true;
-                        if (gameState.enemies.length === 0) {
-                            gameState.bossPhase = 'BOSS';
-                            gameState.survivalMode = false;
-                            spawnBoss(lvl.bossHP, lvl.bossType);
+                        // 적 전멸 대기
+                        if (!gameState.survivalMode && getActiveEnemyCount() === 0) {
+                            gameState.survivalMode = true;
+                            gameState.survivalTimer = 0.7;  // SURVIVE 0.7초
+                            gameState.enemies = [];  // 잔류 탄환 제거
+                        }
+                        // SURVIVE 타이머 → 보스 등장
+                        if (gameState.survivalMode) {
+                            gameState.survivalTimer -= dt;
+                            if (gameState.survivalTimer <= 0) {
+                                gameState.bossPhase = 'BOSS';
+                                gameState.survivalMode = false;
+                                // pendingBoss 우선 사용
+                                if (gameState.pendingBoss) {
+                                    gameState.boss = gameState.pendingBoss;
+                                    gameState.pendingBoss = null;
+                                } else {
+                                    spawnBoss(lvl.bossHP, lvl.bossType);
+                                }
+                            }
                         }
                     } else if (gameState.bossPhase === 'BOSS') {
                         updateBoss(dt);
                     }
                 } else {
-                    gameState.stageTimer -= dt;
-                    if (gameState.stageTimer <= 0 && !gameState.survivalMode) {
-                        gameState.survivalMode = true;
-                        gameState.survivalStartCount = Math.max(gameState.enemies.length, 1);
+                    // 일반 스테이지 로직
+                    if (!gameState.stageTimerEnded) {
+                        gameState.stageTimer -= dt;
+                        if (gameState.stageTimer <= 0) {
+                            gameState.stageTimerEnded = true;  // 스폰 중단
+                        }
                     }
-                    if (gameState.survivalMode && gameState.enemies.length === 0) {
-                        triggerStageClear();
+
+                    // 타이머 종료 + 적 전멸 → SURVIVE 시작
+                    if (gameState.stageTimerEnded && !gameState.survivalMode && getActiveEnemyCount() === 0) {
+                        gameState.survivalMode = true;
+                        gameState.survivalTimer = 0.7;  // SURVIVE 0.7초
+                        gameState.enemies = [];  // 잔류 탄환 제거
+                    }
+
+                    // SURVIVE 타이머 → 스테이지 클리어
+                    if (gameState.survivalMode) {
+                        gameState.survivalTimer -= dt;
+                        if (gameState.survivalTimer <= 0) {
+                            triggerStageClear();
+                        }
                     }
                 }
             }
@@ -1072,7 +1139,7 @@
                 // 가비지 컬렉션 강화 - 화면 밖 적 즉시 제거
                 if (en.y > canvas.height + 50 || en.y < -100 || en.x < -80 || en.x > canvas.width + 80) {
                     gameState.enemies.splice(i, 1);
-                    if (en.type !== 'BULLET' && en.type !== 'SHOCKWAVE') gameState.score++;
+                    if (en.type !== 'BULLET' && en.type !== 'SHOCKWAVE' && en.type !== 'ENEMY_BULLET' && en.type !== 'METEOR') gameState.score++;
                 }
             }
 
