@@ -111,7 +111,8 @@
             text-shadow: 0 0 10px #0ff;
         }
 
-        #leaderboard li {
+        /* [수정] 내 순위 리스트에도 동일한 스타일 적용 */
+        #leaderboard li, #my-rank-list li {
             margin: 8px 0;
             padding: 10px 15px;
             background: rgba(255, 255, 255, 0.05);
@@ -121,7 +122,40 @@
             align-items: center;
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
+            list-style: none; /* 리스트 스타일 제거 */
         }
+
+        /* [추가] 내 순위 전용 - 붉은색 테두리 및 스타일 */
+        li.rank-me {
+            background: linear-gradient(135deg, rgba(255, 0, 0, 0.2), rgba(100, 0, 0, 0.1)) !important;
+            border: 2px solid #ff0000 !important;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+            font-weight: bold;
+            margin-top: 20px !important; /* 위쪽 TOP5와 간격 띄우기 */
+            animation: pulseRed 2s infinite;
+        }
+
+        /* [추가] 붉은색 배지 */
+        .rank-me .rank-badge {
+            background: linear-gradient(135deg, #ff0000, #990000);
+            color: #fff;
+            box-shadow: 0 0 10px #f00;
+        }
+
+        @keyframes pulseRed {
+            0% { box-shadow: 0 0 15px rgba(255, 0, 0, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(255, 0, 0, 0.7); }
+            100% { box-shadow: 0 0 15px rgba(255, 0, 0, 0.4); }
+        }
+        
+        /* [추가] 내 순위 리스트 컨테이너 스타일 */
+        #my-rank-list {
+            padding: 0;
+            margin: 0;
+            width: 320px;
+        }
+
+
 
         #leaderboard li:hover {
             background: rgba(255, 255, 255, 0.1);
@@ -469,10 +503,8 @@
             <ul id="leaderboard">
                 <li>Loading...</li>
             </ul>
-            <div id="my-rank"
-                style="display:none; margin-top: 10px; color: #0ff; font-size: 14px; text-shadow: 0 0 10px #0ff;">
-                YOUR RANK: <span id="rank-position">-</span>th
-            </div>
+            <ul id="my-rank-list" style="display:none;"></ul>
+
             <button onclick="startGame()">GAME START</button>
         </div>
 
@@ -578,50 +610,65 @@
                 });
             } catch (e) { console.error(e); }
 
-            // Phase 1: 페이지 로드 시 저장된 점수가 있으면 순위 표시
-            const lastScore = localStorage.getItem('lastScore');
-            if (lastScore && parseInt(lastScore) > 0) {
-                updateMyRank(parseInt(lastScore));
+                // [수정] Phase 1: 저장된 상세 기록(JSON) 불러오기
+                const savedData = localStorage.getItem('myBestRecord');
+                if (savedData) {
+                    try {
+                        const r = JSON.parse(savedData);
+                    // 이름, 점수, 스테이지 정보를 모두 넘김
+                    if (r.score > 0) updateMyRank(r.name, r.score, r.stage);
+                } catch (e) {
+                    console.error('Data parsing error', e);
+                }
             }
         }
 
         async function saveToFirebase(name, score, stage) {
             if (!firebaseReady) return;
 
-            // Phase 1: 점수를 localStorage에 임시 저장
-            localStorage.setItem('lastScore', score);
+            // [수정] 상세 정보를 JSON으로 저장 (새로고침 후에도 박스를 그리기 위함)
+            const myRecord = { name, score, stage };
+            localStorage.setItem('myBestRecord', JSON.stringify(myRecord));
 
             const { collection, addDoc, serverTimestamp } = window.firebaseModules;
             try {
                 await addDoc(collection(window.firebaseDB, 'rankings'), { name, score, stage, timestamp: serverTimestamp() });
                 lastSavedName = name;
-
-                // 내 순위 계산 및 표시
-                await updateMyRank(score);
+                
+                // 순위 업데이트 호출 시 전체 정보 전달
+                await updateMyRank(name, score, stage);
             }
             catch (e) { console.error(e); }
         }
 
-        async function updateMyRank(myScore) {
-            // Phase 2: 0점이면 무시
-            if (!firebaseReady || !myScore || myScore <= 0) return;
+        async function updateMyRank(name, score, stage) {
+            // 인자가 부족하면 실행 중단
+            if (!firebaseReady || !score) return;
 
             const { collection, query, where, getDocs } = window.firebaseModules;
             try {
-                // 내 점수보다 높은 점수만 카운트 (전체 쿼리 제거)
+                // 내 점수보다 높은 사람 수 계산 (등수 산정)
                 const higherQuery = query(
                     collection(window.firebaseDB, 'rankings'),
-                    where('score', '>', myScore)
+                    where('score', '>', score)
                 );
                 const higherSnapshot = await getDocs(higherQuery);
                 const myRank = higherSnapshot.size + 1;
 
-                // UI 업데이트 (전체 인원 표시 생략)
-                document.getElementById('rank-position').textContent = myRank;
-                document.getElementById('my-rank').style.display = 'block';
+                // [수정] 기존 텍스트 div 대신, 리스트(ul) 안에 새로운 li 박스를 생성해 넣음
+                const rankList = document.getElementById('my-rank-list');
 
-                // 캐시 정리
-                // localStorage.removeItem('lastScore');
+                // HTML 구조 생성 (CSS의 .rank-me 스타일이 적용됨)
+                rankList.innerHTML = `
+                    <li class="rank-me">
+                        <span class="rank-badge">${myRank}</span>
+                        <span class="player-name">${name}</span>
+                        <span class="player-score">${score.toLocaleString()}</span>
+                        <span class="player-stage">ST.${stage}</span>
+                    </li>
+                `;
+                rankList.style.display = 'block';
+
             } catch (e) {
                 console.error('Failed to calculate rank:', e);
             }
@@ -771,8 +818,10 @@
 
         function startGame() {
         // [추가] 새 게임 시작 시 이전 랭킹 표시용 데이터 정리
-            localStorage.removeItem('lastScore');
-            document.getElementById('my-rank').style.display = 'none';
+        // [수정] 키값 변경 및 리스트 숨기기
+            localStorage.removeItem('myBestRecord');
+            const myRankList = document.getElementById('my-rank-list');
+            if(myRankList) myRankList.style.display = 'none';
 
             document.getElementById('start-screen').style.display = 'none';
             resetState();
@@ -799,8 +848,9 @@
             });
             gameState.player.x = 215;
             updateLivesUI();
-            // 내 순위 표시 숨기기
-            document.getElementById('my-rank').style.display = 'none';
+            // [수정] my-rank가 아니라 my-rank-list를 숨겨야 에러가 안 납니다!
+            const myRankList = document.getElementById('my-rank-list');
+            if (myRankList) myRankList.style.display = 'none';
         }
 
         function spawnEntities(dt) {
