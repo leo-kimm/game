@@ -537,12 +537,12 @@
             { stage: 2, duration: 11, theme: '#0f0', speedMult: 1.1, spawnRate: 0.62, types: ['NORMAL', 'ZIGZAG'], isBoss: false },
             { stage: 3, duration: 12, theme: '#8ef', speedMult: 1.2, spawnRate: 0.54, types: ['NORMAL', 'ZIGZAG'], isBoss: false },
             { stage: 4, duration: 13, theme: '#aaf', speedMult: 1.3, spawnRate: 0.46, types: ['NORMAL', 'ZIGZAG', 'HOMING'], isBoss: false },
-            { stage: 5, duration: 14, theme: '#88f', speedMult: 1.4, spawnRate: 0.42, types: ['ZIGZAG', 'HOMING'], isBoss: true, bossHP: 55, bossType: 'LUNAR' },
+            { stage: 5, duration: 14, theme: '#88f', speedMult: 1.4, spawnRate: 0.42, types: ['ZIGZAG', 'HOMING'], isBoss: true, bossHP: 70, bossType: 'LUNAR' },
             { stage: 6, duration: 15, theme: '#f80', speedMult: 1.5, spawnRate: 0.31, types: ['ZIGZAG', 'HOMING'], isBoss: false },
             { stage: 7, duration: 16, theme: '#f64', speedMult: 1.6, spawnRate: 0.27, types: ['ZIGZAG', 'HOMING'], isBoss: false },
             { stage: 8, duration: 17, theme: '#f44', speedMult: 1.7, spawnRate: 0.25, types: ['NORMAL', 'ZIGZAG', 'HOMING', 'SHOOTER'], isBoss: false },
             { stage: 9, duration: 18, theme: '#f22', speedMult: 1.9, spawnRate: 0.22, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER'], isBoss: false },
-            { stage: 10, duration: 19, theme: '#f80', speedMult: 2.0, spawnRate: 0.19, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER', 'LASER_ENEMY'], isBoss: true, bossHP: 120, bossType: 'SUN' }
+            { stage: 10, duration: 19, theme: '#f80', speedMult: 2.0, spawnRate: 0.19, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER', 'LASER_ENEMY'], isBoss: true, bossHP: 140, bossType: 'SUN' }
         ];
 
         let gameState = {
@@ -730,7 +730,10 @@
                 return;
             }
 
+            // [CDSO 수정] 본체 피격 시 처리
             gameState.lives--;
+            gameState.isLunarMode = false; // ★ 핵심: 본체가 맞으면 루나 가디언 파괴됨
+
             updateLivesUI();
             if (gameState.lives <= 0) gameOver();
             else { gameState.isInvincible = true; gameState.invincibilityTimer = 2.0; }
@@ -853,6 +856,9 @@
             if (myRankList) myRankList.style.display = 'none';
         }
 
+
+
+
         function spawnEntities(dt) {
             if (gameState.spawnDelay > 0) {
                 gameState.spawnDelay -= dt;
@@ -861,22 +867,40 @@
 
             const lvl = levels[gameState.currentStage - 1];
 
-            if (lvl.isBoss && gameState.bossPhase === 'BOSS') {
-                if (gameState.bossTimer < 10) {
-                    gameState.spawnTimer += dt;
-                    if (gameState.spawnTimer > 1.2) {
-                        gameState.enemies.push({
-                            x: Math.random() * (canvas.width - 25), y: -35, w: 25, h: 25,
-                            speed: 180 + Math.random() * 80, type: 'MINION',
-                            amplitude: 1, turnRate: 80, time: 0
-                        });
-                        gameState.spawnTimer = 0;
-                    }
+            // [CDSO 전략] 보스전 전용 로직
+            if (lvl.isBoss && gameState.bossPhase === 'BOSS' && gameState.boss) {
+                gameState.spawnTimer += dt;
+                
+                // 보스 종류별 쫄몹 소환
+                let spawnInterval = 2.5; 
+                let eliteTypes = [];
+
+                if (gameState.boss.type === 'LUNAR') {
+                    spawnInterval = 2.2; eliteTypes = ['HOMING', 'ZIGZAG'];
+                } else if (gameState.boss.type === 'SUN') {
+                    spawnInterval = 3.0; eliteTypes = ['SHOOTER', 'BOMBER', 'LASER_ENEMY'];
                 }
+
+                if (gameState.bossResurrected) spawnInterval *= 0.7;
+
+                if (gameState.spawnTimer > spawnInterval) {
+                    const type = eliteTypes[Math.floor(Math.random() * eliteTypes.length)];
+                    gameState.enemies.push({
+                        x: Math.random() * (canvas.width - 30), y: -35, 
+                        w: 25, h: 25, speed: 200 + Math.random() * 50, type: type,
+                        amplitude: 1, turnRate: 100, time: 0,
+                        exploded: false, locked: false, fired: false, chargeTimer: 0,
+                        phase: 'ENTER', strafeDir: Math.random() < 0.5 ? 1 : -1
+                    });
+                    gameState.spawnTimer = 0;
+                }
+
+                // 보스전 아이템 (하트 희소성 유지: 10%)
                 gameState.itemSpawnTimer += dt;
-                if (gameState.itemSpawnTimer > 7) {
-                    const type = Math.random() < 0.7 ? 'BLASTER' : 'SHIELD';
-                    gameState.items.push({ x: Math.random() * (canvas.width - 25), y: -35, w: 25, h: 25, speed: 150, type });
+                if (gameState.itemSpawnTimer > 6) { 
+                    const rand = Math.random();
+                    let itemType = rand < 0.5 ? 'BLASTER' : (rand < 0.9 ? 'SHIELD' : 'LIFE');
+                    gameState.items.push({ x: Math.random() * (canvas.width - 25), y: -35, w: 25, h: 25, speed: 150, type: itemType });
                     gameState.itemSpawnTimer = 0;
                 }
                 return;
@@ -884,6 +908,7 @@
 
             if (gameState.stageClearing || gameState.survivalMode) return;
 
+            // 일반 스테이지 적 소환
             gameState.spawnTimer += dt;
             if (gameState.spawnTimer > lvl.spawnRate && lvl.types.length > 0) {
                 const type = lvl.types[Math.floor(Math.random() * lvl.types.length)];
@@ -895,14 +920,31 @@
                 gameState.spawnTimer = 0;
             }
 
+            // 일반 스테이지 아이템 소환 (하트 확률 30% 적용)
             gameState.itemSpawnTimer += dt;
             if (gameState.itemSpawnTimer > 8) {
                 const rand = Math.random();
-                const type = rand < 0.15 ? 'DRONE' : (rand < 0.55 ? 'SHIELD' : 'BLASTER');
+                let type = rand < 0.25 ? 'DRONE' : (rand < 0.5 ? 'SHIELD' : 'BLASTER');
+                
+                // 스테이지 6, 9에서 하트 등장 확률 30%
+                if (gameState.currentStage === 6 || gameState.currentStage === 9) {
+                    if (Math.random() < 0.3) type = 'LIFE';
+                }
+
                 gameState.items.push({ x: Math.random() * (canvas.width - 25), y: -35, w: 25, h: 25, speed: 150, type });
                 gameState.itemSpawnTimer = 0;
             }
         }
+
+
+
+
+
+
+
+
+
+
 
         function spawnBoss(hp, type) {
             const isLunar = type === 'LUNAR';
@@ -1038,24 +1080,65 @@
                     boss.isSupernova = true;
                     gameState.bossResurrected = true;
                 } else {
-                    // 시간 보너스 점수 계산
+                    // [CDSO 전략 수정] 보스 등급별 차등 보상 시스템 (Tiered Scoring)
+                    
+                    let baseClearScore = 0;
                     let timeBonus = 0;
-                    if (gameState.bossTimer <= 10) {
-                        timeBonus = 500;  // 10초 이내
-                    } else if (gameState.bossTimer <= 20) {
-                        timeBonus = 300;  // 20초 이내
-                    } else {
-                        timeBonus = 100;  // 그 이상
-                    }
-                    gameState.score += timeBonus;
-                    gameState.timeBonusDisplay = { amount: timeBonus, timer: 2.0 };  // 2초간 표시
+                    let perfectBonus = 0;
+                    let timeLimitS = 0; // S등급 기준 시간
+                    let timeLimitA = 0; // A등급 기준 시간
 
-                    // 루나 보스 처치 시 즉시 2방향 와이드 샷 활성화
+                    // 1. 보스 타입별 기준 설정 (Configuration)
+                    if (boss.type === 'LUNAR') {
+                        // [Stage 5] 중간 보스: 타이트한 시간 제한, 적당한 보상
+                        baseClearScore = 300;
+                        timeLimitS = 15; // 25초 컷 (Speed)
+                        timeLimitA = 25; 
+                        
+                        if (gameState.bossTimer <= timeLimitS) timeBonus = 300;
+                        else if (gameState.bossTimer <= timeLimitA) timeBonus = 200;
+                        else timeBonus = 100;
+
+                    } else {
+                        // [Stage 10] 최종 보스: 넉넉한 시간 제한, 압도적인 보상
+                        baseClearScore = 1000; // 엔딩 보상 상향
+                        timeLimitS = 30; // 50초 컷 (Endurance)
+                        timeLimitA = 50;
+
+                        if (gameState.bossTimer <= timeLimitS) timeBonus = 700; // Legendary
+                        else if (gameState.bossTimer <= timeLimitA) timeBonus = 400;
+                        else timeBonus = 200;
+                    }
+
+                    // 2. 노미스 보너스 (공통 로직)
+                    // 최종 보스는 어렵기 때문에 노미스 가산점을 더 높게 책정
+                    if (gameState.lives >= gameState.maxLives) { // 만피일 때
+                        perfectBonus = (boss.type === 'SUN') ? 1000 : 500;
+                    }
+
+                    // 3. 최종 합산
+                    const totalBonus = baseClearScore + timeBonus + perfectBonus;
+                    gameState.score += totalBonus;
+                    
+                    // 4. 결과 표시 (UI Feedback)
+                    // 등급 표시 (S, A, B)
+                    let rankText = gameState.bossTimer <= timeLimitS ? "RANK S" : (gameState.bossTimer <= timeLimitA ? "RANK A" : "RANK B");
+                    
+                    // 보너스 정보를 화면에 보여주기 위해 객체에 저장
+                    gameState.timeBonusDisplay = { 
+                        amount: totalBonus, 
+                        text: `${rankText} BONUS`, // 화면에 S, A, B 등급도 같이 표시
+                        timer: 3.0 
+                    };
+
+                    // 루나 보스 처치 시 루나 모드 활성화 (기존 로직 유지)
                     if (boss.type === 'LUNAR') {
                         gameState.isLunarMode = true;
                     }
                     triggerStageClear();
                 }
+
+
                 return;
             }
 
@@ -1133,6 +1216,10 @@
             gameState.stageTimerEnded = false;  // ★ 추가
             gameState.survivalTimer = 0;        // ★ 추가
             gameState.spawnTimer = 0;
+
+            // [CDSO 수정] 스테이지 전환 시 아이템 타이머 초기화 (중복 등장 방지)
+            gameState.itemSpawnTimer = 0;
+            
             gameState.bossPhase = 'MINION';
             gameState.bossResurrected = false;
             gameState.progressDisplay = 0;
@@ -1502,6 +1589,23 @@
                                 gameState.drones = [];
                             }
                         }
+
+
+                    } else if (it.type === 'LIFE') {
+                    // [CDSO 추가] 하트 획득 시 생명력 회복
+                    if (gameState.lives < gameState.maxLives) {
+                        gameState.lives++;
+                        updateLivesUI(); // 하트 UI 즉시 갱신
+                        // 획득 메시지 (선택 사항)
+                        gameState.skillMode = 'HEALED';
+                        gameState.skillTimer = 2.0;
+                    } else {
+                        // 이미 풀피라면 보너스 점수
+                        gameState.score += 400;
+                    }
+
+
+
                     } else if (it.type === 'BLASTER') {
                         // BLASTER → 유도탄 모드로 변경 (7초)
                         if (gameState.isTransformed) {
@@ -1522,9 +1626,9 @@
                 if (it.y > canvas.height) gameState.items.splice(i, 1);
             }
 
-            // 루나 가디언 공전 및 충돌 처리
+                // 루나 가디언 공전 및 충돌 처리
             if (gameState.isLunarMode) {
-                gameState.lunarAngle += dt * 180;  // 초당 180도 회전
+                gameState.lunarAngle += dt * 180;  // 회전 속도
                 const rad = gameState.lunarAngle * Math.PI / 180;
                 const guardianX = cx + Math.cos(rad) * 40 - 10;
                 const guardianY = cy - 15 + Math.sin(rad) * 40 - 10;
@@ -1533,9 +1637,13 @@
                 // 가디언과 적 충돌 처리
                 for (let i = gameState.enemies.length - 1; i >= 0; i--) {
                     if (checkRectCollision(guardian, gameState.enemies[i])) {
+                        // [CDSO 수정] 적만 제거하고 루나 모드는 유지 (공격형 비트)
                         gameState.enemies.splice(i, 1);
-                        gameState.isLunarMode = false;
                         gameState.score += 3;
+                        
+                        // 시각적 타격감 추가 (선택 사항)
+                        createExplosion(guardianX, guardianY); 
+                        
                         break;
                     }
                 }
@@ -1674,7 +1782,32 @@
         function drawGiftBox(it) {
             const x = it.x, y = it.y, w = it.w, h = it.h;
 
-            // LUNAR_ITEM은 초승달 아이콘으로 특별 렌더링
+            // [CDSO 수정] LIFE 아이템: 하트 렌더링
+            if (it.type === 'LIFE') {
+                const cx = x + w / 2;
+                const cy = y + h / 2;
+                const pulse = 1 + Math.sin(Date.now() / 150) * 0.15; 
+
+                ctx.save();
+                ctx.translate(cx, cy);
+                // [CDSO 수정] 하트 크기 2.3배 확대 (pulse * 2.5)
+                ctx.scale(pulse * 2.3, pulse * 2.3);
+
+                ctx.shadowBlur = 25; ctx.shadowColor = '#f00'; ctx.fillStyle = '#f00';
+                ctx.beginPath();
+                ctx.moveTo(0, -5);
+                ctx.bezierCurveTo(5, -12, 12, -5, 0, 8); 
+                ctx.bezierCurveTo(-12, -5, -5, -12, 0, -5); 
+                ctx.fill();
+                
+                ctx.shadowBlur = 0; ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(-3, -3, 2, 0, Math.PI * 2); ctx.fill();
+
+                ctx.restore();
+                return;
+            }
+
+            // [복구됨] LUNAR_ITEM 체크 조건문이 빠져있었음!
             if (it.type === 'LUNAR_ITEM') {
                 ctx.shadowBlur = 20;
                 ctx.shadowColor = '#88f';
@@ -1690,34 +1823,20 @@
                 return;
             }
 
+            // 일반 아이템 박스
             const boxColor = it.type === 'DRONE' ? '#0ff' : (it.type === 'SHIELD' ? '#0f0' : '#f0f');
-
-            ctx.shadowBlur = 12;
-            ctx.shadowColor = boxColor;
-
-            ctx.fillStyle = boxColor;
-            ctx.fillRect(x + 2, y + 6, w - 4, h - 6);
-
+            ctx.shadowBlur = 12; ctx.shadowColor = boxColor;
+            ctx.fillStyle = boxColor; ctx.fillRect(x + 2, y + 6, w - 4, h - 6);
+            ctx.fillStyle = '#fff'; ctx.fillRect(x + w / 2 - 2, y + 6, 4, h - 6); ctx.fillRect(x + 2, y + h / 2 + 2, w - 4, 4);
+            ctx.fillStyle = boxColor; ctx.fillRect(x, y + 4, w, 6);
             ctx.fillStyle = '#fff';
-            ctx.fillRect(x + w / 2 - 2, y + 6, 4, h - 6);
-            ctx.fillRect(x + 2, y + h / 2 + 2, w - 4, 4);
-
-            ctx.fillStyle = boxColor;
-            ctx.fillRect(x, y + 4, w, 6);
-
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.arc(x + w / 2 - 5, y + 4, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(x + w / 2 + 5, y + 4, 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.beginPath();
-            ctx.arc(x + w / 2, y + 2, 3, 0, Math.PI * 2);
-            ctx.fill();
-
+            ctx.beginPath(); ctx.arc(x + w / 2 - 5, y + 4, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(x + w / 2 + 5, y + 4, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(x + w / 2, y + 2, 3, 0, Math.PI * 2); ctx.fill();
             ctx.shadowBlur = 0;
         }
+
+
 
         function drawAlien(en, stage) {
             const cx = en.x + en.w / 2, cy = en.y + en.h / 2;
