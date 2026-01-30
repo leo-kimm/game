@@ -542,7 +542,7 @@
             { stage: 7, duration: 16, theme: '#f64', speedMult: 1.6, spawnRate: 0.27, types: ['ZIGZAG', 'HOMING'], isBoss: false },
             { stage: 8, duration: 17, theme: '#f44', speedMult: 1.7, spawnRate: 0.25, types: ['NORMAL', 'ZIGZAG', 'HOMING', 'SHOOTER'], isBoss: false },
             { stage: 9, duration: 18, theme: '#f22', speedMult: 1.9, spawnRate: 0.22, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER'], isBoss: false },
-            { stage: 10, duration: 19, theme: '#f80', speedMult: 2.0, spawnRate: 0.19, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER', 'LASER_ENEMY'], isBoss: true, bossHP: 50, bossType: 'SUN' }
+            { stage: 10, duration: 19, theme: '#f80', speedMult: 2.0, spawnRate: 0.19, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER', 'LASER_ENEMY'], isBoss: true, bossHP: 120, bossType: 'SUN' }
         ];
 
         let gameState = {
@@ -979,16 +979,36 @@
                     gameState.dangerWarning = 0;  // 경고 종료
                 }
             } else if (boss.type === 'SUN') {
-                const fireRate = boss.isSupernova ? 1.5 : 2.0;
-                const bulletCount = boss.isSupernova ? 16 : 12;
+                // [CDSO 전략 수정] 난이도 대폭 상향: Spinning Inferno 패턴
+                // 1. 발사 속도: 2페이즈(Supernova)에서는 0.7초마다 난사 (기존 1.5초)
+                const fireRate = boss.isSupernova ? 0.7 : 1.6;
+                
+                // 2. 탄막 밀도: 2페이즈에서는 24발 (기존 16발)
+                const bulletCount = boss.isSupernova ? 24 : 14;
+
                 if (boss.shootTimer > fireRate) {
+                    // 3. 회전 로직: 시간이 지날수록 발사 각도가 돌아감 (나선형 패턴)
+                    // Supernova 상태일 때는 회전 속도 3배 증가
+                    const spinSpeed = boss.isSupernova ? 150 : 40;
+                    const baseAngle = (Date.now() / 1000) * spinSpeed;
+
                     for (let i = 0; i < bulletCount; i++) {
-                        const rad = (i * (360 / bulletCount) + Date.now() / 50) * Math.PI / 180;
+                        // 기본 각도 + 회전 각도 적용
+                        const angle = baseAngle + (i * (360 / bulletCount));
+                        const rad = angle * Math.PI / 180;
+
+                        // 4. 변칙 속도 (Variable Velocity): 
+                        // 2페이즈에서는 짝수/홀수 번째 탄환의 속도를 다르게 하여 '탄막 벽'을 형성
+                        let bSpeed = boss.isSupernova ? 240 : 190;
+                        if (boss.isSupernova && i % 2 === 0) {
+                            bSpeed += 120; // 짝수 탄환은 훨씬 빠르게 발사 (360) -> 엇박자 유발
+                        }
+
                         gameState.enemies.push({
                             x: boss.x + boss.w / 2 - 6, y: boss.y + boss.h / 2,
                             w: 12, h: 12, speed: 0, type: 'BULLET',
-                            vx: Math.cos(rad) * (boss.isSupernova ? 220 : 180),
-                            vy: Math.sin(rad) * (boss.isSupernova ? 220 : 180),
+                            vx: Math.cos(rad) * bSpeed,
+                            vy: Math.sin(rad) * bSpeed,
                             amplitude: 0, turnRate: 0, time: 0
                         });
                     }
@@ -1030,7 +1050,7 @@
                     gameState.score += timeBonus;
                     gameState.timeBonusDisplay = { amount: timeBonus, timer: 2.0 };  // 2초간 표시
 
-                    // 루나 보스 처치 시 즉시 3방향 와이드 샷 활성화
+                    // 루나 보스 처치 시 즉시 2방향 와이드 샷 활성화
                     if (boss.type === 'LUNAR') {
                         gameState.isLunarMode = true;
                     }
@@ -1194,23 +1214,45 @@
                 const cy = gameState.player.y;
 
                 if (gameState.isHomingMode) {
-                    // 유도탄 모드: 가장 가까운 적 추적
-                    const target = findNearestEnemy();
-                    if (target) {
-                        const tx = target.x + target.w / 2;
-                        const ty = target.y + target.h / 2;
-                        const dx = tx - cx;
-                        const dy = ty - cy;
-                        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                    // [CDSO 전략 수정] 3갈래 멀티 유도탄 발사
+                    const target = findNearestEnemy(); // 보스 우선 인식 기능 포함됨
+                    
+                    // 좌(-0.25), 우(+0.25) 두 방향으로 발사 (약 15도 각도)
+                    [-0.25, 0.25].forEach(angle => {
+                        let vx = 0, vy = -550;
+                        
+                        // 타겟이 있으면 타겟 방향으로 초기 벡터 설정
+                        if (target) {
+                            const tx = target.x + target.w / 2;
+                            const ty = target.y + target.h / 2;
+                            const dx = tx - cx;
+                            const dy = ty - cy;
+                            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                            
+                            // 기본 타겟 방향 벡터
+                            let dirX = dx / dist;
+                            let dirY = dy / dist;
+
+                            // 부채꼴로 벌리기 (회전 변환 행렬 적용)
+                            const cos = Math.cos(angle);
+                            const sin = Math.sin(angle);
+                            vx = (dirX * cos - dirY * sin) * 550;
+                            vy = (dirX * sin + dirY * cos) * 550;
+                        } else {
+                            // 타겟 없을 땐 그냥 부채꼴로 나감
+                            vx = Math.sin(angle) * 550;
+                            vy = -Math.cos(angle) * 550;
+                        }
+
                         gameState.bullets.push({
                             x: cx - 5, y: cy, w: 10, h: 15, speed: 550,
-                            isHoming: true, targetX: tx, targetY: ty,
-                            vx: (dx / dist) * 550, vy: (dy / dist) * 550
+                            isHoming: true, 
+                            target: target, // [중요] 타겟 객체 자체를 심음 (실시간 추적용)
+                            vx: vx, vy: vy,
+                            turnRate: 5.0 // 회전 속도 (높을수록 더 잘 꺾음)
                         });
-                    } else {
-                        // 적이 없으면 일반 직선 발사
-                        gameState.bullets.push({ x: cx - 5, y: cy, w: 10, h: 15, speed: 550 });
-                    }
+                    });
+
                 } else {
                     // 일반 직선 발사
                     gameState.bullets.push({ x: cx - 5, y: cy, w: 10, h: 15, speed: 550 });
@@ -1501,16 +1543,55 @@
 
             for (let bi = gameState.bullets.length - 1; bi >= 0; bi--) {
                 const b = gameState.bullets[bi];
+                
                 if (b.isLunar) {
                     b.x += (b.vx || 0) * dt;
                     b.y += (b.vy || 0) * dt;
                 } else if (b.isHoming) {
-                    // 유도탄: 방향 벡터대로 이동
-                    b.x += (b.vx || 0) * dt;
-                    b.y += (b.vy || 0) * dt;
+                    // ★ 지능형 추적 로직 시작 ★
+                    
+                    // 타겟이 살아있는지 확인
+                    const targetAlive = b.target && (gameState.enemies.includes(b.target) || b.target === gameState.boss) && (b.target.hp === undefined || b.target.hp > 0);
+
+                    if (b.target && targetAlive) {
+                        // 1. 현재 내 위치와 타겟 위치 파악
+                        const tx = b.target.x + b.target.w / 2;
+                        const ty = b.target.y + b.target.h / 2;
+                        const bx = b.x + b.w / 2;
+                        const by = b.y + b.h / 2;
+
+                        // 2. 목표 방향 계산
+                        const dx = tx - bx;
+                        const dy = ty - by;
+                        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                        const targetDirX = dx / dist;
+                        const targetDirY = dy / dist;
+
+                        // 3. 현재 이동 방향 계산
+                        const currentSpeed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+                        const currentDirX = b.vx / currentSpeed;
+                        const currentDirY = b.vy / currentSpeed;
+
+                        // 4. 방향 꺾기 (turnRate만큼 부드럽게 회전)
+                        const turn = (b.turnRate || 5.0) * dt; 
+                        let newDirX = currentDirX + (targetDirX - currentDirX) * turn;
+                        let newDirY = currentDirY + (targetDirY - currentDirY) * turn;
+
+                        // 5. 속도 적용
+                        const newLen = Math.sqrt(newDirX * newDirX + newDirY * newDirY);
+                        b.vx = (newDirX / newLen) * b.speed;
+                        b.vy = (newDirY / newLen) * b.speed;
+                    }
+
+                    // 계산된 방향으로 이동
+                    b.x += b.vx * dt;
+                    b.y += b.vy * dt;
+                    
                 } else {
                     b.y -= b.speed * dt;
                 }
+
+
                 if (b.y < -20 || b.y > canvas.height + 20 || b.x < -20 || b.x > canvas.width + 20) {
                     gameState.bullets.splice(bi, 1); continue;
                 }
