@@ -84,6 +84,18 @@
             font-size: 0.9em;
         }
 
+        #current-score {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5em;
+            color: #fff;
+            text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #fff;
+            pointer-events: none;
+            z-index: 10;
+        }
+
         #leaderboard {
             list-style: none;
             padding: 0;
@@ -443,6 +455,7 @@
     <div id="game-container">
         <div class="ui-panel">
             <div id="lives">LIVES: ♥♥♥</div>
+            <div id="current-score">0</div>
             <div id="stage-info">STAGE 1 | TIME: 30</div>
         </div>
         <div id="skill-display" class="active-skill"></div>
@@ -453,6 +466,10 @@
             <ul id="leaderboard">
                 <li>Loading...</li>
             </ul>
+            <div id="my-rank"
+                style="display:none; margin-top: 10px; color: #0ff; font-size: 14px; text-shadow: 0 0 10px #0ff;">
+                YOUR RANK: <span id="rank-position">-</span>th
+            </div>
             <button onclick="startGame()">GAME START</button>
         </div>
 
@@ -481,16 +498,16 @@
         canvas.width = 450; canvas.height = 700;
 
         const levels = [
-            { stage: 1, duration: 10, theme: '#0ff', speedMult: 1.0, spawnRate: 0.9, types: ['NORMAL'], isBoss: false },
-            { stage: 2, duration: 11, theme: '#0f0', speedMult: 1.1, spawnRate: 0.8, types: ['NORMAL', 'ZIGZAG'], isBoss: false },
-            { stage: 3, duration: 12, theme: '#8ef', speedMult: 1.2, spawnRate: 0.7, types: ['NORMAL', 'ZIGZAG'], isBoss: false },
-            { stage: 4, duration: 13, theme: '#aaf', speedMult: 1.3, spawnRate: 0.6, types: ['NORMAL', 'ZIGZAG', 'HOMING'], isBoss: false },
-            { stage: 5, duration: 14, theme: '#88f', speedMult: 1.4, spawnRate: 0.55, types: ['ZIGZAG', 'HOMING'], isBoss: true, bossHP: 55, bossType: 'LUNAR' },
-            { stage: 6, duration: 15, theme: '#f80', speedMult: 1.5, spawnRate: 0.4, types: ['ZIGZAG', 'HOMING'], isBoss: false },
-            { stage: 7, duration: 16, theme: '#f64', speedMult: 1.6, spawnRate: 0.35, types: ['ZIGZAG', 'HOMING'], isBoss: false },
-            { stage: 8, duration: 17, theme: '#f44', speedMult: 1.7, spawnRate: 0.32, types: ['NORMAL', 'ZIGZAG', 'HOMING', 'SHOOTER'], isBoss: false },
-            { stage: 9, duration: 18, theme: '#f22', speedMult: 1.9, spawnRate: 0.28, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER'], isBoss: false },
-            { stage: 10, duration: 19, theme: '#f80', speedMult: 2.0, spawnRate: 0.25, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER', 'LASER_ENEMY'], isBoss: true, bossHP: 50, bossType: 'SUN' }
+            { stage: 1, duration: 10, theme: '#0ff', speedMult: 1.0, spawnRate: 0.69, types: ['NORMAL'], isBoss: false },
+            { stage: 2, duration: 11, theme: '#0f0', speedMult: 1.1, spawnRate: 0.62, types: ['NORMAL', 'ZIGZAG'], isBoss: false },
+            { stage: 3, duration: 12, theme: '#8ef', speedMult: 1.2, spawnRate: 0.54, types: ['NORMAL', 'ZIGZAG'], isBoss: false },
+            { stage: 4, duration: 13, theme: '#aaf', speedMult: 1.3, spawnRate: 0.46, types: ['NORMAL', 'ZIGZAG', 'HOMING'], isBoss: false },
+            { stage: 5, duration: 14, theme: '#88f', speedMult: 1.4, spawnRate: 0.42, types: ['ZIGZAG', 'HOMING'], isBoss: true, bossHP: 55, bossType: 'LUNAR' },
+            { stage: 6, duration: 15, theme: '#f80', speedMult: 1.5, spawnRate: 0.31, types: ['ZIGZAG', 'HOMING'], isBoss: false },
+            { stage: 7, duration: 16, theme: '#f64', speedMult: 1.6, spawnRate: 0.27, types: ['ZIGZAG', 'HOMING'], isBoss: false },
+            { stage: 8, duration: 17, theme: '#f44', speedMult: 1.7, spawnRate: 0.25, types: ['NORMAL', 'ZIGZAG', 'HOMING', 'SHOOTER'], isBoss: false },
+            { stage: 9, duration: 18, theme: '#f22', speedMult: 1.9, spawnRate: 0.22, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER'], isBoss: false },
+            { stage: 10, duration: 19, theme: '#f80', speedMult: 2.0, spawnRate: 0.19, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER', 'LASER_ENEMY'], isBoss: true, bossHP: 50, bossType: 'SUN' }
         ];
 
         let gameState = {
@@ -517,7 +534,15 @@
             touchTarget: null,
             stageTimerEnded: false,
             survivalTimer: 0,
-            pendingBoss: null
+            pendingBoss: null,
+            // 새로운 기능들
+            ultGauge: 0,           // 필살기 게이지 (0~1)
+            autoFireTimer: 0,      // 자동 발사 타이머
+            isHomingMode: false,   // 유도탄 모드
+            homingTimer: 0,        // 유도탄 지속 시간
+            rainbowWave: null,     // 무지개 파동 상태
+            dangerWarning: 0,      // DANGER 경고 타이머
+            timeBonusDisplay: null // 시간 보너스 표시
         };
 
         let firebaseReady = false;
@@ -549,16 +574,54 @@
                     });
                 });
             } catch (e) { console.error(e); }
+
+            // Phase 1: 페이지 로드 시 저장된 점수가 있으면 순위 표시
+            const lastScore = localStorage.getItem('lastScore');
+            if (lastScore && parseInt(lastScore) > 0) {
+                updateMyRank(parseInt(lastScore));
+            }
         }
 
         async function saveToFirebase(name, score, stage) {
             if (!firebaseReady) return;
+
+            // Phase 1: 점수를 localStorage에 임시 저장
+            localStorage.setItem('lastScore', score);
+
             const { collection, addDoc, serverTimestamp } = window.firebaseModules;
             try {
                 await addDoc(collection(window.firebaseDB, 'rankings'), { name, score, stage, timestamp: serverTimestamp() });
-                lastSavedName = name;  // 신규 유저 하이라이트용
+                lastSavedName = name;
+
+                // 내 순위 계산 및 표시
+                await updateMyRank(score);
             }
             catch (e) { console.error(e); }
+        }
+
+        async function updateMyRank(myScore) {
+            // Phase 2: 0점이면 무시
+            if (!firebaseReady || !myScore || myScore <= 0) return;
+
+            const { collection, query, where, getDocs } = window.firebaseModules;
+            try {
+                // 내 점수보다 높은 점수만 카운트 (전체 쿼리 제거)
+                const higherQuery = query(
+                    collection(window.firebaseDB, 'rankings'),
+                    where('score', '>', myScore)
+                );
+                const higherSnapshot = await getDocs(higherQuery);
+                const myRank = higherSnapshot.size + 1;
+
+                // UI 업데이트 (전체 인원 표시 생략)
+                document.getElementById('rank-position').textContent = myRank;
+                document.getElementById('my-rank').style.display = 'block';
+
+                // 캐시 정리
+                // localStorage.removeItem('lastScore');
+            } catch (e) {
+                console.error('Failed to calculate rank:', e);
+            }
         }
 
         // 실제 적 기체만 카운트 (탄환 + 폭발/발사 완료 적 제외)
@@ -585,6 +648,16 @@
                 'MINION': 0.5
             };
             return scoreTable[type] || 1.0;
+        }
+
+        // Phase 6: Safety Margin 충돌 판정 (2px 여유)
+        function checkCollisionWithMargin(a, b, margin = 2) {
+            return !(
+                a.x + a.w + margin < b.x ||
+                a.x - margin > b.x + b.w ||
+                a.y + a.h + margin < b.y ||
+                a.y - margin > b.y + b.h
+            );
         }
 
         function takeDamage() {
@@ -628,7 +701,13 @@
             });
         }
 
-        window.addEventListener('keydown', e => gameState.keys[e.key] = true);
+        window.addEventListener('keydown', e => {
+            gameState.keys[e.key] = true;
+            // Space 키로 필살기 발동
+            if (e.code === 'Space' && gameState.ultGauge >= 1 && !gameState.rainbowWave) {
+                activateRainbowWave();
+            }
+        });
         window.addEventListener('keyup', e => gameState.keys[e.key] = false);
 
         // 모바일 터치 좌표 변환
@@ -650,6 +729,14 @@
             isTouching = true;
             const pos = getTouchPos(e);
             gameState.touchTarget = pos.x - gameState.player.w / 2;
+
+            // 전투기 근처 터치 시 필살기 발동
+            const playerCenterX = gameState.player.x + gameState.player.w / 2;
+            const playerCenterY = gameState.player.y + gameState.player.h / 2;
+            const touchDist = Math.sqrt(Math.pow(pos.x - playerCenterX, 2) + Math.pow(pos.y - playerCenterY, 2));
+            if (touchDist < 80 && gameState.ultGauge >= 1 && !gameState.rainbowWave) {
+                activateRainbowWave();
+            }
         }, { passive: false });
 
         canvas.addEventListener('touchmove', function (e) {
@@ -680,6 +767,10 @@
         });
 
         function startGame() {
+        // [추가] 새 게임 시작 시 이전 랭킹 표시용 데이터 정리
+            localStorage.removeItem('lastScore');
+            document.getElementById('my-rank').style.display = 'none';
+
             document.getElementById('start-screen').style.display = 'none';
             resetState();
             gameState.isRunning = true;
@@ -696,10 +787,17 @@
                 stageClearing: false, stageClearTimer: 0, survivalMode: false,
                 bossPhase: 'MINION', bossTimer: 0, bossResurrected: false,
                 downgradeFlash: 0, progressDisplay: 0, survivalStartCount: 0,
-                spawnDelay: 1.0
+                spawnDelay: 1.0,
+                stageTimerEnded: false, survivalTimer: 0, pendingBoss: null,
+                // 새로운 기능들 초기화
+                ultGauge: 0, autoFireTimer: 0,
+                isHomingMode: false, homingTimer: 0,
+                rainbowWave: null, dangerWarning: 0, timeBonusDisplay: null
             });
             gameState.player.x = 215;
             updateLivesUI();
+            // 내 순위 표시 숨기기
+            document.getElementById('my-rank').style.display = 'none';
         }
 
         function spawnEntities(dt) {
@@ -737,7 +835,7 @@
             if (gameState.spawnTimer > lvl.spawnRate && lvl.types.length > 0) {
                 const type = lvl.types[Math.floor(Math.random() * lvl.types.length)];
                 gameState.enemies.push({
-                    x: Math.random() * (canvas.width - 30), y: -40, w: 30, h: 30,
+                    x: Math.random() * (canvas.width - 24), y: -32, w: 24, h: 24,
                     speed: (200 + Math.random() * 100) * lvl.speedMult, type,
                     amplitude: Math.random() * 2 + 1, turnRate: 120 + Math.random() * 60, time: 0
                 });
@@ -762,7 +860,7 @@
                 hp, maxHp: hp, moveDir: 1, shootTimer: 0, type: type || 'LUNAR',
                 isSupernova: false, shockwaveTimer: 0
             };
-            gameState.enemies = [];
+            // gameState.enemies = [];
             gameState.bossTimer = 0;
             gameState.spawnTimer = 0;
         }
@@ -805,8 +903,14 @@
                     }
                     boss.shootTimer = 0;
                 }
-                // 월광 충격파 (3초마다)
+                // 월광 충격파 (3초마다) + DANGER 경고
                 boss.shockwaveTimer += dt;
+
+                // 충격파 발사 0.5초 전 DANGER 경고 시작
+                if (boss.shockwaveTimer > 2.5 && boss.shockwaveTimer <= 3) {
+                    gameState.dangerWarning = 0.5 - (3 - boss.shockwaveTimer);
+                }
+
                 if (boss.shockwaveTimer > 3) {
                     const px = gameState.player.x + gameState.player.w / 2;
                     const bx = boss.x + boss.w / 2, by = boss.y + boss.h;
@@ -819,6 +923,7 @@
                         amplitude: 0, turnRate: 0, time: 0
                     });
                     boss.shockwaveTimer = 0;
+                    gameState.dangerWarning = 0;  // 경고 종료
                 }
             } else if (boss.type === 'SUN') {
                 const fireRate = boss.isSupernova ? 1.5 : 2.0;
@@ -860,6 +965,18 @@
                     boss.isSupernova = true;
                     gameState.bossResurrected = true;
                 } else {
+                    // 시간 보너스 점수 계산
+                    let timeBonus = 0;
+                    if (gameState.bossTimer <= 10) {
+                        timeBonus = 500;  // 10초 이내
+                    } else if (gameState.bossTimer <= 20) {
+                        timeBonus = 300;  // 20초 이내
+                    } else {
+                        timeBonus = 100;  // 그 이상
+                    }
+                    gameState.score += timeBonus;
+                    gameState.timeBonusDisplay = { amount: timeBonus, timer: 2.0 };  // 2초간 표시
+
                     // 루나 보스 처치 시 즉시 3방향 와이드 샷 활성화
                     if (boss.type === 'LUNAR') {
                         gameState.isLunarMode = true;
@@ -879,22 +996,56 @@
             gameState.survivalMode = false;
             gameState.bossPhase = 'MINION';
             gameState.bossResurrected = false;
+            // Phase 3: pendingBoss 로직 제거 - spawnBoss 직접 호출 방식 사용
+        }
 
-            // ★ 다음 스테이지 보스 사전 준비 (백그라운드)
-            const nextStage = gameState.currentStage + 1;
-            if (nextStage <= 10) {
-                const nextLvl = levels[nextStage - 1];
-                if (nextLvl.isBoss) {
-                    const isLunar = nextLvl.bossType === 'LUNAR';
-                    const w = isLunar ? 94 : 80, h = isLunar ? 92 : 80;
-                    gameState.pendingBoss = {
-                        x: canvas.width / 2 - w / 2, y: 50, w, h,
-                        hp: nextLvl.bossHP, maxHp: nextLvl.bossHP,
-                        moveDir: 1, shootTimer: 0, type: nextLvl.bossType,
-                        isSupernova: false, shockwaveTimer: 0
-                    };
-                } else {
-                    gameState.pendingBoss = null;
+        // Phase 5: 스테이지 전이 로직 통합 함수
+        function handleStageTransition(dt) {
+            const lvl = levels[gameState.currentStage - 1];
+
+            // 스테이지 클리어 처리
+            if (gameState.stageClearing) {
+                gameState.stageClearTimer -= dt;
+                if (gameState.stageClearTimer <= 0) {
+                    gameState.enemies = [];
+                    advanceStage();
+                }
+                return;
+            }
+
+            // 보스 스테이지
+            if (lvl.isBoss) {
+                if (gameState.bossPhase === 'MINION') {
+                    gameState.stageTimer -= dt;
+                    if (gameState.stageTimer <= 0) {
+                        gameState.bossPhase = 'BOSS';
+                        gameState.stageTimerEnded = true;
+                        spawnBoss(lvl.bossHP, lvl.bossType);
+                    }
+                } else if (gameState.bossPhase === 'BOSS') {
+                    updateBoss(dt);
+                }
+                return;
+            }
+
+            // 일반 스테이지
+            if (!gameState.stageTimerEnded) {
+                gameState.stageTimer -= dt;
+                if (gameState.stageTimer <= 0) {
+                    gameState.stageTimerEnded = true;
+                }
+            }
+
+            if (gameState.stageTimerEnded && !gameState.survivalMode && getActiveEnemyCount() === 0) {
+                gameState.survivalMode = true;
+                gameState.survivalTimer = 0.7;
+                gameState.enemies = [];
+            }
+
+            if (gameState.survivalMode) {
+                gameState.survivalTimer -= dt;
+                if (gameState.survivalTimer <= 0) {
+                    triggerStageClear();
                 }
             }
         }
@@ -936,9 +1087,113 @@
             showResultScreen('🎉 MISSION COMPLETE');
         }
 
+        // 무지개 파동 발동
+        function activateRainbowWave() {
+            gameState.rainbowWave = { active: true, y: canvas.height };
+            gameState.ultGauge = 0;
+        }
+
+        // 가장 가까운 적 찾기 (유도탄용)
+        function findNearestEnemy() {
+            const px = gameState.player.x + gameState.player.w / 2;
+            const py = gameState.player.y;
+            let nearest = null;
+            let minDist = Infinity;
+
+            // [추가된 로직] 보스가 존재하면 일단 가장 가까운 적으로 설정
+            if (gameState.boss) {
+                const bx = gameState.boss.x + gameState.boss.w / 2;
+                const by = gameState.boss.y + gameState.boss.h / 2;
+                // 플레이어와 보스 사이의 거리 계산
+                const dist = Math.sqrt(Math.pow(px - bx, 2) + Math.pow(py - by, 2));
+                minDist = dist;
+                nearest = gameState.boss;
+            }
+
+            // 기존 적들과 거리 비교 (보스보다 더 가까운 적이 있으면 타겟 변경)
+            for (const en of gameState.enemies) {
+            if (en.y < py && en.type !== 'BULLET' && en.type !== 'ENEMY_BULLET' && en.type !== 'SHOCKWAVE' && en.type !== 'METEOR') {
+                const ex = en.x + en.w / 2;
+                const ey = en.y + en.h / 2;
+                const dist = Math.sqrt(Math.pow(px - ex, 2) + Math.pow(py - ey, 2));
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearest = en;
+                }
+            }
+        }
+            return nearest;
+        }
+
         function update(dt) {
             if (!gameState.isRunning) return;
             const lvl = levels[gameState.currentStage - 1];
+
+            // 필살기 게이지 충전 (dt * 0.05, 약 20초에 완충)
+            if (gameState.ultGauge < 1 && !gameState.rainbowWave) {
+                gameState.ultGauge = Math.min(1, gameState.ultGauge + dt * 0.05);
+            }
+
+            // 상시 자동 공격 (0.4초마다)
+            gameState.autoFireTimer += dt;
+            if (gameState.autoFireTimer >= 0.4) {
+                const cx = gameState.player.x + gameState.player.w / 2;
+                const cy = gameState.player.y;
+
+                if (gameState.isHomingMode) {
+                    // 유도탄 모드: 가장 가까운 적 추적
+                    const target = findNearestEnemy();
+                    if (target) {
+                        const tx = target.x + target.w / 2;
+                        const ty = target.y + target.h / 2;
+                        const dx = tx - cx;
+                        const dy = ty - cy;
+                        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                        gameState.bullets.push({
+                            x: cx - 5, y: cy, w: 10, h: 15, speed: 550,
+                            isHoming: true, targetX: tx, targetY: ty,
+                            vx: (dx / dist) * 550, vy: (dy / dist) * 550
+                        });
+                    } else {
+                        // 적이 없으면 일반 직선 발사
+                        gameState.bullets.push({ x: cx - 5, y: cy, w: 10, h: 15, speed: 550 });
+                    }
+                } else {
+                    // 일반 직선 발사
+                    gameState.bullets.push({ x: cx - 5, y: cy, w: 10, h: 15, speed: 550 });
+                }
+                gameState.autoFireTimer = 0;
+            }
+
+            // 유도탄 모드 타이머
+            if (gameState.isHomingMode) {
+                gameState.homingTimer -= dt;
+                if (gameState.homingTimer <= 0) {
+                    gameState.isHomingMode = false;
+                }
+            }
+
+            // 무지개 파동 처리
+            if (gameState.rainbowWave) {
+                gameState.rainbowWave.y -= 500 * dt;  // 초당 500px 상승
+
+                // 파동보다 아래 있는 모든 적 제거
+                for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                    const en = gameState.enemies[i];
+                    if (en.y + en.h > gameState.rainbowWave.y) {
+                        gameState.score += getEnemyScore(en.type) * 2;  // 보너스 점수
+                        gameState.enemies.splice(i, 1);
+                    }
+                }
+
+                // 파동이 화면 위로 나가면 종료
+                if (gameState.rainbowWave.y < -50) {
+                    gameState.rainbowWave = null;
+                }
+            }
+
+            // 현재 점수 UI 업데이트
+            document.getElementById('current-score').textContent = Math.round(gameState.score);
 
             if (gameState.isInvincible) {
                 gameState.invincibilityTimer -= dt;
@@ -947,81 +1202,21 @@
 
             if (gameState.downgradeFlash > 0) gameState.downgradeFlash -= dt;
 
+            // 시간 보너스 표시 타이머
+            if (gameState.timeBonusDisplay && gameState.timeBonusDisplay.timer > 0) {
+                gameState.timeBonusDisplay.timer -= dt;
+                if (gameState.timeBonusDisplay.timer <= 0) {
+                    gameState.timeBonusDisplay = null;
+                }
+            }
+
             if (gameState.isLaserMode) {
                 gameState.laserTimer -= dt;
                 if (gameState.laserTimer <= 0) gameState.isLaserMode = false;
             }
 
-            // 스테이지 클리어 상태 처리
-            if (gameState.stageClearing) {
-                gameState.stageClearTimer -= dt;
-                // 타이머 종료 시 다음 스테이지로 (적은 자연 소멸되므로 강제로 진행)
-                if (gameState.stageClearTimer <= 0) {
-                    gameState.enemies = [];  // 남은 적 정리 후 진행
-                    advanceStage();
-                }
-                // stageClearing 중에도 적/아이템 처리는 아래에서 계속
-            }
-
-            // stageClearing이 아닐 때만 스테이지 타이머 및 진행 로직 실행
-            if (!gameState.stageClearing) {
-                if (lvl.isBoss) {
-                    if (gameState.bossPhase === 'MINION') {
-                        gameState.stageTimer -= dt;
-                        if (gameState.stageTimer <= 0) {
-                            gameState.bossPhase = 'SURVIVAL';
-                            gameState.survivalStartCount = Math.max(gameState.enemies.length, 1);
-                        }
-                    } else if (gameState.bossPhase === 'SURVIVAL') {
-                        // 적 전멸 대기
-                        if (!gameState.survivalMode && getActiveEnemyCount() === 0) {
-                            gameState.survivalMode = true;
-                            gameState.survivalTimer = 0.7;  // SURVIVE 0.7초
-                            gameState.enemies = [];  // 잔류 탄환 제거
-                        }
-                        // SURVIVE 타이머 → 보스 등장
-                        if (gameState.survivalMode) {
-                            gameState.survivalTimer -= dt;
-                            if (gameState.survivalTimer <= 0) {
-                                gameState.bossPhase = 'BOSS';
-                                gameState.survivalMode = false;
-                                // pendingBoss 우선 사용
-                                if (gameState.pendingBoss) {
-                                    gameState.boss = gameState.pendingBoss;
-                                    gameState.pendingBoss = null;
-                                } else {
-                                    spawnBoss(lvl.bossHP, lvl.bossType);
-                                }
-                            }
-                        }
-                    } else if (gameState.bossPhase === 'BOSS') {
-                        updateBoss(dt);
-                    }
-                } else {
-                    // 일반 스테이지 로직
-                    if (!gameState.stageTimerEnded) {
-                        gameState.stageTimer -= dt;
-                        if (gameState.stageTimer <= 0) {
-                            gameState.stageTimerEnded = true;  // 스폰 중단
-                        }
-                    }
-
-                    // 타이머 종료 + 적 전멸 → SURVIVE 시작
-                    if (gameState.stageTimerEnded && !gameState.survivalMode && getActiveEnemyCount() === 0) {
-                        gameState.survivalMode = true;
-                        gameState.survivalTimer = 0.7;  // SURVIVE 0.7초
-                        gameState.enemies = [];  // 잔류 탄환 제거
-                    }
-
-                    // SURVIVE 타이머 → 스테이지 클리어
-                    if (gameState.survivalMode) {
-                        gameState.survivalTimer -= dt;
-                        if (gameState.survivalTimer <= 0) {
-                            triggerStageClear();
-                        }
-                    }
-                }
-            }
+            // Phase 5: 스테이지 전이 로직 통합
+            handleStageTransition(dt);
 
             // 플레이어 이동 (키보드)
             if ((gameState.keys['ArrowLeft'] || gameState.keys['a']) && gameState.player.x > 0)
@@ -1047,11 +1242,14 @@
             if (gameState.skillTimer > 0) {
                 gameState.skillTimer -= dt;
                 document.getElementById('skill-display').textContent = `${gameState.skillMode}: ${gameState.skillTimer.toFixed(1)}s`;
-                if (gameState.skillMode === 'BLASTER' && Math.random() < 0.1)
-                    gameState.bullets.push({ x: cx - 5, y: cy, w: 10, h: 20, speed: 600 });
             } else {
                 gameState.skillMode = 'NORMAL';
-                document.getElementById('skill-display').textContent = gameState.isLaserMode ? `LASER: ${gameState.laserTimer.toFixed(1)}s` : (gameState.isLunarMode ? 'LUNAR MODE' : '');
+                // 유도탄 모드, 레이저 모드, 루나 모드 표시
+                let displayText = '';
+                if (gameState.isHomingMode) displayText = `HOMING: ${gameState.homingTimer.toFixed(1)}s`;
+                else if (gameState.isLaserMode) displayText = `LASER: ${gameState.laserTimer.toFixed(1)}s`;
+                else if (gameState.isLunarMode) displayText = 'LUNAR MODE';
+                document.getElementById('skill-display').textContent = displayText;
             }
 
             // 황금 기체 3갈래 공격
@@ -1061,12 +1259,12 @@
 
             updateDrones(dt);
 
-            // 레이저 모드 적 처리
+            // 레이저 모드 적 처리 (SHOCKWAVE, METEOR는 상쇄 불가)
             if (gameState.isLaserMode) {
                 const laserL = cx - 20, laserR = cx + 20;
                 for (let i = gameState.enemies.length - 1; i >= 0; i--) {
                     const en = gameState.enemies[i];
-                    if (en.type !== 'BULLET' && en.type !== 'METEOR' && en.x + en.w > laserL && en.x < laserR && en.y < cy) {
+                    if (en.type !== 'BULLET' && en.type !== 'METEOR' && en.type !== 'SHOCKWAVE' && en.x + en.w > laserL && en.x < laserR && en.y < cy) {
                         gameState.enemies.splice(i, 1);
                         gameState.score += 3;
                     }
@@ -1085,16 +1283,51 @@
                     en.time += dt * 3;
                     en.x += Math.sin(en.time) * 1.5;
                 } else if (en.type === 'SHOOTER') {
-                    // SHOOTER: 천천히 내려오며 플레이어를 향해 발사
-                    en.y += en.speed * dt * 0.7;
-                    en.shootTimer = (en.shootTimer || 0) + dt;
-                    if (en.shootTimer > 1.5 && en.y > 50 && en.y < canvas.height - 100) {
-                        gameState.enemies.push({
-                            x: en.x + en.w / 2 - 5, y: en.y + en.h,
-                            w: 10, h: 10, speed: 0, type: 'ENEMY_BULLET',
-                            vx: 0, vy: 280, amplitude: 0, turnRate: 0, time: 0
-                        });
-                        en.shootTimer = 0;
+                    // SHOOTER: 상단 진입 → 좌우 이동하며 연속 발사 → 하강 퇴장
+                    en.phase = en.phase || 'ENTER';      // ENTER → STRAFE → EXIT
+                    en.strafeDir = en.strafeDir || 1;    // 좌우 이동 방향
+                    en.shotsFired = en.shotsFired || 0;  // 발사한 총알 수
+                    en.setsFired = en.setsFired || 0;    // 발사한 세트 수
+                    en.shootTimer = en.shootTimer || 0;
+
+                    if (en.phase === 'ENTER') {
+                        // 상단(y=80)까지 진입
+                        en.y += en.speed * dt * 0.8;
+                        if (en.y >= 80) {
+                            en.phase = 'STRAFE';
+                            en.y = 80;
+                        }
+                    } else if (en.phase === 'STRAFE') {
+                        // 좌우 이동하며 0.1초 간격 5발 연속 발사 (난이도 하향)
+                        en.x += en.strafeDir * 200 * dt;
+                        if (en.x <= 20) en.strafeDir = 1;
+                        if (en.x >= canvas.width - en.w - 20) en.strafeDir = -1;
+
+                        en.shootTimer += dt;
+                        if (en.shootTimer >= 0.1 && en.shotsFired < 5) {
+                            gameState.enemies.push({
+                                x: en.x + en.w / 2 - 5, y: en.y + en.h,
+                                w: 10, h: 10, speed: 0, type: 'ENEMY_BULLET',
+                                vx: 0, vy: 350, amplitude: 0, turnRate: 0, time: 0
+                            });
+                            en.shotsFired++;
+                            en.shootTimer = 0;
+                        }
+
+                        // 5발 발사 후 세트 완료
+                        if (en.shotsFired >= 5) {
+                            en.setsFired++;
+                            en.shotsFired = 0;
+                            en.shootTimer = -0.5;  // 0.5초 쿨다운
+
+                            // 3세트 완료 시 퇴장
+                            if (en.setsFired >= 3) {
+                                en.phase = 'EXIT';
+                            }
+                        }
+                    } else if (en.phase === 'EXIT') {
+                        // 빠르게 하강하며 퇴장
+                        en.y += en.speed * dt * 2.5;
                     }
                 } else if (en.type === 'BOMBER') {
                     // BOMBER: 화면 중간에서 폭발하며 8방향 탄환
@@ -1175,12 +1408,13 @@
                             }
                         }
                     } else if (it.type === 'BLASTER') {
+                        // BLASTER → 유도탄 모드로 변경 (7초)
                         if (gameState.isTransformed) {
                             gameState.isLaserMode = true;
                             gameState.laserTimer = 3.0;
                         } else {
-                            gameState.skillMode = 'BLASTER';
-                            gameState.skillTimer = 5.0;
+                            gameState.isHomingMode = true;
+                            gameState.homingTimer = 7.0;
                         }
                     } else if (it.type === 'LUNAR_ITEM') {
                         gameState.isLunarMode = true;
@@ -1217,6 +1451,10 @@
                 if (b.isLunar) {
                     b.x += (b.vx || 0) * dt;
                     b.y += (b.vy || 0) * dt;
+                } else if (b.isHoming) {
+                    // 유도탄: 방향 벡터대로 이동
+                    b.x += (b.vx || 0) * dt;
+                    b.y += (b.vy || 0) * dt;
                 } else {
                     b.y -= b.speed * dt;
                 }
@@ -1224,7 +1462,10 @@
                     gameState.bullets.splice(bi, 1); continue;
                 }
                 for (let ei = gameState.enemies.length - 1; ei >= 0; ei--) {
-                    if (checkRectCollision(b, gameState.enemies[ei])) {
+                    const en = gameState.enemies[ei];
+                    // SHOCKWAVE, METEOR는 상쇄 불가
+                    if (en.type === 'SHOCKWAVE' || en.type === 'METEOR') continue;
+                    if (checkRectCollision(b, en)) {
                         gameState.enemies.splice(ei, 1); gameState.bullets.splice(bi, 1); gameState.score += 2; break;
                     }
                 }
@@ -1254,68 +1495,44 @@
         function drawProgressBar() {
             const lvl = levels[gameState.currentStage - 1];
             const barWidth = canvas.width * 0.8;
-            const barHeight = 4;
+            const barHeight = 8;  // 더 두껍게
             const barX = (canvas.width - barWidth) / 2;
-            const barY = canvas.height - 12;
+            const barY = canvas.height - 16;
 
-            const isBossPhase = lvl.isBoss && gameState.bossPhase === 'BOSS' && gameState.boss;
-            const bossType = isBossPhase ? gameState.boss.type : null;
-
+            // 배경
             ctx.fillStyle = 'rgba(255,255,255,0.1)';
             ctx.fillRect(barX, barY, barWidth, barHeight);
 
-            let barColor = lvl.theme;
-            if (isBossPhase) {
-                barColor = bossType === 'LUNAR' ? '#88f' : (gameState.boss.isSupernova ? '#f0f' : '#f80');
-            } else if (gameState.survivalMode) {
-                barColor = '#f55';
-            }
+            // 필살기 게이지 표시
+            const ultProgress = Math.min(gameState.ultGauge, 1);
 
-            let pulse = 1;
-            if (isBossPhase) {
-                pulse = 1 + Math.sin(Date.now() / 100) * 0.3;
-            }
-
-            ctx.shadowBlur = 10 * pulse;
-            ctx.shadowColor = barColor;
-            ctx.fillStyle = barColor;
-            const progressWidth = barWidth * Math.min(gameState.progressDisplay, 1);
-            ctx.fillRect(barX, barY, progressWidth, barHeight);
-
-            if (isBossPhase) {
-                const iconX = barX + progressWidth;
-                const iconY = barY + barHeight / 2;
-
-                ctx.shadowBlur = 15;
-                if (bossType === 'LUNAR') {
-                    ctx.shadowColor = '#88f';
-                    ctx.fillStyle = '#aaf';
-                    ctx.beginPath();
-                    ctx.arc(iconX, iconY, 8, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.fillStyle = '#111';
-                    ctx.beginPath();
-                    ctx.arc(iconX + 4, iconY - 2, 6, 0, Math.PI * 2);
-                    ctx.fill();
-                } else if (bossType === 'SUN') {
-                    const intensity = 1 - (gameState.boss.hp / gameState.boss.maxHp);
-                    ctx.shadowBlur = 15 + intensity * 20;
-                    ctx.shadowColor = gameState.boss.isSupernova ? '#f0f' : '#ff0';
-                    ctx.fillStyle = gameState.boss.isSupernova ? '#f8f' : '#ff0';
-                    ctx.beginPath();
-                    ctx.arc(iconX, iconY, 7, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = ctx.fillStyle;
-                    ctx.lineWidth = 2;
-                    for (let i = 0; i < 8; i++) {
-                        const a = (i * 45 + Date.now() / 30) * Math.PI / 180;
-                        ctx.beginPath();
-                        ctx.moveTo(iconX + Math.cos(a) * 9, iconY + Math.sin(a) * 9);
-                        ctx.lineTo(iconX + Math.cos(a) * 14, iconY + Math.sin(a) * 14);
-                        ctx.stroke();
-                    }
+            if (ultProgress >= 1) {
+                // 완충 시 무지개 그라데이션 + 깜빡임
+                const grad = ctx.createLinearGradient(barX, barY, barX + barWidth, barY);
+                const offset = (Date.now() / 20) % 360;
+                for (let i = 0; i <= 6; i++) {
+                    const hue = (offset + i * 60) % 360;
+                    grad.addColorStop(i / 6, `hsl(${hue}, 100%, 60%)`);
                 }
+                const pulse = 0.7 + Math.sin(Date.now() / 100) * 0.3;
+                ctx.shadowBlur = 20 * pulse;
+                ctx.shadowColor = '#fff';
+                ctx.fillStyle = grad;
+            } else {
+                // 충전 중: 보라색 게이지
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#a0f';
+                ctx.fillStyle = '#c4f';
             }
+
+            ctx.fillRect(barX, barY, barWidth * ultProgress, barHeight);
+
+            // ULT 텍스트 표시
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = ultProgress >= 1 ? '#fff' : '#aaa';
+            ctx.font = 'bold 10px Orbitron';
+            ctx.textAlign = 'center';
+            ctx.fillText(ultProgress >= 1 ? '🌈 PRESS SPACE 🌈' : `ULT: ${Math.floor(ultProgress * 100)}%`, canvas.width / 2, barY - 4);
 
             ctx.shadowBlur = 0;
         }
@@ -1578,11 +1795,13 @@
                 // return 제거 - 아래 렌더링 계속
             }
 
-            if (gameState.survivalMode || (lvl.isBoss && gameState.bossPhase === 'SURVIVAL')) {
+            // SURVIVE 문구 표시 (일반 스테이지만)
+            if (gameState.survivalMode && !lvl.isBoss) {
                 ctx.fillStyle = '#f55'; ctx.font = 'bold 28px Orbitron'; ctx.textAlign = 'center';
                 ctx.shadowBlur = 15; ctx.shadowColor = '#f55';
                 ctx.fillText('SURVIVE!', canvas.width / 2, 80); ctx.shadowBlur = 0;
             }
+
 
             drawLaser();
             drawDrones(); drawPlayer();
@@ -1611,6 +1830,20 @@
             if (gameState.boss) {
                 if (gameState.boss.type === 'LUNAR') drawLunarBoss(gameState.boss);
                 else if (gameState.boss.type === 'SUN') drawSunBoss(gameState.boss);
+
+                // DANGER 경고 표시 (LUNAR 보스)
+                if (gameState.dangerWarning > 0 && gameState.boss.type === 'LUNAR') {
+                    const blink = Math.floor(Date.now() / 100) % 2 === 0;
+                    if (blink) {
+                        ctx.fillStyle = '#f00';
+                        ctx.font = 'bold 16px Orbitron';
+                        ctx.textAlign = 'center';
+                        ctx.shadowBlur = 20;
+                        ctx.shadowColor = '#f00';
+                        ctx.fillText('⚠ DANGER ⚠', gameState.boss.x + gameState.boss.w / 2, gameState.boss.y - 35);
+                        ctx.shadowBlur = 0;
+                    }
+                }
             }
 
             gameState.enemies.forEach(en => {
@@ -1620,22 +1853,28 @@
                     ctx.fillStyle = ctx.shadowColor;
                     ctx.beginPath(); ctx.arc(en.x + en.w / 2, en.y + en.h / 2, en.w / 2, 0, Math.PI * 2); ctx.fill();
                 } else if (en.type === 'SHOCKWAVE') {
-                    // 월광 충격파 렌더링
-                    ctx.shadowBlur = 15;
+                    // 월광 충격파 렌더링 + 반짝임 효과 (상쇄 불가 표시)
+                    const shimmer = 1 + Math.sin(Date.now() / 50) * 0.3;
+                    ctx.shadowBlur = 15 * shimmer;
                     ctx.shadowColor = '#88f';
                     ctx.fillStyle = '#aaf';
                     ctx.beginPath();
-                    ctx.arc(en.x + en.w / 2, en.y + en.h / 2, en.w / 2 + 2, 0, Math.PI * 2);
+                    ctx.arc(en.x + en.w / 2, en.y + en.h / 2, (en.w / 2 + 2) * shimmer, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.fillStyle = '#111';
                     ctx.beginPath();
                     ctx.arc(en.x + en.w / 2 + 5, en.y + en.h / 2 - 3, en.w / 2 - 2, 0, Math.PI * 2);
                     ctx.fill();
+                    // 반짝임 표시
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '10px sans-serif';
+                    ctx.fillText('✨', en.x + en.w - 5, en.y + 5);
                 } else if (en.type === 'METEOR') {
-                    // 유성 렌더링 - 불타는 꼬리 효과
+                    // 유성 렌더링 - 불타는 꼬리 효과 + 반짝임 (상쇄 불가)
                     const mx = en.x + en.w / 2, my = en.y + en.h / 2;
+                    const shimmer = 1 + Math.sin(Date.now() / 50) * 0.2;
                     // 꼬리
-                    ctx.shadowBlur = 20;
+                    ctx.shadowBlur = 20 * shimmer;
                     ctx.shadowColor = '#f80';
                     const grad = ctx.createLinearGradient(mx, my - 15, mx, my + 25);
                     grad.addColorStop(0, 'rgba(255,100,50,0.8)');
@@ -1649,12 +1888,16 @@
                     // 본체
                     ctx.fillStyle = '#88f';
                     ctx.beginPath();
-                    ctx.arc(mx, my, 14, 0, Math.PI * 2);
+                    ctx.arc(mx, my, 14 * shimmer, 0, Math.PI * 2);
                     ctx.fill();
                     ctx.fillStyle = '#aaf';
                     ctx.beginPath();
                     ctx.arc(mx - 3, my - 3, 6, 0, Math.PI * 2);
                     ctx.fill();
+                    // 반짝임 표시
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '10px sans-serif';
+                    ctx.fillText('✨', mx + 10, my - 10);
                     ctx.shadowBlur = 0;
                 } else {
                     drawAlien(en, gameState.currentStage);
@@ -1677,11 +1920,60 @@
                     ctx.beginPath();
                     ctx.arc(b.x + 9, b.y + 4, 4, 0, Math.PI * 2);
                     ctx.fill();
+                } else if (b.isHoming) {
+                    // 유도탄 - 보라색 삼각형
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#a0f';
+                    ctx.fillStyle = '#c4f';
+                    ctx.beginPath();
+                    ctx.moveTo(b.x + b.w / 2, b.y);
+                    ctx.lineTo(b.x, b.y + b.h);
+                    ctx.lineTo(b.x + b.w, b.y + b.h);
+                    ctx.closePath();
+                    ctx.fill();
                 } else {
                     ctx.fillRect(b.x, b.y, b.w, b.h);
                 }
             });
             ctx.shadowBlur = 0;
+
+            // 무지개 파동 렌더링
+            if (gameState.rainbowWave) {
+                const waveY = gameState.rainbowWave.y;
+                const waveHeight = 30;
+
+                // 무지개 그라데이션
+                const grad = ctx.createLinearGradient(0, waveY - waveHeight / 2, 0, waveY + waveHeight / 2);
+                const offset = (Date.now() / 10) % 360;
+                for (let i = 0; i <= 6; i++) {
+                    const hue = (offset + i * 60) % 360;
+                    grad.addColorStop(i / 6, `hsla(${hue}, 100%, 60%, 0.9)`);
+                }
+
+                ctx.shadowBlur = 40;
+                ctx.shadowColor = '#fff';
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, waveY - waveHeight / 2, canvas.width, waveHeight);
+
+                // 중앙 밝은 라인
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.fillRect(0, waveY - 2, canvas.width, 4);
+                ctx.shadowBlur = 0;
+            }
+
+            // 시간 보너스 표시
+            if (gameState.timeBonusDisplay && gameState.timeBonusDisplay.timer > 0) {
+                const alpha = Math.min(1, gameState.timeBonusDisplay.timer);
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = '#ff0';
+                ctx.font = 'bold 24px Orbitron';
+                ctx.textAlign = 'center';
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#ff0';
+                ctx.fillText(`TIME BONUS: +${gameState.timeBonusDisplay.amount}`, canvas.width / 2, 130);
+                ctx.globalAlpha = 1;
+                ctx.shadowBlur = 0;
+            }
 
             drawProgressBar();
         }
@@ -1692,10 +1984,19 @@
             if (gameState.isInvincible && Math.floor(gameState.invincibilityTimer * 10) % 2 === 0) ctx.globalAlpha = 0.3;
             if (gameState.downgradeFlash > 0) ctx.globalAlpha = 0.5 + Math.sin(gameState.downgradeFlash * 20) * 0.5;
 
-            const baseColor = gameState.isTransformed ? '#FFD700' : '#C0C0C0';
-            ctx.shadowBlur = gameState.isTransformed ? 30 : 20;
-            ctx.shadowColor = gameState.isLaserMode ? '#ff0' : (gameState.skillMode === 'SHIELD' ? '#0f0' : (gameState.skillMode === 'BLASTER' ? '#f0f' : baseColor));
-            ctx.fillStyle = ctx.shadowColor; ctx.strokeStyle = ctx.shadowColor; ctx.lineWidth = 2;
+            // 필살기 게이지 100% 시 무지개 반짝임
+            let playerColor;
+            if (gameState.ultGauge >= 1 && !gameState.rainbowWave) {
+                const hue = (Date.now() / 5) % 360;  // 빠르게 무지개색 순환
+                playerColor = `hsl(${hue}, 100%, 60%)`;
+                ctx.shadowBlur = 40 + Math.sin(Date.now() / 100) * 10;
+            } else {
+                const baseColor = gameState.isTransformed ? '#FFD700' : '#C0C0C0';
+                ctx.shadowBlur = gameState.isTransformed ? 30 : 20;
+                playerColor = gameState.isLaserMode ? '#ff0' : (gameState.skillMode === 'SHIELD' ? '#0f0' : (gameState.isHomingMode ? '#c4f' : baseColor));
+            }
+            ctx.shadowColor = playerColor;
+            ctx.fillStyle = playerColor; ctx.strokeStyle = playerColor; ctx.lineWidth = 2;
 
             ctx.beginPath();
             if (gameState.isTransformed) {
