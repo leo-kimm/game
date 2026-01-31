@@ -56,6 +56,8 @@
             }
         }
 
+
+
         .overlay {
             position: absolute;
             top: 0;
@@ -460,6 +462,34 @@
                 transform: translateX(0);
             }
         }
+
+        /* [CDSO 추가] 설정 버튼 스타일 (PC에서는 숨김, 모바일에서는 노출) */
+        #setting-btn {
+            display: none; /* 기본값: PC에서는 안 보임 */
+            margin-top: 15px;
+            font-size: 0.9em;
+            background: transparent;
+            border: 2px solid #888;
+            color: #aaa;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-shadow: 0 0 5px #000;
+        }
+        #setting-btn:hover {
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+
+        /* 모바일 화면에서만 버튼 보이기 */
+        @media (max-width: 500px) {
+            #setting-btn {
+                display: block !important;
+            }
+        }
+
+
+
+
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 
@@ -506,6 +536,13 @@
             <ul id="my-rank-list" style="display:none;"></ul>
 
             <button onclick="startGame()">GAME START</button>
+
+            <button id="setting-btn" onclick="toggleControlMode()" style="margin-top:10px; font-size:0.8em; border-color:#888; color:#aaa;">
+
+                ⚙️ CONTROL: TRACKING
+            </button>
+
+
         </div>
 
         <div id="rank-input-screen" class="overlay" style="display:none;">
@@ -547,7 +584,7 @@
 
         let gameState = {
             isRunning: false, score: 0,
-            player: { x: 215, y: 630, w: 20, h: 20, speed: 450 },
+            player: { x: 215, y: 630, w: 20, h: 20, speed: 400 },
             enemies: [], items: [], bullets: [], keys: {},
             skillMode: 'NORMAL', skillTimer: 0,
             lives: 3, maxLives: 3, isInvincible: false, invincibilityTimer: 0,
@@ -580,25 +617,73 @@
             timeBonusDisplay: null // 시간 보너스 표시
         };
 
+
+        // [CDSO 전략] 컨트롤 모드 상태 관리 ('TRACKING' vs 'BUTTONS')
+        // localStorage를 사용하여 유저의 선택을 기억합니다.
+        let controlMode = localStorage.getItem('controlMode') || 'BUTTONS';
+
+        function toggleControlMode() {
+            // 모드 토글 (TRACKING <-> BUTTONS)
+            controlMode = controlMode === 'TRACKING' ? 'BUTTONS' : 'TRACKING';
+            localStorage.setItem('controlMode', controlMode); // 저장
+            updateSettingBtn(); // UI 업데이트
+        }
+
+        function updateSettingBtn() {
+            const btn = document.getElementById('setting-btn');
+            if (btn) {
+                if (controlMode === 'TRACKING') {
+                    btn.innerHTML = '⚙️ CONTROL: 👆 TRACKING'; // 추적 모드
+                    btn.style.color = '#0ff';
+                    btn.style.borderColor = '#0ff';
+                } else {
+                    btn.innerHTML = '⚙️ CONTROL: ⬅️➡️ BUTTONS'; // 버튼 모드
+                    btn.style.color = '#f0f';
+                    btn.style.borderColor = '#f0f';
+                }
+            }
+        }
+
+        // 페이지 로드 시 버튼 상태 초기화
+        window.addEventListener('load', updateSettingBtn);
+
+
+
+
         let firebaseReady = false;
         let lastSavedName = '';  // 신규 등록 유저 하이라이트용
 
-        function initFirebaseRanking() {
+
+        // [CDSO 전략 수정] 비용 최적화: 실시간 리스너(onSnapshot) 제거 -> 단발성 조회(getDocs)로 변경
+        async function initFirebaseRanking() {
             if (!window.firebaseDB) { setTimeout(initFirebaseRanking, 100); return; }
             firebaseReady = true;
-            const { collection, query, orderBy, limit, onSnapshot } = window.firebaseModules;
+            
+            const { collection, query, orderBy, limit, getDocs } = window.firebaseModules;
             const list = document.getElementById('leaderboard');
+            
             try {
-                const q = query(collection(window.firebaseDB, 'rankings'), orderBy('score', 'desc'), limit(5));
-                onSnapshot(q, (snapshot) => {
-                    list.innerHTML = '<h3>🌐 GLOBAL TOP 5</h3>';
-                    if (snapshot.empty) { list.innerHTML += '<li class="rank-1">No Records Yet</li>'; return; }
+                // 1. 쿼리 생성 (기존과 동일)
+                const q = query(
+                    collection(window.firebaseDB, 'rankings'), 
+                    orderBy('score', 'desc'), 
+                    limit(5)
+                );
+
+                // 2. [변경] getDocs를 사용하여 1회만 데이터 가져오기 (비용 절감 핵심)
+                const snapshot = await getDocs(q);
+
+                list.innerHTML = '<h3>🌐 GLOBAL TOP 5</h3>';
+                if (snapshot.empty) { 
+                    list.innerHTML += '<li class="rank-1">No Records Yet</li>'; 
+                } else {
                     snapshot.docs.forEach((doc, i) => {
                         const r = doc.data();
                         const rank = i + 1;
                         const isNewUser = lastSavedName && r.name === lastSavedName;
                         const rankClass = `rank-${rank}${isNewUser ? ' new-user' : ''}`;
                         const rankEmoji = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : rank));
+                        
                         list.innerHTML += `
                             <li class="${rankClass}">
                                 <span class="rank-badge">${rankEmoji}</span>
@@ -607,39 +692,92 @@
                                 <span class="player-stage">ST.${r.stage}</span>
                             </li>`;
                     });
-                });
-            } catch (e) { console.error(e); }
-
-                // [수정] Phase 1: 저장된 상세 기록(JSON) 불러오기
-                const savedData = localStorage.getItem('myBestRecord');
-                if (savedData) {
-                    try {
-                        const r = JSON.parse(savedData);
-                    // 이름, 점수, 스테이지 정보를 모두 넘김
-                    if (r.score > 0) updateMyRank(r.name, r.score, r.stage);
-                } catch (e) {
-                    console.error('Data parsing error', e);
                 }
+            } catch (e) { 
+                console.error("Ranking Load Error:", e); 
+            }
+
+            // 내 최고 기록 불러오기 로직 (기존 유지)
+            const savedData = localStorage.getItem('myBestRecord');
+            if (savedData) {
+                try {
+                    const r = JSON.parse(savedData);
+                    if (r.score > 0) updateMyRank(r.name, r.score, r.stage);
+                } catch (e) { console.error('Data parsing error', e); }
             }
         }
+
+
+        // [CDSO 추가] 사용자 환경 정보 수집 함수
+        function getSystemInfo() {
+            const ua = navigator.userAgent;
+            const isMobile = /Mobi|Android/i.test(ua) || window.innerWidth <= 500;
+            
+            return {
+                platform: isMobile ? 'MOBILE' : 'PC', // 모바일/PC 구분
+                browserInfo: ua,                      // 기기 및 브라우저 원본 정보
+                resolution: `${window.innerWidth}x${window.innerHeight}`, // 화면 해상도
+                controlType: localStorage.getItem('controlMode') || 'BUTTONS' // 사용한 컨트롤 방식
+            };
+        }
+
+
 
         async function saveToFirebase(name, score, stage) {
             if (!firebaseReady) return;
 
-            // [수정] 상세 정보를 JSON으로 저장 (새로고침 후에도 박스를 그리기 위함)
+            // 상세 정보를 로컬에 저장
             const myRecord = { name, score, stage };
             localStorage.setItem('myBestRecord', JSON.stringify(myRecord));
 
+            // [CDSO 전략] 기기 정보 및 게임 플레이 데이터 분석
+            const sysInfo = getSystemInfo();
+            
+            // 1. 플레이 시간 계산
+            const playTimeSec = Math.floor((Date.now() - gameState.startTime) / 1000);
+
+            // 2. 아이템 획득률 계산 (0% ~ 100%)
+            const collectionRate = gameState.totalItemsSpawned > 0 
+                ? Math.round((gameState.itemsCollected / gameState.totalItemsSpawned) * 100) 
+                : 0;
+
+            // 3. 탐욕 사망 판정 (죽었을 때 근처 100px 내에 아이템이 있었는가?)
+            let isGreedyDeath = false;
+            const px = gameState.player.x, py = gameState.player.y;
+            for (let item of gameState.items) {
+                const dist = Math.sqrt(Math.pow(item.x - px, 2) + Math.pow(item.y - py, 2));
+                if (dist < 100) { isGreedyDeath = true; break; }
+            }
+
             const { collection, addDoc, serverTimestamp } = window.firebaseModules;
             try {
-                await addDoc(collection(window.firebaseDB, 'rankings'), { name, score, stage, timestamp: serverTimestamp() });
-                lastSavedName = name;
+                // 확장된 데이터 페이로드 전송
+                await addDoc(collection(window.firebaseDB, 'rankings'), { 
+                    name, 
+                    score, 
+                    stage, 
+                    timestamp: serverTimestamp(),
+                    
+                    // [System Info]
+                    platform: sysInfo.platform,
+                    device: sysInfo.browserInfo,
+                    screen: sysInfo.resolution,
+                    control: sysInfo.controlType,
+
+                    // [Game Analytics]
+                    playTimeSec: playTimeSec,           // 플레이 시간 (초)
+                    deathReason: gameState.lastHitBy,   // 사망 원인 (예: ENEMY_BULLET)
+                    itemCollectionRate: collectionRate, // 아이템 획득률 (%)
+                    isGreedyDeath: isGreedyDeath        // 탐욕 사망 여부 (Boolean)
+                });
                 
-                // 순위 업데이트 호출 시 전체 정보 전달
+                lastSavedName = name;
                 await updateMyRank(name, score, stage);
             }
             catch (e) { console.error(e); }
         }
+
+
 
         async function updateMyRank(name, score, stage) {
             // 인자가 부족하면 실행 중단
@@ -777,37 +915,84 @@
 
         // 모바일 터치 이벤트 (제스처 차단 + 부드러운 추적)
         let isTouching = false;
-        canvas.addEventListener('touchstart', function (e) {
+        // [CDSO 전략 수정] 하이브리드 터치 컨트롤 시스템
+        canvas.addEventListener('touchstart', handleTouch, { passive: false });
+        canvas.addEventListener('touchmove', handleTouch, { passive: false });
+        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+        
+        // [CDSO 최종 수정] 터치 핸들러: 하단 10% 필살기 / 상단 90% 이동
+        function handleTouch(e) {
             e.preventDefault();
-            isTouching = true;
-            const pos = getTouchPos(e);
-            gameState.touchTarget = pos.x - gameState.player.w / 2;
+            
+            if (controlMode === 'TRACKING') {
+                // [모드 A] 추적 모드
+                const pos = getTouchPos(e);
+                gameState.touchTarget = pos.x - gameState.player.w / 2;
+                
+                // 추적 모드에서도 하단 10%를 누르면 필살기 발동 (통일성 유지)
+                if (pos.y > canvas.height * 0.90 && gameState.ultGauge >= 1 && !gameState.rainbowWave) {
+                    activateRainbowWave();
+                }
 
-            // 전투기 근처 터치 시 필살기 발동
-            const playerCenterX = gameState.player.x + gameState.player.w / 2;
-            const playerCenterY = gameState.player.y + gameState.player.h / 2;
-            const touchDist = Math.sqrt(Math.pow(pos.x - playerCenterX, 2) + Math.pow(pos.y - playerCenterY, 2));
-            if (touchDist < 80 && gameState.ultGauge >= 1 && !gameState.rainbowWave) {
-                activateRainbowWave();
+            } else {
+                // [모드 B] 버튼 모드
+                gameState.keys['ArrowLeft'] = false;
+                gameState.keys['ArrowRight'] = false;
+                gameState.touchTarget = null; 
+
+                const halfWidth = window.innerWidth / 2;
+                // 하단 15% 높이 계산 (0.1 ~ 0.15 추천)
+                const ultZoneY = window.innerHeight * 0.9; 
+
+                // 멀티터치 루프
+                for (let i = 0; i < e.touches.length; i++) {
+                    const t = e.touches[i];
+
+                    // 1. 필살기 영역 체크 (화면 하단 15%)
+                    // 게이지가 있는 아래쪽을 누르면 발동
+                    if (t.clientY > ultZoneY) {
+                        if (gameState.ultGauge >= 1 && !gameState.rainbowWave) {
+                            activateRainbowWave();
+                        }
+                        continue; // 필살기 누른 손가락은 이동에 영향 주지 않음
+                    }
+
+                    // 2. 이동 영역 체크 (화면 상단 85%)
+                    // 나머지 넓은 화면을 좌우 버튼으로 사용
+                    if (t.clientX < halfWidth) {
+                        gameState.keys['ArrowLeft'] = true;
+                    } else {
+                        gameState.keys['ArrowRight'] = true;
+                    }
+                }
             }
-        }, { passive: false });
+        }
 
-        canvas.addEventListener('touchmove', function (e) {
-            e.preventDefault();
-            if (!isTouching) return;
-            const pos = getTouchPos(e);
-            gameState.touchTarget = pos.x - gameState.player.w / 2;
-        }, { passive: false });
 
-        canvas.addEventListener('touchend', function (e) {
-            e.preventDefault();
-            isTouching = false;
-        }, { passive: false });
 
-        canvas.addEventListener('touchcancel', function (e) {
+
+
+        // 터치 종료 처리
+        function handleTouchEnd(e) {
             e.preventDefault();
-            isTouching = false;
-        }, { passive: false });
+            
+            if (controlMode === 'TRACKING') {
+                // 추적 모드는 손을 떼면 멈춤 (마지막 위치 유지)
+                // gameState.touchTarget = null; // 원하면 이 주석 해제하여 멈추게 가능
+            } else {
+                // 버튼 모드는 손을 떼면 키 입력 해제 (남은 터치 다시 계산)
+                if (e.touches.length === 0) {
+                    gameState.keys['ArrowLeft'] = false;
+                    gameState.keys['ArrowRight'] = false;
+                } else {
+                    handleTouch(e); // 아직 다른 손가락이 붙어있으면 재계산
+                }
+            }
+        }
+
+
+
+
 
         // 자동 일시정지 (전화/홈 화면 전환 시)
         document.addEventListener('visibilitychange', function () {
@@ -847,7 +1032,14 @@
                 // 새로운 기능들 초기화
                 ultGauge: 0, autoFireTimer: 0,
                 isHomingMode: false, homingTimer: 0,
-                rainbowWave: null, dangerWarning: 0, timeBonusDisplay: null
+                rainbowWave: null, dangerWarning: 0, timeBonusDisplay: null,
+                // [CDSO 추가] 데이터 분석용 변수 초기화
+                startTime: Date.now(),      // 게임 시작 시간
+                totalItemsSpawned: 0,       // 생성된 총 아이템 수
+                itemsCollected: 0,          // 획득한 아이템 수
+                lastHitBy: 'UNKNOWN',       // 마지막 피격 원인 (사망 원인)
+                deathCoords: { x: 0, y: 0 } // 사망 좌표
+
             });
             gameState.player.x = 215;
             updateLivesUI();
@@ -901,6 +1093,8 @@
                     const rand = Math.random();
                     let itemType = rand < 0.5 ? 'BLASTER' : (rand < 0.9 ? 'SHIELD' : 'LIFE');
                     gameState.items.push({ x: Math.random() * (canvas.width - 25), y: -35, w: 25, h: 25, speed: 150, type: itemType });
+
+                    gameState.totalItemsSpawned++; // [추가] 생성 카운트 증가
                     gameState.itemSpawnTimer = 0;
                 }
                 return;
@@ -932,17 +1126,10 @@
                 }
 
                 gameState.items.push({ x: Math.random() * (canvas.width - 25), y: -35, w: 25, h: 25, speed: 150, type });
+                gameState.totalItemsSpawned++; // [추가] 생성 카운트 증가
                 gameState.itemSpawnTimer = 0;
             }
         }
-
-
-
-
-
-
-
-
 
 
 
@@ -1142,7 +1329,10 @@
                 return;
             }
 
-            if (!gameState.isInvincible && gameState.skillMode !== 'SHIELD' && checkRectCollision(gameState.player, boss)) takeDamage();
+            if (!gameState.isInvincible && gameState.skillMode !== 'SHIELD' && checkRectCollision(gameState.player, boss)) {
+                gameState.lastHitBy = boss.type + '_BODY'; // [추가] 보스 몸통 충돌 기록
+                takeDamage();
+            }
         }
 
         function triggerStageClear() {
@@ -1336,7 +1526,7 @@
                             isHoming: true, 
                             target: target, // [중요] 타겟 객체 자체를 심음 (실시간 추적용)
                             vx: vx, vy: vy,
-                            turnRate: 5.0 // 회전 속도 (높을수록 더 잘 꺾음)
+                            turnRate: 8.0 // 회전 속도 (높을수록 더 잘 꺾음)
                         });
                     });
 
@@ -1400,16 +1590,18 @@
             // Phase 5: 스테이지 전이 로직 통합
             handleStageTransition(dt);
 
-            // 플레이어 이동 (키보드)
+            // 플레이어 이동 (키보드 및 버튼 모드)
             if ((gameState.keys['ArrowLeft'] || gameState.keys['a']) && gameState.player.x > 0)
                 gameState.player.x -= gameState.player.speed * dt;
             if ((gameState.keys['ArrowRight'] || gameState.keys['d']) && gameState.player.x < canvas.width - gameState.player.w)
                 gameState.player.x += gameState.player.speed * dt;
 
-            // 모바일 터치 부드러운 추적
-            if (gameState.touchTarget !== null) {
+            // [수정] 모바일 터치 부드러운 추적 (TRACKING 모드일 때만 실행)
+            if (controlMode === 'TRACKING' && gameState.touchTarget !== null) {
                 const target = Math.max(0, Math.min(canvas.width - gameState.player.w, gameState.touchTarget));
                 const diff = target - gameState.player.x;
+                
+                // 너무 가까우면 떨림 방지
                 if (Math.abs(diff) > 2) {
                     gameState.player.x += Math.sign(diff) * gameState.player.speed * dt;
                 } else {
@@ -1565,7 +1757,9 @@
                 if (!gameState.isInvincible && gameState.skillMode !== 'SHIELD' && checkRectCollision(gameState.player, en)) {
                     gameState.enemies.splice(i, 1);
                     if (gameState.isLunarMode) { gameState.isLunarMode = false; }
-                    else { takeDamage(); }
+                    else { 
+                        gameState.lastHitBy = en.type; // [추가] 사망 원인 기록 (예: 'ZIGZAG','ENEMY_BULLET')
+                        takeDamage(); }
                     continue;
                 }
                 // 가비지 컬렉션 강화 - 화면 밖 적 즉시 제거
@@ -1581,6 +1775,8 @@
                 const it = gameState.items[i];
                 it.y += it.speed * dt;
                 if (checkRectCollision(gameState.player, it)) {
+                    gameState.itemsCollected++; // [추가] 획득 카운트 증가
+
                     if (it.type === 'DRONE') {
                         if (!gameState.isTransformed) {
                             gameState.drones.push({ offsetX: (gameState.drones.length === 0 ? -1 : 1) * 35, shootTimer: 0 });
@@ -1628,7 +1824,7 @@
 
                 // 루나 가디언 공전 및 충돌 처리
             if (gameState.isLunarMode) {
-                gameState.lunarAngle += dt * 180;  // 회전 속도
+                gameState.lunarAngle += dt * 360;  // 회전 속도
                 const rad = gameState.lunarAngle * Math.PI / 180;
                 const guardianX = cx + Math.cos(rad) * 40 - 10;
                 const guardianY = cy - 15 + Math.sin(rad) * 40 - 10;
@@ -2294,6 +2490,10 @@
         function gameOver() {
             gameState.isRunning = false;
             showResultScreen('MISSION FAILED');
+
+            // [CDSO 추가] 게임 종료 시 랭킹판 최신화 (이때만 읽기 비용 발생)
+            initFirebaseRanking();
+
         }
 
         async function saveAndRestart() { // async 키워드 추가
@@ -2324,4 +2524,3 @@
 </body>
 
 </html>
-
