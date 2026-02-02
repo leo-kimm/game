@@ -25,6 +25,12 @@
 
         #game-container {
             position: relative;
+            width: 450px;           /* 너비 고정 */
+            height: 700px;          /* 높이 고정 */
+            overflow: hidden;       /* 삐져나가는 것 숨김 */
+            transform-origin: center center; /* 중앙 기준 확대/축소 */
+            
+            /* 터치 방지 옵션 유지 */
             touch-action: none !important;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
@@ -36,13 +42,21 @@
             border: 3px solid #0ff;
             display: block;
             box-shadow: 0 0 20px #0ff;
+
+            /* [CDSO 수정] 테두리 포함 크기 계산 및 컨테이너 맞춤 */
+            box-sizing: border-box; /* 테두리를 450px 안에 포함시킴 */
+            width: 100%;            /* 컨테이너 너비에 딱 맞춤 */
+            height: 100%;           /* 컨테이너 높이에 딱 맞춤 */
+
+
             touch-action: none !important;
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
         }
 
-        /* 모바일 반응형 */
+        /* 모바일 반응형 (JS로 제어하기 위해 주석 처리함) */
+        /*
         @media (max-width: 500px) {
             canvas {
                 width: 100vw !important;
@@ -55,6 +69,7 @@
                 width: 100vw;
             }
         }
+        */
 
 
 
@@ -114,7 +129,9 @@
         }
 
         /* [수정] 내 순위 리스트에도 동일한 스타일 적용 */
-        #leaderboard li, #my-rank-list li {
+        #leaderboard li,
+        #my-rank-list li,
+        #result-rank-list li {
             margin: 8px 0;
             padding: 10px 15px;
             background: rgba(255, 255, 255, 0.05);
@@ -124,8 +141,19 @@
             align-items: center;
             border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s ease;
-            list-style: none; /* 리스트 스타일 제거 */
+            list-style: none;
+            /* 리스트 스타일 제거 */
         }
+
+        /* 리스트 컨테이너 스타일도 동일하게 적용 */
+        #my-rank-list, #result-rank-list {
+            padding: 0;
+            margin: 15px 0; /* 간격 확보 */
+            width: 320px;
+        }
+
+
+
 
         /* [추가] 내 순위 전용 - 붉은색 테두리 및 스타일 */
         li.rank-me {
@@ -133,7 +161,8 @@
             border: 2px solid #ff0000 !important;
             box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
             font-weight: bold;
-            margin-top: 20px !important; /* 위쪽 TOP5와 간격 띄우기 */
+            margin-top: 20px !important;
+            /* 위쪽 TOP5와 간격 띄우기 */
             animation: pulseRed 2s infinite;
         }
 
@@ -145,11 +174,19 @@
         }
 
         @keyframes pulseRed {
-            0% { box-shadow: 0 0 15px rgba(255, 0, 0, 0.4); }
-            50% { box-shadow: 0 0 25px rgba(255, 0, 0, 0.7); }
-            100% { box-shadow: 0 0 15px rgba(255, 0, 0, 0.4); }
+            0% {
+                box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(255, 0, 0, 0.7);
+            }
+
+            100% {
+                box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
+            }
         }
-        
+
         /* [추가] 내 순위 리스트 컨테이너 스타일 */
         #my-rank-list {
             padding: 0;
@@ -465,7 +502,8 @@
 
         /* [CDSO 추가] 설정 버튼 스타일 (PC에서는 숨김, 모바일에서는 노출) */
         #setting-btn {
-            display: none; /* 기본값: PC에서는 안 보임 */
+            display: none;
+            /* 기본값: PC에서는 안 보임 */
             margin-top: 15px;
             font-size: 0.9em;
             background: transparent;
@@ -476,6 +514,7 @@
             transition: all 0.3s;
             text-shadow: 0 0 5px #000;
         }
+
         #setting-btn:hover {
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
         }
@@ -486,10 +525,6 @@
                 display: block !important;
             }
         }
-
-
-
-
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 
@@ -537,7 +572,8 @@
 
             <button onclick="startGame()">GAME START</button>
 
-            <button id="setting-btn" onclick="toggleControlMode()" style="margin-top:10px; font-size:0.8em; border-color:#888; color:#aaa;">
+            <button id="setting-btn" onclick="toggleControlMode()"
+                style="margin-top:10px; font-size:0.8em; border-color:#888; color:#aaa;">
 
                 ⚙️ CONTROL: TRACKING
             </button>
@@ -557,12 +593,24 @@
                         <span class="label">SCORE</span>
                         <span class="value" id="res-score">0</span>
                     </div>
-                </div>
+                    </div>
             </div>
+            
             <input type="text" id="initial-input" maxlength="3" placeholder="AAA">
-            <button onclick="saveAndRestart()">SAVE RECORD</button>
+            
+            <button id="btn-save" onclick="saveAndRestart()">SAVE RECORD</button>
+            
+            <ul id="result-rank-list" style="display:none;"></ul>
+
+            <div id="action-buttons" style="display:none; gap:15px; margin-top:5px;">
+                <button onclick="location.reload()" style="border-color:#0ff; color:#0ff; padding: 10px 20px;">
+                    🔄 RESTART
+                </button>
+                <button onclick="shareScore()" style="border-color:#f0f; color:#f0f; padding: 10px 20px;">
+                    📤 SHARE
+                </button>
+            </div>
         </div>
-    </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -658,24 +706,24 @@
         async function initFirebaseRanking() {
             if (!window.firebaseDB) { setTimeout(initFirebaseRanking, 100); return; }
             firebaseReady = true;
-            
+
             const { collection, query, orderBy, limit, getDocs } = window.firebaseModules;
             const list = document.getElementById('leaderboard');
-            
+
             try {
                 // 1. 쿼리 생성 (기존과 동일)
                 const q = query(
-                    collection(window.firebaseDB, 'rankings'), 
-                    orderBy('score', 'desc'), 
-                    limit(5)
+                    collection(window.firebaseDB, 'rankings'),
+                    orderBy('score', 'desc'),
+                    limit(10)
                 );
 
                 // 2. [변경] getDocs를 사용하여 1회만 데이터 가져오기 (비용 절감 핵심)
                 const snapshot = await getDocs(q);
 
                 list.innerHTML = '<h3>🌐 GLOBAL TOP 5</h3>';
-                if (snapshot.empty) { 
-                    list.innerHTML += '<li class="rank-1">No Records Yet</li>'; 
+                if (snapshot.empty) {
+                    list.innerHTML += '<li class="rank-1">No Records Yet</li>';
                 } else {
                     snapshot.docs.forEach((doc, i) => {
                         const r = doc.data();
@@ -683,9 +731,14 @@
                         const isNewUser = lastSavedName && r.name === lastSavedName;
                         const rankClass = `rank-${rank}${isNewUser ? ' new-user' : ''}`;
                         const rankEmoji = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : rank));
-                        
+
+                        // [CDSO 핵심 수정] 6등부터(index 5 이상)는 화면에서 숨깁니다.
+                        // 하지만 HTML에는 존재하므로 shareScore 함수가 읽을 수 있습니다.
+                        const hideStyle = i >= 5 ? 'style="display:none;"' : '';
+
+
                         list.innerHTML += `
-                            <li class="${rankClass}">
+                            <li class="${rankClass}" ${hideStyle}>
                                 <span class="rank-badge">${rankEmoji}</span>
                                 <span class="player-name">${r.name}</span>
                                 <span class="player-score">${r.score.toLocaleString()}</span>
@@ -693,8 +746,8 @@
                             </li>`;
                     });
                 }
-            } catch (e) { 
-                console.error("Ranking Load Error:", e); 
+            } catch (e) {
+                console.error("Ranking Load Error:", e);
             }
 
             // 내 최고 기록 불러오기 로직 (기존 유지)
@@ -712,7 +765,7 @@
         function getSystemInfo() {
             const ua = navigator.userAgent;
             const isMobile = /Mobi|Android/i.test(ua) || window.innerWidth <= 500;
-            
+
             return {
                 platform: isMobile ? 'MOBILE' : 'PC', // 모바일/PC 구분
                 browserInfo: ua,                      // 기기 및 브라우저 원본 정보
@@ -732,13 +785,13 @@
 
             // [CDSO 전략] 기기 정보 및 게임 플레이 데이터 분석
             const sysInfo = getSystemInfo();
-            
+
             // 1. 플레이 시간 계산
             const playTimeSec = Math.floor((Date.now() - gameState.startTime) / 1000);
 
             // 2. 아이템 획득률 계산 (0% ~ 100%)
-            const collectionRate = gameState.totalItemsSpawned > 0 
-                ? Math.round((gameState.itemsCollected / gameState.totalItemsSpawned) * 100) 
+            const collectionRate = gameState.totalItemsSpawned > 0
+                ? Math.round((gameState.itemsCollected / gameState.totalItemsSpawned) * 100)
                 : 0;
 
             // 3. 탐욕 사망 판정 (죽었을 때 근처 100px 내에 아이템이 있었는가?)
@@ -752,12 +805,12 @@
             const { collection, addDoc, serverTimestamp } = window.firebaseModules;
             try {
                 // 확장된 데이터 페이로드 전송
-                await addDoc(collection(window.firebaseDB, 'rankings'), { 
-                    name, 
-                    score, 
-                    stage, 
+                await addDoc(collection(window.firebaseDB, 'rankings'), {
+                    name,
+                    score,
+                    stage,
                     timestamp: serverTimestamp(),
-                    
+
                     // [System Info]
                     platform: sysInfo.platform,
                     device: sysInfo.browserInfo,
@@ -770,11 +823,14 @@
                     itemCollectionRate: collectionRate, // 아이템 획득률 (%)
                     isGreedyDeath: isGreedyDeath        // 탐욕 사망 여부 (Boolean)
                 });
-                
+
                 lastSavedName = name;
-                await updateMyRank(name, score, stage);
+                // [CDSO 핵심 수정] 순위를 받아서 다시 밖으로 던져줍니다
+                const rank = await updateMyRank(name, score, stage);
+                return rank;
+
             }
-            catch (e) { console.error(e); }
+            catch (e) { console.error(e); return null; }
         }
 
 
@@ -807,8 +863,13 @@
                 `;
                 rankList.style.display = 'block';
 
+                // [핵심] 값을 리턴합니다
+                return myRank;
+
+
             } catch (e) {
                 console.error('Failed to calculate rank:', e);
+                return null; // 에러 시 null 반환
             }
         }
 
@@ -849,6 +910,14 @@
         }
 
         function takeDamage() {
+
+            // [CDSO 수정] 무적이나 쉴드 상태면 진동 안 함
+            if (gameState.isInvincible || gameState.skillMode === 'SHIELD') return;
+
+            // [CDSO 핵심 추가] 피격 시 300ms(0.3초) 동안 강한 진동 발생!
+            triggerHaptic(300);
+
+
             if (gameState.isInvincible || gameState.skillMode === 'SHIELD') return;
 
             if (gameState.isTransformed) {
@@ -902,16 +971,59 @@
         window.addEventListener('keyup', e => gameState.keys[e.key] = false);
 
         // 모바일 터치 좌표 변환
+        // [CDSO 수정 Step 2] 기기 기반 엄격한 배율 고정 시스템
+        let gameScale = 1;
+
+        // 모바일 기기 감지 (정규식 활용)
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+
+        function resizeGame() {
+            const container = document.getElementById('game-container');
+            const winW = window.innerWidth;
+            const winH = window.innerHeight;
+            const baseW = 450;
+            const baseH = 700;
+            
+            // 1. 기기 타입 판별
+            const isMobile = isMobileDevice();
+
+            if (!isMobile) {
+                // [PC 전략] 창 크기와 상관없이 원본 크기(1.0) 절대 사수
+                // 창을 줄이면 게임 화면이 잘리(Clipping)더라도 크기는 유지됨
+                gameScale = 1.0; 
+            } else {
+                // [모바일 전략] 화면에 꽉 차게 줄이되, 최소 안전 배율(0.5) 설정
+                const ratio = Math.min(winW / baseW, winH / baseH);
+                gameScale = Math.max(ratio, 0.5); // 0.5배 미만으로 작아지지 않음 (가독성 보호)
+            }
+            
+            // 2. 컨테이너 중앙 정렬 및 스케일 적용
+            container.style.position = 'absolute';
+            container.style.left = '50%';
+            container.style.top = '50%';
+            container.style.transform = `translate(-50%, -50%) scale(${gameScale})`;
+        }
+
+        window.addEventListener('resize', resizeGame);
+        window.addEventListener('load', resizeGame);
+        
+        // (getTouchPos 함수는 수정할 필요 없이 그대로 두시면 됩니다.)
+
+        // 수정된 터치 좌표 변환 (스케일링 반영)
         function getTouchPos(e) {
             const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
             const touch = e.touches[0];
+            
+            // 역보정 공식
             return {
-                x: (touch.clientX - rect.left) * scaleX,
-                y: (touch.clientY - rect.top) * scaleY
+                x: (touch.clientX - rect.left) * (450 / rect.width),
+                y: (touch.clientY - rect.top) * (700 / rect.height)
             };
         }
+
+
 
         // 모바일 터치 이벤트 (제스처 차단 + 부드러운 추적)
         let isTouching = false;
@@ -919,16 +1031,16 @@
         canvas.addEventListener('touchstart', handleTouch, { passive: false });
         canvas.addEventListener('touchmove', handleTouch, { passive: false });
         canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
-        
+
         // [CDSO 최종 수정] 터치 핸들러: 하단 10% 필살기 / 상단 90% 이동
         function handleTouch(e) {
             e.preventDefault();
-            
+
             if (controlMode === 'TRACKING') {
                 // [모드 A] 추적 모드
                 const pos = getTouchPos(e);
                 gameState.touchTarget = pos.x - gameState.player.w / 2;
-                
+
                 // 추적 모드에서도 하단 10%를 누르면 필살기 발동 (통일성 유지)
                 if (pos.y > canvas.height * 0.90 && gameState.ultGauge >= 1 && !gameState.rainbowWave) {
                     activateRainbowWave();
@@ -938,11 +1050,11 @@
                 // [모드 B] 버튼 모드
                 gameState.keys['ArrowLeft'] = false;
                 gameState.keys['ArrowRight'] = false;
-                gameState.touchTarget = null; 
+                gameState.touchTarget = null;
 
                 const halfWidth = window.innerWidth / 2;
                 // 하단 15% 높이 계산 (0.1 ~ 0.15 추천)
-                const ultZoneY = window.innerHeight * 0.9; 
+                const ultZoneY = window.innerHeight * 0.9;
 
                 // 멀티터치 루프
                 for (let i = 0; i < e.touches.length; i++) {
@@ -969,13 +1081,28 @@
         }
 
 
+        // [CDSO 추가] 햅틱 피드백 시스템 (진동 효과)
+        function triggerHaptic(duration) {
+            // 1. 진동 API 지원 여부 확인
+            // 2. 모바일 기기인지 확인
+            // 3. 진동이 켜져 있는지 확인 (보통 브라우저 설정 따름)
+            if (navigator.vibrate && isMobileDevice()) {
+                try {
+                    navigator.vibrate(duration);
+                } catch (e) {
+                    console.log("Vibration blocked by system");
+                }
+            }
+        }
+
+
 
 
 
         // 터치 종료 처리
         function handleTouchEnd(e) {
             e.preventDefault();
-            
+
             if (controlMode === 'TRACKING') {
                 // 추적 모드는 손을 떼면 멈춤 (마지막 위치 유지)
                 // gameState.touchTarget = null; // 원하면 이 주석 해제하여 멈추게 가능
@@ -1005,11 +1132,11 @@
         });
 
         function startGame() {
-        // [추가] 새 게임 시작 시 이전 랭킹 표시용 데이터 정리
-        // [수정] 키값 변경 및 리스트 숨기기
+            // [추가] 새 게임 시작 시 이전 랭킹 표시용 데이터 정리
+            // [수정] 키값 변경 및 리스트 숨기기
             localStorage.removeItem('myBestRecord');
             const myRankList = document.getElementById('my-rank-list');
-            if(myRankList) myRankList.style.display = 'none';
+            if (myRankList) myRankList.style.display = 'none';
 
             document.getElementById('start-screen').style.display = 'none';
             resetState();
@@ -1062,9 +1189,9 @@
             // [CDSO 전략] 보스전 전용 로직
             if (lvl.isBoss && gameState.bossPhase === 'BOSS' && gameState.boss) {
                 gameState.spawnTimer += dt;
-                
+
                 // 보스 종류별 쫄몹 소환
-                let spawnInterval = 2.5; 
+                let spawnInterval = 2.5;
                 let eliteTypes = [];
 
                 if (gameState.boss.type === 'LUNAR') {
@@ -1078,7 +1205,7 @@
                 if (gameState.spawnTimer > spawnInterval) {
                     const type = eliteTypes[Math.floor(Math.random() * eliteTypes.length)];
                     gameState.enemies.push({
-                        x: Math.random() * (canvas.width - 30), y: -35, 
+                        x: Math.random() * (canvas.width - 30), y: -35,
                         w: 25, h: 25, speed: 200 + Math.random() * 50, type: type,
                         amplitude: 1, turnRate: 100, time: 0,
                         exploded: false, locked: false, fired: false, chargeTimer: 0,
@@ -1089,7 +1216,7 @@
 
                 // 보스전 아이템 (하트 희소성 유지: 10%)
                 gameState.itemSpawnTimer += dt;
-                if (gameState.itemSpawnTimer > 6) { 
+                if (gameState.itemSpawnTimer > 6) {
                     const rand = Math.random();
                     let itemType = rand < 0.5 ? 'BLASTER' : (rand < 0.9 ? 'SHIELD' : 'LIFE');
                     gameState.items.push({ x: Math.random() * (canvas.width - 25), y: -35, w: 25, h: 25, speed: 150, type: itemType });
@@ -1119,7 +1246,7 @@
             if (gameState.itemSpawnTimer > 8) {
                 const rand = Math.random();
                 let type = rand < 0.25 ? 'DRONE' : (rand < 0.5 ? 'SHIELD' : 'BLASTER');
-                
+
                 // 스테이지 6, 9에서 하트 등장 확률 30%
                 if (gameState.currentStage === 6 || gameState.currentStage === 9) {
                     if (Math.random() < 0.3) type = 'LIFE';
@@ -1211,7 +1338,7 @@
                 // [CDSO 전략 수정] 난이도 대폭 상향: Spinning Inferno 패턴
                 // 1. 발사 속도: 2페이즈(Supernova)에서는 0.7초마다 난사 (기존 1.5초)
                 const fireRate = boss.isSupernova ? 0.7 : 1.6;
-                
+
                 // 2. 탄막 밀도: 2페이즈에서는 24발 (기존 16발)
                 const bulletCount = boss.isSupernova ? 24 : 14;
 
@@ -1268,7 +1395,7 @@
                     gameState.bossResurrected = true;
                 } else {
                     // [CDSO 전략 수정] 보스 등급별 차등 보상 시스템 (Tiered Scoring)
-                    
+
                     let baseClearScore = 0;
                     let timeBonus = 0;
                     let perfectBonus = 0;
@@ -1280,8 +1407,8 @@
                         // [Stage 5] 중간 보스: 타이트한 시간 제한, 적당한 보상
                         baseClearScore = 300;
                         timeLimitS = 15; // 25초 컷 (Speed)
-                        timeLimitA = 25; 
-                        
+                        timeLimitA = 25;
+
                         if (gameState.bossTimer <= timeLimitS) timeBonus = 300;
                         else if (gameState.bossTimer <= timeLimitA) timeBonus = 200;
                         else timeBonus = 100;
@@ -1306,16 +1433,16 @@
                     // 3. 최종 합산
                     const totalBonus = baseClearScore + timeBonus + perfectBonus;
                     gameState.score += totalBonus;
-                    
+
                     // 4. 결과 표시 (UI Feedback)
                     // 등급 표시 (S, A, B)
                     let rankText = gameState.bossTimer <= timeLimitS ? "RANK S" : (gameState.bossTimer <= timeLimitA ? "RANK A" : "RANK B");
-                    
+
                     // 보너스 정보를 화면에 보여주기 위해 객체에 저장
-                    gameState.timeBonusDisplay = { 
-                        amount: totalBonus, 
+                    gameState.timeBonusDisplay = {
+                        amount: totalBonus,
                         text: `${rankText} BONUS`, // 화면에 S, A, B 등급도 같이 표시
-                        timer: 3.0 
+                        timer: 3.0
                     };
 
                     // 루나 보스 처치 시 루나 모드 활성화 (기존 로직 유지)
@@ -1409,7 +1536,7 @@
 
             // [CDSO 수정] 스테이지 전환 시 아이템 타이머 초기화 (중복 등장 방지)
             gameState.itemSpawnTimer = 0;
-            
+
             gameState.bossPhase = 'MINION';
             gameState.bossResurrected = false;
             gameState.progressDisplay = 0;
@@ -1462,16 +1589,16 @@
 
             // 기존 적들과 거리 비교 (보스보다 더 가까운 적이 있으면 타겟 변경)
             for (const en of gameState.enemies) {
-            if (en.y < py && en.type !== 'BULLET' && en.type !== 'ENEMY_BULLET' && en.type !== 'SHOCKWAVE' && en.type !== 'METEOR') {
-                const ex = en.x + en.w / 2;
-                const ey = en.y + en.h / 2;
-                const dist = Math.sqrt(Math.pow(px - ex, 2) + Math.pow(py - ey, 2));
-                if (dist < minDist) {
-                    minDist = dist;
-                    nearest = en;
+                if (en.y < py && en.type !== 'BULLET' && en.type !== 'ENEMY_BULLET' && en.type !== 'SHOCKWAVE' && en.type !== 'METEOR') {
+                    const ex = en.x + en.w / 2;
+                    const ey = en.y + en.h / 2;
+                    const dist = Math.sqrt(Math.pow(px - ex, 2) + Math.pow(py - ey, 2));
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearest = en;
+                    }
                 }
             }
-        }
             return nearest;
         }
 
@@ -1493,11 +1620,11 @@
                 if (gameState.isHomingMode) {
                     // [CDSO 전략 수정] 3갈래 멀티 유도탄 발사
                     const target = findNearestEnemy(); // 보스 우선 인식 기능 포함됨
-                    
+
                     // 좌(-0.25), 우(+0.25) 두 방향으로 발사 (약 15도 각도)
                     [-0.25, 0.25].forEach(angle => {
                         let vx = 0, vy = -550;
-                        
+
                         // 타겟이 있으면 타겟 방향으로 초기 벡터 설정
                         if (target) {
                             const tx = target.x + target.w / 2;
@@ -1505,7 +1632,7 @@
                             const dx = tx - cx;
                             const dy = ty - cy;
                             const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                            
+
                             // 기본 타겟 방향 벡터
                             let dirX = dx / dist;
                             let dirY = dy / dist;
@@ -1523,7 +1650,7 @@
 
                         gameState.bullets.push({
                             x: cx - 5, y: cy, w: 10, h: 15, speed: 550,
-                            isHoming: true, 
+                            isHoming: true,
                             target: target, // [중요] 타겟 객체 자체를 심음 (실시간 추적용)
                             vx: vx, vy: vy,
                             turnRate: 8.0 // 회전 속도 (높을수록 더 잘 꺾음)
@@ -1597,13 +1724,18 @@
                 gameState.player.x += gameState.player.speed * dt;
 
             // [수정] 모바일 터치 부드러운 추적 (TRACKING 모드일 때만 실행)
+            // [CDSO 수정] 모바일 터치 고속 추적 시스템
             if (controlMode === 'TRACKING' && gameState.touchTarget !== null) {
                 const target = Math.max(0, Math.min(canvas.width - gameState.player.w, gameState.touchTarget));
                 const diff = target - gameState.player.x;
-                
+
                 // 너무 가까우면 떨림 방지
                 if (Math.abs(diff) > 2) {
-                    gameState.player.x += Math.sign(diff) * gameState.player.speed * dt;
+                    // [핵심 변경] 추적 모드일 때만 속도를 3.0배(1200)로 증폭시킴
+                    // * 숫자가 클수록 손가락에 더 "착" 달라붙습니다. (추천: 2.5 ~ 4.0)
+                    const trackingSpeed = gameState.player.speed * 3.0; 
+                    
+                    gameState.player.x += Math.sign(diff) * trackingSpeed * dt;
                 } else {
                     gameState.player.x = target;
                 }
@@ -1757,9 +1889,10 @@
                 if (!gameState.isInvincible && gameState.skillMode !== 'SHIELD' && checkRectCollision(gameState.player, en)) {
                     gameState.enemies.splice(i, 1);
                     if (gameState.isLunarMode) { gameState.isLunarMode = false; }
-                    else { 
+                    else {
                         gameState.lastHitBy = en.type; // [추가] 사망 원인 기록 (예: 'ZIGZAG','ENEMY_BULLET')
-                        takeDamage(); }
+                        takeDamage();
+                    }
                     continue;
                 }
                 // 가비지 컬렉션 강화 - 화면 밖 적 즉시 제거
@@ -1788,17 +1921,17 @@
 
 
                     } else if (it.type === 'LIFE') {
-                    // [CDSO 추가] 하트 획득 시 생명력 회복
-                    if (gameState.lives < gameState.maxLives) {
-                        gameState.lives++;
-                        updateLivesUI(); // 하트 UI 즉시 갱신
-                        // 획득 메시지 (선택 사항)
-                        gameState.skillMode = 'HEALED';
-                        gameState.skillTimer = 2.0;
-                    } else {
-                        // 이미 풀피라면 보너스 점수
-                        gameState.score += 400;
-                    }
+                        // [CDSO 추가] 하트 획득 시 생명력 회복
+                        if (gameState.lives < gameState.maxLives) {
+                            gameState.lives++;
+                            updateLivesUI(); // 하트 UI 즉시 갱신
+                            // 획득 메시지 (선택 사항)
+                            gameState.skillMode = 'HEALED';
+                            gameState.skillTimer = 2.0;
+                        } else {
+                            // 이미 풀피라면 보너스 점수
+                            gameState.score += 400;
+                        }
 
 
 
@@ -1822,7 +1955,7 @@
                 if (it.y > canvas.height) gameState.items.splice(i, 1);
             }
 
-                // 루나 가디언 공전 및 충돌 처리
+            // 루나 가디언 공전 및 충돌 처리
             if (gameState.isLunarMode) {
                 gameState.lunarAngle += dt * 360;  // 회전 속도
                 const rad = gameState.lunarAngle * Math.PI / 180;
@@ -1836,10 +1969,10 @@
                         // [CDSO 수정] 적만 제거하고 루나 모드는 유지 (공격형 비트)
                         gameState.enemies.splice(i, 1);
                         gameState.score += 3;
-                        
+
                         // 시각적 타격감 추가 (선택 사항)
                         // createExplosion(guardianX, guardianY); 
-                        
+
                         break;
                     }
                 }
@@ -1847,13 +1980,13 @@
 
             for (let bi = gameState.bullets.length - 1; bi >= 0; bi--) {
                 const b = gameState.bullets[bi];
-                
+
                 if (b.isLunar) {
                     b.x += (b.vx || 0) * dt;
                     b.y += (b.vy || 0) * dt;
                 } else if (b.isHoming) {
                     // ★ 지능형 추적 로직 시작 ★
-                    
+
                     // 타겟이 살아있는지 확인
                     const targetAlive = b.target && (gameState.enemies.includes(b.target) || b.target === gameState.boss) && (b.target.hp === undefined || b.target.hp > 0);
 
@@ -1877,7 +2010,7 @@
                         const currentDirY = b.vy / currentSpeed;
 
                         // 4. 방향 꺾기 (turnRate만큼 부드럽게 회전)
-                        const turn = (b.turnRate || 5.0) * dt; 
+                        const turn = (b.turnRate || 5.0) * dt;
                         let newDirX = currentDirX + (targetDirX - currentDirX) * turn;
                         let newDirY = currentDirY + (targetDirY - currentDirY) * turn;
 
@@ -1890,7 +2023,7 @@
                     // 계산된 방향으로 이동
                     b.x += b.vx * dt;
                     b.y += b.vy * dt;
-                    
+
                 } else {
                     b.y -= b.speed * dt;
                 }
@@ -1982,7 +2115,7 @@
             if (it.type === 'LIFE') {
                 const cx = x + w / 2;
                 const cy = y + h / 2;
-                const pulse = 1 + Math.sin(Date.now() / 150) * 0.15; 
+                const pulse = 1 + Math.sin(Date.now() / 150) * 0.15;
 
                 ctx.save();
                 ctx.translate(cx, cy);
@@ -1992,10 +2125,10 @@
                 ctx.shadowBlur = 25; ctx.shadowColor = '#f00'; ctx.fillStyle = '#f00';
                 ctx.beginPath();
                 ctx.moveTo(0, -5);
-                ctx.bezierCurveTo(5, -12, 12, -5, 0, 8); 
-                ctx.bezierCurveTo(-12, -5, -5, -12, 0, -5); 
+                ctx.bezierCurveTo(5, -12, 12, -5, 0, 8);
+                ctx.bezierCurveTo(-12, -5, -5, -12, 0, -5);
                 ctx.fill();
-                
+
                 ctx.shadowBlur = 0; ctx.fillStyle = '#fff';
                 ctx.beginPath(); ctx.arc(-3, -3, 2, 0, Math.PI * 2); ctx.fill();
 
@@ -2496,20 +2629,209 @@
 
         }
 
-        async function saveAndRestart() { // async 키워드 추가
-            const btn = document.querySelector('#rank-input-screen button');
-            btn.textContent = "SAVING..."; // 저장 중임을 표시
-            btn.disabled = true; // 중복 클릭 방지
+        // [CDSO 최종 수정] 입력 강제 유효성 검사 + 공간 최적화 + 랭킹 통합
+        async function saveAndRestart() {
+            const btnSave = document.getElementById('btn-save');
+            const actionBtns = document.getElementById('action-buttons');
+            const input = document.getElementById('initial-input');
+            const resultList = document.getElementById('result-rank-list');
+            
+            const resultStats = document.querySelector('.result-stats');
+            const resultTitle = document.getElementById('res-title');
 
-            const name = document.getElementById('initial-input').value.toUpperCase() || 'AAA';
+            // [CDSO 추가 1] 입력값 유효성 검사 (Validation Gate)
+            // 공백을 제거한 실제 글자수를 확인합니다.
+            const rawName = input.value.trim(); 
+
+            if (rawName.length === 0) {
+                // 입력이 없으면 경고 효과 연출 (빨간색 점멸 + 흔들림)
+                input.style.borderColor = '#f00';
+                input.style.boxShadow = '0 0 15px #f00';
+                input.placeholder = 'NAME!'; // 플레이스홀더 변경
+                input.focus();
+
+                // 흔들림 애니메이션 (UX 강화)
+                input.animate([
+                    { transform: 'translateX(0)' },
+                    { transform: 'translateX(-5px)' },
+                    { transform: 'translateX(5px)' },
+                    { transform: 'translateX(0)' }
+                ], { duration: 300 });
+
+                return; // ★ 여기서 함수를 강제 종료시켜 저장을 막습니다.
+            }
+
+            // 1. 저장 중 상태 표시
+            btnSave.textContent = "UPDATING RANK...";
+            btnSave.disabled = true;
+            input.disabled = true;
+
+            // 유효성 검사를 통과했으므로 이름 확정
+            const name = rawName.toUpperCase();
             const finalScore = Math.round(gameState.score);
 
-            // 저장이 완료될 때까지 기다림 (await)
-            await saveToFirebase(name, finalScore, gameState.currentStage);
+            // 2. 파이어베이스 저장 및 내 순위 반환
+            const myRank = await saveToFirebase(name, finalScore, gameState.currentStage);
+            
+            // 전체 랭킹(Top 5) 데이터 갱신
+            await initFirebaseRanking();
+            
+            gameState.finalRank = myRank;
 
-            // 저장이 확실히 끝난 후 새로고침
-            location.reload();
+            // 3. UI 공간 최적화 (Space Optimization)
+            btnSave.style.display = 'none';    
+            input.style.display = 'none';      
+            resultStats.style.display = 'none'; 
+            
+            resultTitle.style.marginBottom = '10px';
+            resultTitle.style.fontSize = '1.5em'; 
+
+            if (myRank) {
+                // A. 최신 Top 5 리스트 복사
+                const top5Content = document.getElementById('leaderboard').innerHTML;
+
+                // B. 내 순위 박스 생성
+                const myRankHTML = `
+                    <li class="rank-me" style="animation: pulseRed 2s infinite; margin-top: 15px; border-color: #f00;">
+                        <span class="rank-badge" style="background: linear-gradient(135deg, #ff0000, #990000); color: #fff;">${myRank}</span>
+                        <span class="player-name">${name}</span>
+                        <span class="player-score">${finalScore.toLocaleString()}</span>
+                        <span class="player-stage">ST.${gameState.currentStage}</span>
+                    </li>
+                `;
+
+                // C. 통합 리스트 출력
+                resultList.innerHTML = top5Content + myRankHTML;
+                resultList.style.display = 'block';
+            }
+
+            // 4. 버튼 그룹 보이기
+            actionBtns.style.display = 'flex';
         }
+
+
+        // [CDSO 최종 수정] TOP 5 이미지 통합 + PC 공유 충돌 방지 시스템
+        async function shareScore() {
+            // 1. 데이터 준비
+            const myRank = gameState.finalRank || '?';
+            const myScore = Math.round(gameState.score);
+            const myName = document.getElementById('initial-input').value.toUpperCase() || 'PLAYER';
+            const gameUrl = window.location.href; 
+
+            // 2. 바이럴 텍스트 (복사 및 공유용)
+            const shareTitle = 'Neon Dodge Record';
+            const shareText = `[NEON DODGE]\n👑 RANK: ${myRank}\n👾 PLAYER: ${myName}\n🚀 SCORE: ${myScore.toLocaleString()}\n\n나보다 못하쥬?\n🔗 Play: ${gameUrl}`;
+
+            // 3. 캔버스 그리기 (이미지 합성)
+            ctx.save();
+            
+            // 배경 & 테두리
+            ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#0ff'; ctx.lineWidth = 10; ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+            // A. 타이틀 (상단)
+            ctx.shadowColor = '#0ff'; ctx.shadowBlur = 20;
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 36px Orbitron'; ctx.textAlign = 'center';
+            ctx.fillText('NEON DODGE', canvas.width/2, 60);
+
+            // B. 내 순위 & 점수 (중단 강조)
+            ctx.shadowColor = '#f00'; ctx.shadowBlur = 30;
+            ctx.fillStyle = '#f00'; ctx.font = 'bold 50px Orbitron';
+            ctx.fillText(`RANK ${myRank}`, canvas.width/2, 130);
+
+            ctx.shadowColor = '#fff'; ctx.shadowBlur = 10;
+            ctx.fillStyle = '#fff'; ctx.font = '20px Orbitron';
+            ctx.fillText(`PLAYER: ${myName}`, canvas.width/2, 170);
+            
+            ctx.shadowColor = '#f0f'; ctx.fillStyle = '#f0f'; ctx.font = 'bold 36px Orbitron';
+            ctx.fillText(myScore.toLocaleString(), canvas.width/2, 215);
+
+            // 구분선
+            ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(40, 240); ctx.lineTo(410, 240); ctx.stroke();
+
+            // C. TOP 10 리스트 그리기 (하단 표)
+            ctx.shadowColor = '#ff0'; ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ff0'; ctx.font = 'bold 18px Orbitron';
+            
+            ctx.fillText('- LEGENDARY TOP 10 -', canvas.width/2, 255); // Y좌표 255로 올림
+            const listItems = document.querySelectorAll('#leaderboard li');
+            
+            // [수정] 시작 위치를 300으로 대폭 올림
+            let startY = 300;
+            // [추가] 촘촘한 줄 간격 변수 생성
+            const lineHeight = 38;
+            ctx.font = '14px Orbitron';
+            
+            listItems.forEach((li, index) => {
+                if (index >= 10) return; // 10등까지만
+
+                // [CDSO 수정] 숨겨진 요소(display:none)의 값을 읽기 위해 textContent 사용
+                const pName = li.querySelector('.player-name')?.textContent || '???';
+                const pScore = li.querySelector('.player-score')?.textContent || '0';
+
+                const rank = index + 1;
+
+                // 1,2,3등 색상 구분
+                let color = '#aaa';
+                if (rank === 1) color = '#ffd700';
+                else if (rank === 2) color = '#c0c0c0';
+                else if (rank === 3) color = '#cd7f32';
+                else if (rank <= 10) color = '#ddd'; // [추가] 4~10등은 밝은 회색
+
+                // 좌측 정렬(이름) & 우측 정렬(점수)
+                ctx.textAlign = 'left'; ctx.fillStyle = color;
+                ctx.fillText(`${rank}. ${pName}`, 50, startY);
+                
+                ctx.textAlign = 'right'; ctx.fillStyle = '#fff';
+                ctx.fillText(pScore, 400, startY);
+
+                startY += lineHeight; // [수정] 45 -> 38 (lineHeight 변수 사용)
+            });
+
+            // 날짜 도장
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#444'; ctx.font = '10px Orbitron';
+            ctx.fillText(new Date().toLocaleString(), canvas.width/2, canvas.height - 20);
+            ctx.restore();
+
+
+            // 4. 공유 로직 (PC 충돌 방지)
+            try {
+                // 모바일 기기인지 확인 (이미 선언된 isMobileDevice 함수 활용)
+                // 만약 isMobileDevice 함수가 없다면 아래 정규식 사용: /Android|iPhone|iPad/i.test(navigator.userAgent)
+                const isMobile = isMobileDevice(); 
+
+                if (isMobile && navigator.share) {
+                    // [모바일] 이미지 공유 시도
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                    const file = new File([blob], "neon_dodge_ranking.png", { type: "image/png" });
+                    
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                            title: shareTitle,
+                            text: shareText,
+                            files: [file]
+                        });
+                        return; // 성공 시 종료
+                    }
+                }
+                
+                // [PC / 모바일 공유 실패 시] 클립보드 복사로 강제 전환
+                throw new Error("FALLBACK_TO_CLIPBOARD");
+
+            } catch (err) {
+                // 5. 클립보드 복사 (Fallback)
+                try {
+                    await navigator.clipboard.writeText(shareText);
+                    alert("📋 랭킹과 점수가 복사되었습니다!\n(Ctrl+V로 공유하세요)");
+                } catch (clipboardErr) {
+                    prompt("아래 텍스트를 복사하세요:", shareText);
+                }
+            }
+        }
+
+
 
         let lastTime = performance.now();
         function gameLoop(now) {
