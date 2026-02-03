@@ -627,8 +627,23 @@
             { stage: 7, duration: 16, theme: '#f64', speedMult: 1.6, spawnRate: 0.27, types: ['ZIGZAG', 'HOMING'], isBoss: false },
             { stage: 8, duration: 17, theme: '#f44', speedMult: 1.7, spawnRate: 0.25, types: ['NORMAL', 'ZIGZAG', 'HOMING', 'SHOOTER'], isBoss: false },
             { stage: 9, duration: 18, theme: '#f22', speedMult: 1.9, spawnRate: 0.22, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER'], isBoss: false },
-            { stage: 10, duration: 19, theme: '#f80', speedMult: 2.0, spawnRate: 0.19, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER', 'LASER_ENEMY'], isBoss: true, bossHP: 140, bossType: 'SUN' }
+            { stage: 10, duration: 19, theme: '#f80', speedMult: 2.0, spawnRate: 0.19, types: ['ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER', 'LASER_ENEMY'], isBoss: true, bossHP: 200, bossType: 'SUN' }
         ];
+
+        // ▼▼▼ [CDSO 긴급 패치] 이 코드를 여기에 붙여넣으세요! ▼▼▼
+        if (typeof levels !== 'undefined') {
+            levels.push({
+                stage: 11,
+                duration: 99999,      // 시간 무제한
+                theme: '#050505',     // 심연의 검은색 배경
+                speedMult: 2.0,       // 속도 배율
+                spawnRate: 0.1,       // 스폰율
+                types: [],            // 적 타입 (spawnEntities 함수가 처리함)
+                isBoss: false         // 보스 아님
+                });
+            console.log("✅ Stage 11 Dummy Data Injected");
+        }
+
 
         let gameState = {
             isRunning: false, score: 0,
@@ -704,7 +719,13 @@
 
         // [CDSO 전략 수정] 비용 최적화: 실시간 리스너(onSnapshot) 제거 -> 단발성 조회(getDocs)로 변경
         async function initFirebaseRanking() {
-            if (!window.firebaseDB) { setTimeout(initFirebaseRanking, 100); return; }
+            // DB 연결 객체와 함수 모듈이 모두 준비될 때까지 대기
+            if (!window.firebaseDB || !window.firebaseModules) { 
+                console.log("Waiting for Firebase Modules...");
+                setTimeout(initFirebaseRanking, 100); 
+                return;
+            }
+
             firebaseReady = true;
 
             const { collection, query, orderBy, limit, getDocs } = window.firebaseModules;
@@ -722,6 +743,20 @@
                 const snapshot = await getDocs(q);
 
                 list.innerHTML = '<h3>🌐 GLOBAL TOP 5</h3>';
+
+                // [CDSO 핵심 추가] 3등 점수 추출 (없으면 0점)
+                // 배열 인덱스 2가 3등입니다 (0=1등, 1=2등, 2=3등)
+                if (snapshot.docs.length >= 3) {
+                    // 데이터베이스에서 3등의 점수를 가져와 전역 변수에 저장
+                    gameState.rank3Score = snapshot.docs[2].data().score;
+                    console.log("🎯 Target Score (Top 3 Cutline):", gameState.rank3Score);
+                } else {
+                    // 랭킹에 사람이 3명도 없으면? 무조건 1등 진입 가능하므로 커트라인 0
+                    gameState.rank3Score = 0;
+                }
+
+
+
                 if (snapshot.empty) {
                     list.innerHTML += '<li class="rank-1">No Records Yet</li>';
                 } else {
@@ -748,6 +783,11 @@
                 }
             } catch (e) {
                 console.error("Ranking Load Error:", e);
+                // 에러가 나도 로딩 텍스트를 없애고 기본 상태로 전환
+                list.innerHTML = '<h3>🌐 GLOBAL TOP 5</h3><li class="rank-1">Network/Data Error</li>';
+                // 에러 시 안전하게 커트라인을 0으로 설정
+                gameState.rank3Score = 0;
+
             }
 
             // 내 최고 기록 불러오기 로직 (기존 유지)
@@ -761,16 +801,74 @@
         }
 
 
-        // [CDSO 추가] 사용자 환경 정보 수집 함수
+        // [CDSO Finalized] 통합 시스템 정보 수집기 (All-in-One)
         function getSystemInfo() {
             const ua = navigator.userAgent;
-            const isMobile = /Mobi|Android/i.test(ua) || window.innerWidth <= 500;
+            let os = 'UNKNOWN';
+            let osVer = '';
+            let browser = 'UNKNOWN';
+            let model = 'PC/Generic';
+            let engine = 'Unknown Engine';
 
+            // 1. OS & Version 정밀 분석
+            if (/Windows/i.test(ua)) {
+                os = 'Windows';
+                const match = ua.match(/Windows NT ([\d.]+)/);
+                if (match) osVer = match[1];
+            } else if (/Android/i.test(ua)) {
+                os = 'Android';
+                const match = ua.match(/Android\s([0-9.]+)/);
+                if (match) osVer = match[1];
+                
+                // 안드로이드 모델명 추출
+                const modelMatch = ua.match(/;\s([^;]+)\sBuild/);
+                if (modelMatch) model = modelMatch[1].trim();
+            } else if (/iPhone|iPad|iPod/i.test(ua)) {
+                os = 'iOS';
+                const match = ua.match(/OS\s([\d_]+)/);
+                if (match) osVer = match[1].replace(/_/g, '.');
+                model = 'iPhone/iPad';
+            } else if (/Mac/i.test(ua)) {
+                os = 'Mac';
+            }
+
+            // 2. Browser 정밀 분석
+            if (/KAKAOTALK/i.test(ua)) browser = 'KakaoTalk InApp';
+            else if (/NAVER/i.test(ua)) browser = 'Naver InApp';
+            else if (/Instagram/i.test(ua)) browser = 'Instagram InApp';
+            else if (/Chrome/i.test(ua)) browser = 'Chrome';
+            else if (/Safari/i.test(ua)) browser = 'Safari';
+            else if (/Firefox/i.test(ua)) browser = 'Firefox';
+
+            // 3. 엔진 버전 추출
+            const engineMatch = ua.match(/(AppleWebKit\/[\d.]+)/);
+            if (engineMatch) {
+                engine = engineMatch[1]; 
+            } else if (/Gecko\//.test(ua)) {
+                engine = 'Gecko (Mozilla)';
+            }
+
+            // 4. 화면 및 플랫폼 정보 (구버전 기능 통합)
+            const isMobile = /Mobi|Android/i.test(ua) || window.innerWidth <= 500;
+            const resolution = `${window.innerWidth}x${window.innerHeight}`;
+            const controlType = localStorage.getItem('controlMode') || 'BUTTONS';
+
+            // 5. 통합 객체 반환
             return {
-                platform: isMobile ? 'MOBILE' : 'PC', // 모바일/PC 구분
-                browserInfo: ua,                      // 기기 및 브라우저 원본 정보
-                resolution: `${window.innerWidth}x${window.innerHeight}`, // 화면 해상도
-                controlType: localStorage.getItem('controlMode') || 'BUTTONS' // 사용한 컨트롤 방식
+                // [Parsed Data]
+                os,
+                osVer,
+                browser,
+                model,
+                engine,
+                
+                // [Environment Data]
+                platform: isMobile ? 'MOBILE' : 'PC',
+                resolution: resolution,
+                control: controlType,
+                
+                // [Raw Data]
+                raw_ua: ua
             };
         }
 
@@ -779,22 +877,22 @@
         async function saveToFirebase(name, score, stage) {
             if (!firebaseReady) return;
 
-            // 상세 정보를 로컬에 저장
+            // 로컬 저장
             const myRecord = { name, score, stage };
             localStorage.setItem('myBestRecord', JSON.stringify(myRecord));
 
-            // [CDSO 전략] 기기 정보 및 게임 플레이 데이터 분석
-            const sysInfo = getSystemInfo();
+            // [CDSO] 통합된 시스템 정보 호출 (변수명 'sys'로 통일)
+            const sys = getSystemInfo(); 
 
-            // 1. 플레이 시간 계산
+            // 플레이 시간 계산
             const playTimeSec = Math.floor((Date.now() - gameState.startTime) / 1000);
 
-            // 2. 아이템 획득률 계산 (0% ~ 100%)
+            // 아이템 획득률 계산
             const collectionRate = gameState.totalItemsSpawned > 0
                 ? Math.round((gameState.itemsCollected / gameState.totalItemsSpawned) * 100)
                 : 0;
 
-            // 3. 탐욕 사망 판정 (죽었을 때 근처 100px 내에 아이템이 있었는가?)
+            // 탐욕 사망 판정
             let isGreedyDeath = false;
             const px = gameState.player.x, py = gameState.player.y;
             for (let item of gameState.items) {
@@ -804,28 +902,37 @@
 
             const { collection, addDoc, serverTimestamp } = window.firebaseModules;
             try {
-                // 확장된 데이터 페이로드 전송
+                // [Clean Data Structure]
                 await addDoc(collection(window.firebaseDB, 'rankings'), {
+                    // [Basic Info]
                     name,
                     score,
                     stage,
                     timestamp: serverTimestamp(),
 
-                    // [System Info]
-                    platform: sysInfo.platform,
-                    device: sysInfo.browserInfo,
-                    screen: sysInfo.resolution,
-                    control: sysInfo.controlType,
+                    // [Detailed System Info] - sys 객체에서 모두 해결
+                    os: sys.os,                 // OS 종류 (Android, Windows...)
+                    osVer: sys.osVer,           // OS 버전 (15, 10...)
+                    browser: sys.browser,       // 브라우저 (Chrome, KakaoTalk...)
+                    model: sys.model,           // 기기 모델명 (SM-G991N...)
+                    engine: sys.engine,         // 엔진 정보 (AppleWebKit/537.36...)
+                    
+                    // [Environment Info]
+                    platform: sys.platform,     // MOBILE vs PC
+                    screen: sys.resolution,     // 화면 해상도 (450x700...)
+                    control: sys.control,       // 조작 방식 (TRACKING...)
+                    
+                    // [Raw Data Archiving] - 원본 보존
+                    ua_full: sys.raw_ua,        // User-Agent 원본 문자열
 
                     // [Game Analytics]
-                    playTimeSec: playTimeSec,           // 플레이 시간 (초)
-                    deathReason: gameState.lastHitBy,   // 사망 원인 (예: ENEMY_BULLET)
-                    itemCollectionRate: collectionRate, // 아이템 획득률 (%)
-                    isGreedyDeath: isGreedyDeath        // 탐욕 사망 여부 (Boolean)
+                    playTimeSec: playTimeSec,           
+                    deathReason: gameState.lastHitBy,   
+                    itemCollectionRate: collectionRate, 
+                    isGreedyDeath: isGreedyDeath        
                 });
 
                 lastSavedName = name;
-                // [CDSO 핵심 수정] 순위를 받아서 다시 밖으로 던져줍니다
                 const rank = await updateMyRank(name, score, stage);
                 return rank;
 
@@ -894,9 +1001,13 @@
                 'SHOOTER': 1.8,
                 'BOMBER': 2.0,
                 'LASER_ENEMY': 2.2,
-                'MINION': 0.5
+                'MINION': 0.5,
+                // [Patch A] 무의미한 객체 점수 0 처리 (Data Sanitization)
+                'BULLET': 0,
+                'ENEMY_BULLET': 0,
+                'OBSTACLE': 0 // 추후 장애물 추가 대비
             };
-            return scoreTable[type] || 1.0;
+            return (scoreTable[type] !== undefined) ? scoreTable[type] : 1.0;
         }
 
         // Phase 6: Safety Margin 충돌 판정 (2px 여유)
@@ -960,6 +1071,9 @@
         }
 
         function updateLivesUI() {
+            // 빈 하트 개수가 음수가 되지 않도록 0과 비교하여 큰 값을 취함
+            const emptyHearts = Math.max(0, gameState.maxLives - gameState.lives);
+
             document.getElementById('lives').textContent = `LIVES: ${'♥'.repeat(gameState.lives)}${'♡'.repeat(gameState.maxLives - gameState.lives)}`;
         }
 
@@ -1165,6 +1279,9 @@
                 try { bestScore = JSON.parse(savedRecord).score; } 
                 catch (e) { bestScore = 0; }
             }
+
+            // [CDSO 추가] 관리자 모드 플래그 (기본값 false)
+            gameState.isAdminMode = false;
             
             // 최고 기록이 없거나 5,000점 미만이면 '루키 모드' 활성화
             const isRookie = (!savedRecord || bestScore < 5000);
@@ -1185,6 +1302,11 @@
                 ultGauge: 0, autoFireTimer: 0,
                 isHomingMode: false, homingTimer: 0,
                 rainbowWave: null, dangerWarning: 0, timeBonusDisplay: null,
+
+                // ▼▼▼ [CDSO Patch: 여기에 추가하세요] ▼▼▼
+                currentStageScore: 0,  // 스테이지별 점수 카운터 초기화
+
+
                 // [CDSO 추가] 데이터 분석용 변수 초기화
                 startTime: Date.now(),      // 게임 시작 시간
                 totalItemsSpawned: 0,       // 생성된 총 아이템 수
@@ -1204,32 +1326,73 @@
         }
 
 
-        // [CDSO 전략] 중앙 점수 관리 함수 (Rookie Boost 포함)
+        // [CDSO 전략 수정] 점수 획득 로직 (Rookie Boost vs Infinite Penalty)
         function addScore(amount) {
             let finalAmount = amount;
             
-            // 조건: 루키 모드이고 + 현재 점수가 5000점 미만일 때 -> 3배 적용
-            if (gameState.isRookieMode && gameState.score < 5000) {
+            // [CDSO 전략 수정] 우선순위 변경: 지옥 페널티 > 루키 부스트
+            
+            // 1. [Absolute Rule] Stage 11(히든 루트) 진입 시 -> 무조건 20%만 반영
+            if (gameState.currentStage >= 11) {
+                // 루키 모드여도 상관없음. 지옥은 지옥임.
+                finalAmount = Math.floor(amount * 0.2);
+                gameState.boostActive = false; 
+            }
+            // 2. [Conditional Rule] 루키 모드이고 5000점 미만일 때 -> 3배 적용
+            else if (gameState.isRookieMode && gameState.score < 5000) {
                 finalAmount = amount * 3;
                 gameState.boostActive = true;
-            } else {
+            } 
+            else {
                 gameState.boostActive = false;
             }
 
-            gameState.score += finalAmount;
+            // [CDSO Strategy] 스테이지별 차등 제한 (Dynamic Cap)
+            // Stage 1~9: 기본 3,000점 + 스테이지당 1,000점 증가 (예: 1탄 4000, 9탄 12000)
+            // Stage 10(보스): 20,000점 (대폭 허용)
+            // Stage 11(무한): 제한 없음 (Infinity)
 
-            // [UI 피드백] 점수판 색상 변경 (초록색 = 부스트 중)
+            let stageMaxScore;
+            if (gameState.currentStage >= 11) {
+                stageMaxScore = Infinity; // 무한 모드는 제한 해제
+            } else if (gameState.currentStage === 10) {
+                stageMaxScore = 20000;    // 최종 보스전은 넉넉하게
+            } else {
+                // 일반 스테이지는 보수적으로 잡음
+                stageMaxScore = 3000 + (gameState.currentStage * 1000); 
+            }
+            
+            // 현재 스테이지에서 획득한 누적 점수 추적 필요 (gameState에 currentStageScore 변수 추가 전제)
+            if (gameState.currentStageScore > stageMaxScore) {
+                finalAmount = Math.floor(amount * 0.1); // 10%만 반영
+                
+                // UI 피드백 (선택사항): 점수 색상을 회색으로 변경하여 '효율 감소' 알림
+                const scoreEl = document.getElementById('current-score');
+                if(scoreEl) scoreEl.style.color = '#888';
+            }
+
+
+
+            // 점수 반영
+            if (finalAmount > 0) {
+                gameState.score += finalAmount;
+            }
+
+            // [UI 피드백] 점수판 색상 상태 표시
             const scoreEl = document.getElementById('current-score');
             if (scoreEl) {
-                if (gameState.boostActive) {
-                    scoreEl.style.color = '#0f0'; // Neon Green
+                if (gameState.currentStage >= 11) {
+                    scoreEl.style.color = '#f88'; // Hell Color
+                    scoreEl.style.textShadow = '0 0 5px #f00';
+                } else if (gameState.boostActive) {
+                    scoreEl.style.color = '#0f0'; // Boost Color
                     scoreEl.style.textShadow = '0 0 15px #0f0';
-                    // 콤보 텍스트 등 추가 가능
                 } else {
-                    scoreEl.style.color = '#fff';
+                    scoreEl.style.color = '#fff'; // Normal
                     scoreEl.style.textShadow = '0 0 10px #fff';
                 }
             }
+
         }
 
 
@@ -1240,6 +1403,53 @@
                 gameState.spawnDelay -= dt;
                 return;
             }
+
+            // [CDSO 전략] Stage 11 이상: 무한 서바이벌 로직
+            if (gameState.currentStage >= 11) {
+                // 1. 난이도 실시간 상승 (10초마다 10%씩 빨라짐)
+                gameState.infiniteDifficulty += dt * 0.01; 
+                
+                gameState.spawnTimer += dt;
+                
+                // 스폰 주기: 난이도가 높을수록 짧아짐 (최소 0.1초)
+                const currentSpawnRate = Math.max(0.1, 0.5 / gameState.infiniteDifficulty);
+
+                if (gameState.spawnTimer > currentSpawnRate) {
+                    // 모든 타입 랜덤 등장
+                    const types = ['NORMAL', 'ZIGZAG', 'HOMING', 'SHOOTER', 'BOMBER', 'LASER_ENEMY'];
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    
+                    // 속도: 기본 속도 * 난이도 배율
+                    const speedMult = gameState.infiniteDifficulty * 1.5;
+
+                    gameState.enemies.push({
+                        x: Math.random() * (canvas.width - 24), 
+                        y: -32, 
+                        w: 24, h: 24,
+                        speed: (200 + Math.random() * 100) * speedMult, 
+                        type: type,
+                        amplitude: Math.random() * 2 + 1, 
+                        turnRate: 120 * speedMult, // 유도탄 회전력도 증가
+                        time: 0,
+                        // 특수 적 초기화 값들
+                        exploded: false, locked: false, fired: false, chargeTimer: 0,
+                        phase: 'ENTER', strafeDir: Math.random() < 0.5 ? 1 : -1
+                    });
+                    gameState.spawnTimer = 0;
+                }
+
+                // 아이템 스폰 (가끔 나와야 생존 가능)
+                gameState.itemSpawnTimer += dt;
+                if (gameState.itemSpawnTimer > 10) {
+                    const rand = Math.random();
+                    // 후반엔 하트가 절실하므로 하트 확률 조금 높임
+                    let itemType = rand < 0.3 ? 'LIFE' : (rand < 0.6 ? 'SHIELD' : 'BLASTER');
+                    gameState.items.push({ x: Math.random() * (canvas.width - 25), y: -35, w: 25, h: 25, speed: 150, type: itemType });
+                    gameState.itemSpawnTimer = 0;
+                }
+                return; // ★ 여기서 함수 종료 (아래 기존 로직 실행 안 함)
+            }
+
 
             const lvl = levels[gameState.currentStage - 1];
 
@@ -1351,6 +1561,24 @@
             if (!boss) return;
 
             gameState.bossTimer += dt;
+
+            // [Patch B] 90초(1분 30초) 초과 시 광폭화 모드 발동 (Hard Cap)
+            if (gameState.bossTimer > 90) {
+                // 경고 메시지 1회 출력 (UX 고려)
+                if (!boss.enraged) {
+                    boss.enraged = true;
+                    document.getElementById('res-title').textContent = "⚠ SYSTEM CRITICAL: ENRAGE ⚠";
+                    // 광폭화 효과: 공격 속도 5배, 이동 속도 3배
+                    boss.shootTimer = 100; // 즉시 발사 유도
+                }
+                
+                // 강제 데미지 로직 (플레이어를 즉사시키거나 보스가 자폭하거나)
+                // 여기서는 난이도를 극도로 높여 '자연스러운 죽음' 유도
+                dt *= 5.0; // 시간 가속
+            }
+
+
+
             boss.x += boss.moveDir * 120 * dt;
             if (boss.x <= 0 || boss.x >= canvas.width - boss.w) boss.moveDir *= -1;
             boss.shootTimer += dt;
@@ -1580,18 +1808,71 @@
             }
         }
 
+
         function advanceStage() {
-            if (gameState.currentStage >= 10) { gameComplete(); return; }
+            // [CDSO 수정] 스테이지 전이 로직 정상화
+
+            // 1. [End Game Check] 10스테이지 클리어 시 분기 처리
+            if (gameState.currentStage >= 10) {
+                // 판단 기준 데이터
+                const isTopRanker = gameState.score > (gameState.rank3Score || 0);
+                const isPerfectCondition = gameState.lives >= 3; 
+
+                // [Scenario A] 랭커 등극 (Top 3) -> 명예로운 졸업
+                if (isTopRanker) {
+                    gameComplete(); 
+                    return;
+                }
+
+                // [Scenario B] 랭킹 실패 BUT 완벽한 상태 -> 히든 루트 개방
+                if (isPerfectCondition) {
+                    console.log("🔓 Hidden Stage Unlocked");
+                    
+                    gameState.currentStage = 11;
+
+                    // ▼▼▼ [CDSO Patch: 여기에도 반드시 추가해야 합니다!] ▼▼▼
+                    gameState.currentStageScore = 0;
+
+                    gameState.stageTimer = 99999; 
+                    gameState.stageClearing = false;
+                    gameState.survivalMode = false;
+                    gameState.spawnTimer = 0;
+                    gameState.infiniteDifficulty = 1.0; 
+                    
+                    // UX 피드백
+                    const stageInfo = document.getElementById('stage-info');
+                    if(stageInfo) {
+                        stageInfo.textContent = "⚠ HIDDEN ROUTE: OVERDRIVE ⚠";
+                        stageInfo.style.color = "#f00";
+                        stageInfo.animate([
+                            { opacity: 0, transform: 'scale(1.5)' },
+                            { opacity: 1, transform: 'scale(1.0)' }
+                        ], { duration: 1000, easing: 'ease-out' });
+                    }
+                    return;
+                }
+
+                // [Scenario C] 일반 엔딩
+                gameComplete();
+                return;
+            }
+
+            // 2. [Normal Progression] 1~9 스테이지 진행 (여기가 else 블록이 되면 안 됨!)
             gameState.currentStage++;
+
+            // ▼▼▼ [CDSO Patch: 수확 체감 법칙을 위한 초기화] ▼▼▼
+            gameState.currentStageScore = 0;
+            
+
+
+            // 다음 스테이지 정보 로드
             const lvl = levels[gameState.currentStage - 1];
             gameState.stageTimer = lvl.duration;
             gameState.stageClearing = false;
             gameState.survivalMode = false;
-            gameState.stageTimerEnded = false;  // ★ 추가
-            gameState.survivalTimer = 0;        // ★ 추가
+            gameState.stageTimerEnded = false;
+            gameState.survivalTimer = 0;
             gameState.spawnTimer = 0;
-
-            // [CDSO 수정] 스테이지 전환 시 아이템 타이머 초기화 (중복 등장 방지)
             gameState.itemSpawnTimer = 0;
 
             gameState.bossPhase = 'MINION';
@@ -1600,7 +1881,12 @@
             gameState.enemies = [];
             gameState.items = [];
             gameState.spawnDelay = 0.8;
+            
+            console.log(`✅ Advanced to Stage ${gameState.currentStage}`);
         }
+
+
+
 
         function showResultScreen(title) {
             const finalScore = Math.round(gameState.score);  // 소수점 반올림
@@ -2096,11 +2382,14 @@
                     // SHOCKWAVE, METEOR는 상쇄 불가
                     if (en.type === 'SHOCKWAVE' || en.type === 'METEOR') continue;
                     if (checkRectCollision(b, en)) {
-                        gameState.enemies.splice(ei, 1); gameState.bullets.splice(bi, 1);
+                        gameState.enemies.splice(ei, 1); 
+                        gameState.bullets.splice(bi, 1);
 
-                        // 기존 점수 2점은 너무 짭니다. 적 종류별 점수를 활용
-                        const basePoints = getEnemyScore(en.type) * 10; // 기본 10배
-                        addScore(basePoints);
+                        // [Patch A-2] 점수가 0보다 클 때만 addScore 호출 (불필요한 연산 방지)
+                        const unitScore = getEnemyScore(en.type);
+                        if (unitScore > 0) {
+                            addScore(unitScore * 10);
+                        }
 
 
                         break;
@@ -2118,11 +2407,24 @@
             }
             gameState.progressDisplay += (targetProgress - gameState.progressDisplay) * dt * 5;
 
-            // 타이머 숨김 - SURVIVE/BOSS 표시만 유지
-            let stageDisplay = lvl.isBoss
-                ? (gameState.bossPhase === 'BOSS' ? 'BOSS!' : (gameState.bossPhase === 'SURVIVAL' ? 'SURVIVE!' : ''))
-                : (gameState.survivalMode ? 'SURVIVE!' : '');
-            document.getElementById('stage-info').textContent = `STAGE ${gameState.currentStage}${stageDisplay ? ' | ' + stageDisplay : ''}`;
+
+
+            // ... (기존 코드)
+
+            // [CDSO 수정] UI 표시
+            let stageText = '';
+            if (gameState.currentStage >= 11) {
+                stageText = `STAGE ∞ | OVERDRIVE x${gameState.infiniteDifficulty.toFixed(2)}`;
+            } else {
+                // 기존 로직
+                let stageDisplay = lvl.isBoss
+                    ? (gameState.bossPhase === 'BOSS' ? 'BOSS!' : (gameState.bossPhase === 'SURVIVAL' ? 'SURVIVE!' : ''))
+                    : (gameState.survivalMode ? 'SURVIVE!' : '');
+                stageText = `STAGE ${gameState.currentStage}${stageDisplay ? ' | ' + stageDisplay : ''}`;
+            }
+            
+            document.getElementById('stage-info').textContent = stageText;
+        
         }
 
         function checkRectCollision(r1, r2) {
@@ -2697,6 +2999,15 @@
 
         // [CDSO 최종 수정] 입력 강제 유효성 검사 + 공간 최적화 + 랭킹 통합
         async function saveAndRestart() {
+            // [CDSO 보안 프로토콜] 관리자 모드 데이터 저장 차단
+            if (gameState.isAdminMode) {
+                alert("🚫 [ADMIN MODE]\n기록 저장불가\n(Sandbox Data Rejected)");
+                
+                // 페이지 새로고침으로 흔적 지우기
+                location.reload(); 
+                return; 
+            }
+
             const btnSave = document.getElementById('btn-save');
             const actionBtns = document.getElementById('action-buttons');
             const input = document.getElementById('initial-input');
@@ -2908,6 +3219,86 @@
 
         window.addEventListener('firebase-ready', initFirebaseRanking);
         setTimeout(() => { if (!firebaseReady) initFirebaseRanking(); }, 1000);
+
+        // [CDSO 전략] 관리자 전용 백도어 (Project Wormhole)
+        let cheatBuffer = [];
+        const CHEAT_CODE = "ADMIN"; // 원하는 비밀번호로 변경 가능
+        let logoTapCount = 0;
+        let logoTapTimer = null;
+
+        // 1. PC: 키보드 입력 감지
+        window.addEventListener('keydown', e => {
+            const startScreen = document.getElementById('start-screen');
+            // 시작 화면이 안 보이면 작동 X
+            if (startScreen.style.display === 'none') return; 
+
+            cheatBuffer.push(e.key.toUpperCase());
+            if (cheatBuffer.length > CHEAT_CODE.length) cheatBuffer.shift();
+
+            if (cheatBuffer.join('') === CHEAT_CODE) {
+                activateWormhole(); // 워프 발동!
+            }
+        });
+
+        // 2. Mobile: 로고 터치 감지 (DOM 로드 후 이벤트 연결)
+        window.addEventListener('load', () => {
+            const titleLogo = document.querySelector('#start-screen h1');
+            if (titleLogo) {
+                titleLogo.addEventListener('click', () => {
+                    logoTapCount++;
+                    
+                    // 2초 안에 5번 못 누르면 초기화
+                    clearTimeout(logoTapTimer);
+                    logoTapTimer = setTimeout(() => { logoTapCount = 0; }, 2000);
+
+                    if (logoTapCount >= 5) {
+                        activateWormhole(); // 워프 발동!
+                        logoTapCount = 0;
+                    }
+                });
+            }
+        });
+
+        // 3. 워프 실행 함수 (Stage 11 강제 진입)
+        function activateWormhole() {
+            console.warn("⚠ ADMIN ACCESS GRANTED: WARPING TO STAGE 11 ⚠");
+            
+            // 1) 정상 게임 시작
+            startGame(); 
+
+            // [CDSO 핵심] 관리자 모드 도장 찍기
+            gameState.isAdminMode = true;
+
+
+            // 2) 데이터 강제 변조 (Data Injection)
+            gameState.currentStage = 11;
+            gameState.stageTimer = 99999; 
+            gameState.spawnTimer = 0;
+            gameState.spawnDelay = 0; // 딜레이 없이 즉시 시작
+            
+            // 무한 모드 전용 변수 초기화
+            gameState.infiniteDifficulty = 1.0;
+            
+            // [관리자 특전] 테스트 편의를 위해 쉴드와 풀파워 제공 (선택사항)
+            gameState.lives = 7; 
+            gameState.maxLives = 7; // <--- 이 줄을 반드시 추가해야 함
+            updateLivesUI();        // <--- 변경된 UI 즉시 반영
+            gameState.skillMode = 'SHIELD';
+            gameState.skillTimer = 10.0;
+            
+            // 3) UI 강제 업데이트
+            const stageInfo = document.getElementById('stage-info');
+            if(stageInfo) {
+                stageInfo.textContent = "STAGE ∞ | TEST MODE";
+                stageInfo.style.color = "#0f0"; // 관리자 모드임을 알리는 녹색
+            }
+            
+            // 시작 화면 텍스트 변경 효과 (간지용)
+            const btn = document.querySelector('#start-screen button');
+            if(btn) btn.textContent = "ACCESS GRANTED...";
+        }
+
+
     </script>
 </body>
 
