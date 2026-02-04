@@ -1566,7 +1566,7 @@
             gameState.itemSpawnTimer += dt;
             if (gameState.itemSpawnTimer > 8) {
                 const rand = Math.random();
-                let type = rand < 0.25 ? 'DRONE' : (rand < 0.5 ? 'SHIELD' : 'BLASTER');
+                let type = rand < 0.5 ? 'DRONE' : (rand < 0.5 ? 'SHIELD' : 'BLASTER');
 
                 // 스테이지 6, 9에서 하트 등장 확률 30%
                 if (gameState.currentStage === 6 || gameState.currentStage === 9) {
@@ -3407,3 +3407,4 @@
 </body>
 
 </html>
+
