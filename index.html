@@ -525,6 +525,35 @@
                 display: block !important;
             }
         }
+
+        /* [CDSO Patch: 시즌 2 배지 디자인] */
+        .season-badge {
+            display: inline-block;
+            margin-top: -10px;      /* 타이틀과 간격 좁히기 */
+            margin-bottom: 20px;    /* 랭킹판과 간격 벌리기 */
+            padding: 5px 15px;
+            
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 3px;    /* 글자 간격 넓게 */
+            color: #00fff2;         /* 사이버펑크 청록색 */
+            
+            border: 2px solid #00fff2;
+            border-radius: 15px;    /* 둥근 모서리 */
+            background: rgba(0, 255, 242, 0.15); /* 반투명 배경 */
+            
+            box-shadow: 0 0 15px rgba(0, 255, 242, 0.5); /* 네온 광원 효과 */
+            text-shadow: 0 0 5px #00fff2;
+            
+            animation: badgePulse 2s infinite alternate; /* 숨쉬는 효과 */
+        }
+
+        /* 배지 애니메이션 */
+        @keyframes badgePulse {
+            0% { transform: scale(1.0); opacity: 0.8; box-shadow: 0 0 10px #00fff2; }
+            100% { transform: scale(1.05); opacity: 1.0; box-shadow: 0 0 20px #00fff2, inset 0 0 10px rgba(0,255,242,0.5); }
+        }
+
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 
@@ -565,6 +594,7 @@
 
         <div id="start-screen" class="overlay">
             <h1>NEON DODGE</h1>
+            <span class="season-badge">SEASON 2</span>
             <ul id="leaderboard">
                 <li>Loading...</li>
             </ul>
@@ -716,6 +746,8 @@
         let firebaseReady = false;
         let lastSavedName = '';  // 신규 등록 유저 하이라이트용
 
+        window.isVeteranServer = false  // 기본값: 아직 고인물 서버 아님
+
 
         // [CDSO 전략 수정] 비용 최적화: 실시간 리스너(onSnapshot) 제거 -> 단발성 조회(getDocs)로 변경
         async function initFirebaseRanking() {
@@ -734,6 +766,8 @@
             try {
                 // 1. 쿼리 생성 (기존과 동일)
                 const q = query(
+                    // [수정 전] collection(window.firebaseDB, 'rankings'),
+                    // [수정 후] 시즌2용 새 컬렉션 이름으로 변경
                     collection(window.firebaseDB, 'rankings'),
                     orderBy('score', 'desc'),
                     limit(10)
@@ -741,6 +775,20 @@
 
                 // 2. [변경] getDocs를 사용하여 1회만 데이터 가져오기 (비용 절감 핵심)
                 const snapshot = await getDocs(q);
+
+                // 조건: 랭킹에 10명 이상 있고 && 10등(인덱스 9)의 점수가 5000점 이상인가?
+                if (snapshot.docs.length >= 10) {
+                    const tenthRankScore = snapshot.docs[9].data().score;
+                    if (tenthRankScore >= 5000) {
+                        window.isVeteranServer = true;
+                        console.log("⚔️ Server Status: VETERAN (Cutline established)");
+                    } else {
+                        window.isVeteranServer = false;
+                    }
+                } else {
+                    window.isVeteranServer = false; // 사람이 10명도 안 되면 아직 루키 모드 없음
+                }
+
 
                 list.innerHTML = '<h3>🌐 GLOBAL TOP 5</h3>';
 
@@ -902,7 +950,8 @@
 
             const { collection, addDoc, serverTimestamp } = window.firebaseModules;
             try {
-                // [Clean Data Structure]
+                // [수정 전] await addDoc(collection(window.firebaseDB, 'rankings'), {
+                // [수정 후] 저장할 때도 같은 곳을 바라봐야 합니다.
                 await addDoc(collection(window.firebaseDB, 'rankings'), {
                     // [Basic Info]
                     name,
@@ -950,6 +999,8 @@
             try {
                 // 내 점수보다 높은 사람 수 계산 (등수 산정)
                 const higherQuery = query(
+                    // [수정 전] collection(window.firebaseDB, 'rankings'),
+                    // [수정 후]
                     collection(window.firebaseDB, 'rankings'),
                     where('score', '>', score)
                 );
@@ -1283,9 +1334,12 @@
             // [CDSO 추가] 관리자 모드 플래그 (기본값 false)
             gameState.isAdminMode = false;
             
-            // 최고 기록이 없거나 5,000점 미만이면 '루키 모드' 활성화
-            const isRookie = (!savedRecord || bestScore < 5000);
-
+            // ▼▼▼ [CDSO Patch: 시즌 2 하드코어 정책 적용] ▼▼▼
+            // 기존: const isRookie = (!savedRecord || bestScore < 5000);
+            
+            // 변경: 기록이 '반드시 존재하고' 그 점수가 5000점 미만일 때만 루키 인정
+            // 즉, 처음 접속하는 사람(savedRecord가 null)은 false가 되어 '일반 모드'로 시작함
+            const isRookie = (savedRecord && bestScore < 5000 && window.isVeteranServer);
 
             Object.assign(gameState, {
                 score: 0, enemies: [], items: [], bullets: [],
@@ -2587,23 +2641,73 @@
                 return;
             }
 
-            // LASER_ENEMY 렌더링 (보라색 사각형 + 차징 효과)
+            // LASER_ENEMY 렌더링 (기존: 보라색 사각형 -> 변경: 오징어)
             if (en.type === 'LASER_ENEMY') {
                 ctx.shadowBlur = 15;
                 ctx.shadowColor = '#a0f';
                 ctx.fillStyle = '#c4f';
-                ctx.fillRect(en.x, en.y, en.w, en.h);
+                
+                // 오징어 그리기 로직 (Squid Rendering)
+                const squidHeadR = en.w / 2;     // 머리 반지름
+                const legLen = en.h * 0.5;       // 다리 길이
+                
+                // 1. 머리 (반원 + 직사각형)
+                ctx.beginPath();
+                ctx.arc(cx, en.y + squidHeadR, squidHeadR, Math.PI, 0); // 둥근 머리 위쪽
+                ctx.lineTo(en.x + en.w, en.y + en.h - legLen);          // 오른쪽 몸통
+                ctx.lineTo(en.x, en.y + en.h - legLen);                 // 왼쪽 몸통
+                ctx.closePath();
+                ctx.fill();
+
+                // 2. 다리 (꾸불꾸불한 촉수 4개)
+                ctx.strokeStyle = '#c4f';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                
+                // 다리가 움직이는 애니메이션 효과 (Squid Wiggle)
+                const wiggle = Math.sin(Date.now() / 100) * 3; 
+
+                for(let i=0; i<4; i++) {
+                    const legX = en.x + (en.w / 4) * i + (en.w/8);
+                    const legStartY = en.y + en.h - legLen;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(legX, legStartY);
+                    // 베지어 곡선으로 다리 표현
+                    ctx.bezierCurveTo(
+                        legX + wiggle, legStartY + legLen/2, 
+                        legX - wiggle, legStartY + legLen, 
+                        legX, legStartY + legLen
+                    );
+                    ctx.stroke();
+                }
+
+                // 3. 눈 (구분을 위해 흰색 추가)
+                ctx.fillStyle = '#fff';
+                const eyeY = en.y + squidHeadR + 2;
+                ctx.beginPath(); ctx.arc(cx - 5, eyeY, 3, 0, Math.PI*2); ctx.fill(); // 왼쪽 눈
+                ctx.beginPath(); ctx.arc(cx + 5, eyeY, 3, 0, Math.PI*2); ctx.fill(); // 오른쪽 눈
+
+
+                // (기존 차징 로직 유지)
                 if (en.locked && !en.fired) {
-                    // 차징 표시
                     const chargeProgress = Math.min((en.chargeTimer || 0) / 1.0, 1);
                     ctx.fillStyle = '#fff';
                     ctx.fillRect(en.x, en.y + en.h, en.w, 3);
                     ctx.fillStyle = '#f0f';
                     ctx.fillRect(en.x, en.y + en.h, en.w * chargeProgress, 3);
+                    
+                    // 차징 중이면 눈이 빨개짐 (Angry Mode)
+                    ctx.fillStyle = '#f00';
+                    ctx.beginPath(); ctx.arc(cx - 5, eyeY, 2, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + 5, eyeY, 2, 0, Math.PI*2); ctx.fill();
                 }
                 ctx.shadowBlur = 0;
-                return;
+                return; // 여기서 함수 종료
             }
+
+
+
 
             ctx.shadowBlur = 12;
             ctx.shadowColor = isCold ? '#8ef' : '#f80';
