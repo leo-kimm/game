@@ -26,7 +26,7 @@
         #game-container {
             position: relative;
             width: 450px;           /* 너비 고정 */
-            height: 700px;          /* 높이 고정 */
+            height: 800px;          /* 높이 고정 */
             overflow: hidden;       /* 삐져나가는 것 숨김 */
             transform-origin: center center; /* 중앙 기준 확대/축소 */
             
@@ -116,7 +116,7 @@
         #leaderboard {
             list-style: none;
             padding: 0;
-            margin: 20px 0;
+            margin: 5px 0;
             font-size: 1em;
             width: 320px;
         }
@@ -152,6 +152,23 @@
             width: 320px;
         }
 
+        /* [CDSO 추가] 4등~10등을 위한 컴팩트 스타일 (70% 축소 체감) */
+        li.rank-compact {
+            padding: 6px 10px !important;       /* 패딩 축소 (기존 10px -> 6px) */
+            margin: 4px 0 !important;           /* 간격 축소 (기존 8px -> 4px) */
+            font-size: 0.85em !important;       /* 글자 크기 85% */
+            height: 30px !important;            /* 높이 고정 */
+            opacity: 0.9;                       /* 살짝 투명하게 */
+            border: 1px solid rgba(255, 255, 255, 0.05) !important; /* 테두리 얇게 */
+        }
+
+        /* 컴팩트 모드일 때 배지 크기도 조정 */
+        li.rank-compact .rank-badge {
+            min-width: 20px !important;
+            height: 20px !important;
+            font-size: 0.8em !important;
+            margin-right: 8px !important;
+        }
 
 
 
@@ -360,7 +377,7 @@
             padding: 10px 25px;
             cursor: pointer;
             font-size: 1.2em;
-            margin-top: 20px;
+            margin-top: 5px;
             text-shadow: 0 0 5px #0ff;
             box-shadow: 0 0 10px #0ff;
             transition: all 0.3s ease;
@@ -604,11 +621,11 @@
 
             <button onclick="startGame()">GAME START</button>
 
-            <button id="setting-btn" onclick="toggleControlMode()"
+<!--             <button id="setting-btn" onclick="toggleControlMode()"
                 style="margin-top:10px; font-size:0.8em; border-color:#888; color:#aaa;">
 
                 ⚙️ CONTROL: TRACKING
-            </button>
+            </button> -->
 
 
         </div>
@@ -647,7 +664,7 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = 450; canvas.height = 700;
+        canvas.width = 450; canvas.height = 800;
 
         const levels = [
             { stage: 1, duration: 10, theme: '#0ff', speedMult: 1.0, spawnRate: 0.69, types: ['NORMAL'], isBoss: false },
@@ -679,7 +696,7 @@
 
         let gameState = {
             isRunning: false, score: 0,
-            player: { x: 215, y: 630, w: 20, h: 20, speed: 400 },
+            player: { x: 215, y: 730, w: 20, h: 20, speed: 400 },
             enemies: [], items: [], bullets: [], keys: {},
             skillMode: 'NORMAL', skillTimer: 0,
             lives: 3, maxLives: 3, isInvincible: false, invincibilityTimer: 0,
@@ -715,32 +732,32 @@
 
         // [CDSO 전략] 컨트롤 모드 상태 관리 ('TRACKING' vs 'BUTTONS')
         // localStorage를 사용하여 유저의 선택을 기억합니다.
-        let controlMode = localStorage.getItem('controlMode') || 'BUTTONS';
+        let controlMode = 'BUTTONS';
 
-        function toggleControlMode() {
-            // 모드 토글 (TRACKING <-> BUTTONS)
-            controlMode = controlMode === 'TRACKING' ? 'BUTTONS' : 'TRACKING';
-            localStorage.setItem('controlMode', controlMode); // 저장
-            updateSettingBtn(); // UI 업데이트
-        }
+        // function toggleControlMode() {
+        //     // 모드 토글 (TRACKING <-> BUTTONS)
+        //     controlMode = controlMode === 'TRACKING' ? 'BUTTONS' : 'TRACKING';
+        //     localStorage.setItem('controlMode', controlMode); // 저장
+        //     updateSettingBtn(); // UI 업데이트
+        // }
 
-        function updateSettingBtn() {
-            const btn = document.getElementById('setting-btn');
-            if (btn) {
-                if (controlMode === 'TRACKING') {
-                    btn.innerHTML = '⚙️ CONTROL: 👆 TRACKING'; // 추적 모드
-                    btn.style.color = '#0ff';
-                    btn.style.borderColor = '#0ff';
-                } else {
-                    btn.innerHTML = '⚙️ CONTROL: ⬅️➡️ BUTTONS'; // 버튼 모드
-                    btn.style.color = '#f0f';
-                    btn.style.borderColor = '#f0f';
-                }
-            }
-        }
+        // function updateSettingBtn() {
+        //     const btn = document.getElementById('setting-btn');
+        //     if (btn) {
+        //         if (controlMode === 'TRACKING') {
+        //             btn.innerHTML = '⚙️ CONTROL: 👆 TRACKING'; // 추적 모드
+        //             btn.style.color = '#0ff';
+        //             btn.style.borderColor = '#0ff';
+        //         } else {
+        //             btn.innerHTML = '⚙️ CONTROL: ⬅️➡️ BUTTONS'; // 버튼 모드
+        //             btn.style.color = '#f0f';
+        //             btn.style.borderColor = '#f0f';
+        //         }
+        //     }
+        // }
 
         // 페이지 로드 시 버튼 상태 초기화
-        window.addEventListener('load', updateSettingBtn);
+        // window.addEventListener('load', updateSettingBtn);
 
 
 
@@ -792,7 +809,7 @@
                 }
 
 
-                list.innerHTML = '<h3>🌐 GLOBAL TOP 5</h3>';
+                list.innerHTML = '<h3>🌐 GLOBAL TOP 10</h3>';
 
                 // [CDSO 핵심 추가] 3등 점수 추출 (없으면 0점)
                 // 배열 인덱스 2가 3등입니다 (0=1등, 1=2등, 2=3등)
@@ -814,27 +831,32 @@
                         const r = doc.data();
                         const rank = i + 1;
                         const isNewUser = lastSavedName && r.name === lastSavedName;
-                        const rankClass = `rank-${rank}${isNewUser ? ' new-user' : ''}`;
+                        // 1. 기본 클래스 설정
+                        let rankClass = `rank-${rank}${isNewUser ? ' new-user' : ''}`;
+                        
+                        // 2. [CDSO 전략] 4등부터는 'rank-compact' 클래스 추가 (70% 축소 효과)
+                        if (rank >= 4) {
+                            rankClass += ' rank-compact';
+                        }
+
                         const rankEmoji = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : rank));
 
-                        // [CDSO 핵심 수정] 6등부터(index 5 이상)는 화면에서 숨깁니다.
-                        // 하지만 HTML에는 존재하므로 shareScore 함수가 읽을 수 있습니다.
-                        const hideStyle = i >= 5 ? 'style="display:none;"' : '';
-
-
+                        // 3. [CDSO 수정] 숨김 처리 로직(hideStyle) 제거 -> 무조건 10등까지 표시
                         list.innerHTML += `
-                            <li class="${rankClass}" ${hideStyle}>
+                            <li class="${rankClass}">
                                 <span class="rank-badge">${rankEmoji}</span>
                                 <span class="player-name">${r.name}</span>
                                 <span class="player-score">${r.score.toLocaleString()}</span>
                                 <span class="player-stage">ST.${r.stage}</span>
                             </li>`;
+
+
                     });
                 }
             } catch (e) {
                 console.error("Ranking Load Error:", e);
                 // 에러가 나도 로딩 텍스트를 없애고 기본 상태로 전환
-                list.innerHTML = '<h3>🌐 GLOBAL TOP 5</h3><li class="rank-1">Network/Data Error</li>';
+                list.innerHTML = '<h3>🌐 GLOBAL TOP 10</h3><li class="rank-1">Network/Data Error</li>';
                 // 에러 시 안전하게 커트라인을 0으로 설정
                 gameState.rank3Score = 0;
 
@@ -1164,7 +1186,7 @@
             const winW = window.innerWidth;
             const winH = window.innerHeight;
             const baseW = 450;
-            const baseH = 700;
+            const baseH = 800;
             
             // 1. 기기 타입 판별
             const isMobile = isMobileDevice();
@@ -1199,7 +1221,7 @@
             // 역보정 공식
             return {
                 x: (touch.clientX - rect.left) * (450 / rect.width),
-                y: (touch.clientY - rect.top) * (700 / rect.height)
+                y: (touch.clientY - rect.top) * (800 / rect.height)
             };
         }
 
@@ -1375,6 +1397,7 @@
 
             });
             gameState.player.x = 215;
+            gameState.player.y = 730; // [추가] 반드시 780으로 강제 리셋
             updateLivesUI();
             // [수정] my-rank가 아니라 my-rank-list를 숨겨야 에러가 안 납니다!
             const myRankList = document.getElementById('my-rank-list');
@@ -3178,8 +3201,10 @@
             input.style.display = 'none';      
             resultStats.style.display = 'none'; 
             
-            resultTitle.style.marginBottom = '10px';
-            resultTitle.style.fontSize = '1.5em'; 
+            // resultTitle.style.marginBottom = '10px';
+            // resultTitle.style.fontSize = '1.5em'; 
+            // [CDSO 수정] 타이틀 문구(MISSION FAILED)도 같이 숨김 처리
+            resultTitle.style.display = 'none';
 
             if (myRank) {
                 // A. 최신 Top 5 리스트 복사
