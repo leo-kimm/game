@@ -257,6 +257,35 @@
             }
         }
 
+
+        /* [CDSO 추가] 플랫폼 구분 배지 스타일 */
+        .platform-badge {
+            display: inline-block;
+            font-size: 0.75em;
+            font-weight: bold;
+            padding: 2px 4px;
+            margin-left: 8px; /* 앞 요소(Stage)와 간격 */
+            border-radius: 4px;
+            min-width: 24px;  /* 너비 고정으로 정렬 맞춤 */
+            text-align: center;
+        }
+
+        /* PC 스타일 (사이버 블루) */
+        .plat-pc {
+            border: 1px solid #88f;
+            color: #aaf;
+            box-shadow: 0 0 5px rgba(136, 136, 255, 0.3);
+        }
+
+        /* Mobile 스타일 (워닝 오렌지) */
+        .plat-mobile {
+            border: 1px solid #f80;
+            color: #fa0;
+            box-shadow: 0 0 5px rgba(255, 136, 0, 0.3);
+        }
+
+
+
         .rank-badge {
             min-width: 28px;
             height: 28px;
@@ -841,16 +870,19 @@
 
                         const rankEmoji = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : rank));
 
-                        // 3. [CDSO 수정] 숨김 처리 로직(hideStyle) 제거 -> 무조건 10등까지 표시
+                        // 데이터가 없으면 기본값 'PC'로 간주
+                        const isMobileData = r.platform === 'MOBILE';
+                        const platText = isMobileData ? 'M' : 'PC';
+                        const platClass = isMobileData ? 'plat-mobile' : 'plat-pc';
+
                         list.innerHTML += `
                             <li class="${rankClass}">
                                 <span class="rank-badge">${rankEmoji}</span>
                                 <span class="player-name">${r.name}</span>
                                 <span class="player-score">${r.score.toLocaleString()}</span>
                                 <span class="player-stage">ST.${r.stage}</span>
+                                <span class="platform-badge ${platClass}">${platText}</span>
                             </li>`;
-
-
                     });
                 }
             } catch (e) {
@@ -3210,13 +3242,20 @@
                 // A. 최신 Top 5 리스트 복사
                 const top5Content = document.getElementById('leaderboard').innerHTML;
 
-                // B. 내 순위 박스 생성
+                // [CDSO 추가] 현재 내 시스템 정보 확인
+                const currentSys = getSystemInfo(); 
+                const isMobileNow = currentSys.platform === 'MOBILE';
+                const myPlatText = isMobileNow ? 'M' : 'PC';
+                const myPlatClass = isMobileNow ? 'plat-mobile' : 'plat-pc';
+
+                // B. 내 순위 박스 생성 (배지 포함)
                 const myRankHTML = `
                     <li class="rank-me" style="animation: pulseRed 2s infinite; margin-top: 15px; border-color: #f00;">
                         <span class="rank-badge" style="background: linear-gradient(135deg, #ff0000, #990000); color: #fff;">${myRank}</span>
                         <span class="player-name">${name}</span>
                         <span class="player-score">${finalScore.toLocaleString()}</span>
                         <span class="player-stage">ST.${gameState.currentStage}</span>
+                        <span class="platform-badge ${myPlatClass}">${myPlatText}</span>
                     </li>
                 `;
 
