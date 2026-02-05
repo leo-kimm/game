@@ -1107,7 +1107,7 @@
                 'HOMING': 25,
                 'SHOOTER': 31,
                 'BOMBER': 35,
-                'LASER_ENEMY': 40,
+                'LASER_ENEMY': 45,
                 'MINION': 5,
                 // [Patch A] 무의미한 객체 점수 0 처리 (Data Sanitization)
                 'BULLET': 3,
@@ -3172,11 +3172,9 @@
 
         // [CDSO 최종 수정] 입력 강제 유효성 검사 + 공간 최적화 + 랭킹 통합
         async function saveAndRestart() {
-            // [CDSO 보안 프로토콜] 관리자 모드 데이터 저장 차단
+            // [CDSO 보안] 관리자 모드 차단
             if (gameState.isAdminMode) {
-                alert("🚫 [ADMIN MODE]\n기록 저장불가\n(Sandbox Data Rejected)");
-                
-                // 페이지 새로고침으로 흔적 지우기
+                alert("🚫 [ADMIN MODE]\n기록 저장불가");
                 location.reload(); 
                 return; 
             }
@@ -3185,70 +3183,47 @@
             const actionBtns = document.getElementById('action-buttons');
             const input = document.getElementById('initial-input');
             const resultList = document.getElementById('result-rank-list');
-            
-            const resultStats = document.querySelector('.result-stats');
-            const resultTitle = document.getElementById('res-title');
+            // [핵심] 컨테이너 선택자 추가
+            const resultContainer = document.querySelector('.result-container');
 
-            // [CDSO 추가 1] 입력값 유효성 검사 (Validation Gate)
-            // 공백을 제거한 실제 글자수를 확인합니다.
             const rawName = input.value.trim(); 
-
             if (rawName.length === 0) {
-                // 입력이 없으면 경고 효과 연출 (빨간색 점멸 + 흔들림)
                 input.style.borderColor = '#f00';
-                input.style.boxShadow = '0 0 15px #f00';
-                input.placeholder = 'NAME!'; // 플레이스홀더 변경
                 input.focus();
-
-                // 흔들림 애니메이션 (UX 강화)
-                input.animate([
-                    { transform: 'translateX(0)' },
-                    { transform: 'translateX(-5px)' },
-                    { transform: 'translateX(5px)' },
-                    { transform: 'translateX(0)' }
-                ], { duration: 300 });
-
-                return; // ★ 여기서 함수를 강제 종료시켜 저장을 막습니다.
+                return; 
             }
 
-            // 1. 저장 중 상태 표시
             btnSave.textContent = "UPDATING RANK...";
             btnSave.disabled = true;
             input.disabled = true;
 
-            // 유효성 검사를 통과했으므로 이름 확정
             const name = rawName.toUpperCase();
             const finalScore = Math.round(gameState.score);
 
-            // 2. 파이어베이스 저장 및 내 순위 반환
+            // 2. 파이어베이스 저장
             const myRank = await saveToFirebase(name, finalScore, gameState.currentStage);
-            
-            // 전체 랭킹(Top 5) 데이터 갱신
             await initFirebaseRanking();
-            
             gameState.finalRank = myRank;
 
-            // 3. UI 공간 최적화 (Space Optimization)
+            // 3. UI 공간 최적화 (Clean Sweep)
+            // 입력창과 저장버튼 숨김
             btnSave.style.display = 'none';    
             input.style.display = 'none';      
-            resultStats.style.display = 'none'; 
             
-            // resultTitle.style.marginBottom = '10px';
-            // resultTitle.style.fontSize = '1.5em'; 
-            // [CDSO 수정] 타이틀 문구(MISSION FAILED)도 같이 숨김 처리
-            resultTitle.style.display = 'none';
+            // [핵심] 핑크색 결과 박스(잔재)를 통째로 제거!
+            // (이 안에 타이틀, 점수판 등이 다 들어있으므로 이것만 끄면 끝납니다)
+            if (resultContainer) {
+                resultContainer.style.display = 'none'; 
+            }
 
+            // 4. 랭킹 리스트 및 버튼 표시
             if (myRank) {
-                // A. 최신 Top 5 리스트 복사
                 const top5Content = document.getElementById('leaderboard').innerHTML;
-
-                // [CDSO 추가] 현재 내 시스템 정보 확인
                 const currentSys = getSystemInfo(); 
                 const isMobileNow = currentSys.platform === 'MOBILE';
                 const myPlatText = isMobileNow ? 'M' : 'PC';
                 const myPlatClass = isMobileNow ? 'plat-mobile' : 'plat-pc';
 
-                // B. 내 순위 박스 생성 (배지 포함)
                 const myRankHTML = `
                     <li class="rank-me" style="animation: pulseRed 2s infinite; margin-top: 15px; border-color: #f00;">
                         <span class="rank-badge" style="background: linear-gradient(135deg, #ff0000, #990000); color: #fff;">${myRank}</span>
@@ -3259,12 +3234,10 @@
                     </li>
                 `;
 
-                // C. 통합 리스트 출력
                 resultList.innerHTML = top5Content + myRankHTML;
                 resultList.style.display = 'block';
             }
 
-            // 4. 버튼 그룹 보이기
             actionBtns.style.display = 'flex';
         }
 
@@ -3485,4 +3458,3 @@
 </body>
 
 </html>
-
