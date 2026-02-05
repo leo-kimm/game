@@ -594,7 +594,9 @@
 
         <div id="start-screen" class="overlay">
             <h1>NEON DODGE</h1>
-            <span class="season-badge">SEASON 2</span>
+            <div style="color: #0f0; font-size: 1.2em; font-weight: bold; margin: 10px 0; animation: textGlitch 1s infinite;">
+            🔥 SCORE BOOST ACTIVE 🔥
+            </div>
             <ul id="leaderboard">
                 <li>Loading...</li>
             </ul>
@@ -1046,19 +1048,19 @@
         // 적 타입별 차등 점수 (소수점 단위)
         function getEnemyScore(type) {
             const scoreTable = {
-                'NORMAL': 2.0,
-                'ZIGZAG': 2.4,
-                'HOMING': 3.0,
-                'SHOOTER': 3.6,
-                'BOMBER': 4.0,
-                'LASER_ENEMY': 4.4,
-                'MINION': 1,
+                'NORMAL': 15,
+                'ZIGZAG': 19,
+                'HOMING': 25,
+                'SHOOTER': 31,
+                'BOMBER': 35,
+                'LASER_ENEMY': 40,
+                'MINION': 5,
                 // [Patch A] 무의미한 객체 점수 0 처리 (Data Sanitization)
-                'BULLET': 0.5,
-                'ENEMY_BULLET': 0.5,
-                'OBSTACLE': 0.5 // 추후 장애물 추가 대비
+                'BULLET': 3,
+                'ENEMY_BULLET': 3,
+                'OBSTACLE': 3 // 추후 장애물 추가 대비
             };
-            return (scoreTable[type] !== undefined) ? scoreTable[type] : 1.0;
+            return (scoreTable[type] !== undefined) ? scoreTable[type] : 100;
         }
 
         // Phase 6: Safety Margin 충돌 판정 (2px 여유)
@@ -1382,54 +1384,66 @@
 
         // [CDSO 전략 수정] 점수 획득 로직 (Rookie Boost vs Infinite Penalty)
         function addScore(amount) {
-            let finalAmount = amount;
+            let finalAmount = amount*1.5;
             
             // [CDSO 전략 수정] 우선순위 변경: 지옥 페널티 > 루키 부스트
             
             // 1. [Absolute Rule] Stage 11(히든 루트) 진입 시 -> 무조건 20%만 반영
             if (gameState.currentStage >= 11) {
                 // 루키 모드여도 상관없음. 지옥은 지옥임.
-                finalAmount = Math.floor(amount * 0.2);
-                gameState.boostActive = false; 
+                finalAmount = finalAmount * 2;
+                gameState.boostActive = true; 
             }
             // 2. [Conditional Rule] 루키 모드이고 5000점 미만일 때 -> 3배 적용
-            else if (gameState.isRookieMode && gameState.score < 5000) {
-                finalAmount = amount * 3;
+            else if (gameState.isRookieMode && gameState.score < 50000) {
+                finalAmount = finalAmount * 3;
                 gameState.boostActive = true;
             } 
-            else {
-                gameState.boostActive = false;
-            }
 
             // [CDSO Strategy] 스테이지별 차등 제한 (Dynamic Cap)
             // Stage 1~9: 기본 3,000점 + 스테이지당 1,000점 증가 (예: 1탄 4000, 9탄 12000)
             // Stage 10(보스): 20,000점 (대폭 허용)
             // Stage 11(무한): 제한 없음 (Infinity)
 
-            let stageMaxScore;
-            if (gameState.currentStage >= 11) {
-                stageMaxScore = Infinity; // 무한 모드는 제한 해제
-            } else if (gameState.currentStage === 10) {
-                stageMaxScore = 50000;    // 최종 보스전은 넉넉하게
-            } else {
-                // 일반 스테이지는 보수적으로 잡음
-                stageMaxScore = 3000 + (gameState.currentStage * 1000); 
-            }
+            // let stageMaxScore;
+            // if (gameState.currentStage >= 11) {
+            //     stageMaxScore = Infinity; // 무한 모드는 제한 해제
+            // } else if (gameState.currentStage === 10) {
+            //     stageMaxScore = 50000;    // 최종 보스전은 넉넉하게
+            // } else {
+            //     // 일반 스테이지는 보수적으로 잡음
+            //     stageMaxScore = 3000 + (gameState.currentStage * 1000); 
+            // }
             
-            // 현재 스테이지에서 획득한 누적 점수 추적 필요 (gameState에 currentStageScore 변수 추가 전제)
-            if (gameState.currentStageScore > stageMaxScore) {
-                finalAmount = Math.floor(amount * 0.1); // 10%만 반영
+            // // 현재 스테이지에서 획득한 누적 점수 추적 필요 (gameState에 currentStageScore 변수 추가 전제)
+            // if (gameState.currentStageScore > stageMaxScore) {
+            //     finalAmount = Math.floor(amount * 0.1); // 10%만 반영
                 
-                // UI 피드백 (선택사항): 점수 색상을 회색으로 변경하여 '효율 감소' 알림
+            //     // UI 피드백 (선택사항): 점수 색상을 회색으로 변경하여 '효율 감소' 알림
+            //     const scoreEl = document.getElementById('current-score');
+            //     if(scoreEl) scoreEl.style.color = '#888';
+            // }
+
+            // ▼▼▼ [CDSO Patch: Mid-Game Soft Cap] 여기서부터 추가하세요 ▼▼▼
+            // 조건: 스테이지 5 클리어 이후(즉, 6스테이지 이상) AND 현재 점수 8만점 초과 시
+            if (gameState.currentStage > 5 && gameState.score > 60000) {
+                // 획득 점수 50% 페널티 (반토막)
+                finalAmount = Math.floor(finalAmount * 0.3);
+                
+                // [UX Feedback] 점수판 색상을 주황색으로 바꿔 '패널티 적용 중'임을 암시 (선택사항)
                 const scoreEl = document.getElementById('current-score');
-                if(scoreEl) scoreEl.style.color = '#888';
+                if (scoreEl) scoreEl.style.color = '#fa0'; // Orange Warning
             }
+
+
 
 
 
             // 점수 반영
             if (finalAmount > 0) {
                 gameState.score += finalAmount;
+                gameState.currentStageScore += finalAmount; // 카운팅은 유지
+
             }
 
             // [UI 피드백] 점수판 색상 상태 표시
@@ -1744,29 +1758,29 @@
                     // 1. 보스 타입별 기준 설정 (Configuration)
                     if (boss.type === 'LUNAR') {
                         // [Stage 5] 중간 보스: 타이트한 시간 제한, 적당한 보상
-                        baseClearScore = 300;
+                        baseClearScore = 5000;
                         timeLimitS = 15; // 25초 컷 (Speed)
                         timeLimitA = 25;
 
-                        if (gameState.bossTimer <= timeLimitS) timeBonus = 300;
-                        else if (gameState.bossTimer <= timeLimitA) timeBonus = 200;
+                        if (gameState.bossTimer <= timeLimitS) timeBonus = 3000;
+                        else if (gameState.bossTimer <= timeLimitA) timeBonus = 2000;
                         else timeBonus = 100;
 
                     } else {
                         // [Stage 10] 최종 보스: 넉넉한 시간 제한, 압도적인 보상
-                        baseClearScore = 1000; // 엔딩 보상 상향
+                        baseClearScore = 20000; // 엔딩 보상 상향
                         timeLimitS = 30; // 50초 컷 (Endurance)
                         timeLimitA = 50;
 
-                        if (gameState.bossTimer <= timeLimitS) timeBonus = 700; // Legendary
-                        else if (gameState.bossTimer <= timeLimitA) timeBonus = 400;
+                        if (gameState.bossTimer <= timeLimitS) timeBonus = 7000; // Legendary
+                        else if (gameState.bossTimer <= timeLimitA) timeBonus = 4000;
                         else timeBonus = 200;
                     }
 
                     // 2. 노미스 보너스 (공통 로직)
                     // 최종 보스는 어렵기 때문에 노미스 가산점을 더 높게 책정
                     if (gameState.lives >= gameState.maxLives) { // 만피일 때
-                        perfectBonus = (boss.type === 'SUN') ? 1000 : 500;
+                        perfectBonus = (boss.type === 'SUN') ? 30000 : 10000;
                     }
 
                     // 3. 최종 합산
@@ -2328,7 +2342,7 @@
                         } else {
                             // 이미 풀피라면 보너스 점수
                             // gameState.score += 400;
-                            addScore(400);
+                            addScore(500);
                         }
 
 
@@ -2367,7 +2381,7 @@
                         // [CDSO 수정] 적만 제거하고 루나 모드는 유지 (공격형 비트)
                         gameState.enemies.splice(i, 1);
                         // gameState.score += 3;
-                        addScore(30); // 30점으로 상향
+                        addScore(300); // 30점으로 상향
 
                         // 시각적 타격감 추가 (선택 사항)
                         // createExplosion(guardianX, guardianY); 
