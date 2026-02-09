@@ -1,0 +1,3131 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Luge Olympic - Drawing Puzzle</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --olympic-blue: #0081C8;
+      --olympic-yellow: #FCB131;
+      --olympic-black: #1D1D1B;
+      --olympic-green: #00A651;
+      --olympic-red: #EE334E;
+      --gold: #FFD700;
+      --silver: #C0C0C0;
+      --bronze: #CD7F32;
+      --iron-red: #B22222;
+      --iron-gold: #DAA520;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 50%, #0a1628 100%);
+      font-family: 'Outfit', system-ui, sans-serif;
+    }
+
+    /* Game Container - 9:16 aspect ratio */
+    #gameContainer {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: min(100vw, 56.25vh);
+      height: min(177.78vw, 100vh);
+      max-width: 450px;
+      max-height: 800px;
+      /* 눈 덮인 설산 테마 CSS 그라디언트
+         로컬 이미지 사용 시: background-image: url('assets/bg_snow.jpg'); 로 교체 */
+      background:
+        linear-gradient(180deg,
+          rgba(15, 23, 42, 0.4) 0%,
+          rgba(30, 50, 80, 0.3) 25%,
+          rgba(60, 90, 130, 0.2) 50%,
+          rgba(150, 180, 210, 0.15) 75%,
+          rgba(220, 235, 250, 0.2) 100%),
+        linear-gradient(135deg,
+          #0a1628 0%,
+          #1a3a5c 20%,
+          #2a5a8c 40%,
+          #5a8ab0 60%,
+          #8ab8d8 80%,
+          #c8e0f0 100%);
+      background-size: cover;
+
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 0 60px rgba(0, 129, 200, 0.3), 0 0 120px rgba(252, 177, 49, 0.1);
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    /* ========== HOME SCREEN ========== */
+    .screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 100;
+      overflow: hidden;
+    }
+
+    .screen.hidden {
+      display: none;
+    }
+
+    #homeScreen {
+      background: rgba(10, 22, 40, 0.6);
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(4px);
+      /* (선택) 글씨 잘 보이게 배경 살짝 흐리기 */
+    }
+
+    /* Olympic Rings */
+    .olympic-rings {
+      position: absolute;
+      top: 8%;
+      display: flex;
+      gap: 6px;
+      opacity: 0.12;
+      transform: scale(1.2);
+    }
+
+    .ring {
+      width: 32px;
+      height: 32px;
+      border: 4px solid;
+      border-radius: 50%;
+    }
+
+    .ring.blue {
+      border-color: var(--olympic-blue);
+    }
+
+    .ring.yellow {
+      border-color: var(--olympic-yellow);
+      margin-top: 16px;
+    }
+
+    .ring.black {
+      border-color: #fff;
+    }
+
+    .ring.green {
+      border-color: var(--olympic-green);
+      margin-top: 16px;
+    }
+
+    .ring.red {
+      border-color: var(--olympic-red);
+    }
+
+    .home-title {
+      font-size: 36px;
+      font-weight: 900;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      text-shadow: 0 0 20px var(--olympic-blue), 0 0 40px var(--olympic-yellow);
+      margin-bottom: 5px;
+      z-index: 10;
+    }
+
+    .home-subtitle {
+      font-size: 12px;
+      color: var(--gold);
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-bottom: 25px;
+      z-index: 10;
+    }
+
+    .medal-icon {
+      font-size: 50px;
+      margin-bottom: 15px;
+      animation: float 3s ease-in-out infinite;
+      z-index: 10;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-8px);
+      }
+    }
+
+    /* Level Select Grid */
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin: 0 auto 20px auto;
+      z-index: 10;
+      width: 90%;
+      max-width: 300px;
+      justify-content: center;
+    }
+
+    .level-btn {
+      aspect-ratio: 1;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(0, 129, 200, 0.3), rgba(0, 50, 100, 0.5));
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .level-btn:hover:not(.locked) {
+      transform: scale(1.05);
+      border-color: var(--gold);
+      box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+    }
+
+    .level-btn.locked {
+      background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+      color: #555;
+      cursor: not-allowed;
+      border-color: #333;
+    }
+
+    .level-btn.locked::after {
+      content: '🔒';
+      position: absolute;
+      font-size: 12px;
+      bottom: 4px;
+    }
+
+    .level-btn.cleared {
+      border-color: var(--gold);
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(180, 150, 0, 0.3));
+    }
+
+    .level-btn .stars-indicator {
+      font-size: 8px;
+      margin-top: 2px;
+    }
+
+    /* Mode Selector */
+    .mode-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      z-index: 10;
+    }
+
+    .mode-btn {
+      padding: 12px 20px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      background: rgba(20, 40, 70, 0.8);
+      color: #aaa;
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .mode-btn.active {
+      border-color: var(--gold);
+      color: #fff;
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(180, 150, 0, 0.3));
+    }
+
+    .play-btn {
+      width: 80%;
+      max-width: 250px;
+      padding: 16px 35px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--olympic-black);
+      background: linear-gradient(135deg, var(--gold), #FFA500);
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      box-shadow: 0 5px 0 #B8860B, 0 8px 25px rgba(255, 215, 0, 0.4);
+      transition: all 0.2s;
+      z-index: 10;
+    }
+
+    .play-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .play-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #B8860B;
+    }
+
+    .play-btn:disabled {
+      background: #444;
+      color: #888;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    /* ========== GAME HUD ========== */
+    .game-ui {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 10px;
+      z-index: 10;
+    }
+
+    .game-ui.hidden {
+      display: none;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .hud-left {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      /* [추가] 박스와 게이지 수직 중앙 정렬 */
+    }
+
+    .hud-right {
+      display: flex;
+      gap: 6px;
+      pointer-events: auto;
+    }
+
+    .hud-box {
+      background: rgba(10, 20, 40, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(8px);
+      padding: 5px 10px;
+      border-radius: 8px;
+      color: #fff;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+      text-align: center;
+    }
+
+    .hud-title {
+      font-size: 8px;
+      color: var(--olympic-blue);
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .hud-value {
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .hud-value.stars {
+      color: var(--gold);
+    }
+
+    .hud-value.time {
+      color: #00ffcc;
+      font-family: monospace;
+      font-size: 11px;
+    }
+
+    .hud-value.ink {
+      color: #88ccff;
+    }
+
+    .hud-value.ink.low {
+      color: #ff6666;
+    }
+
+    .hud-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(10, 20, 40, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .hud-btn:hover {
+      border-color: var(--gold);
+    }
+
+    .controls {
+      display: flex;
+      gap: 6px;
+      pointer-events: auto;
+      width: 100%;
+    }
+
+    .ctrl-btn {
+      flex: 1;
+      border: 0;
+      height: 40px;
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3);
+      transition: all 0.15s;
+    }
+
+    .ctrl-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-play {
+      background: linear-gradient(135deg, var(--olympic-yellow), #FFA500);
+      color: #000;
+    }
+
+    .btn-eraser {
+      background: linear-gradient(135deg, #4a5568, #2d3748);
+    }
+
+    .btn-eraser.active {
+      background: linear-gradient(135deg, var(--olympic-red), #cc2244);
+    }
+
+    .btn-clear {
+      background: linear-gradient(135deg, #742a2a, #5a2020);
+    }
+
+    /* ========== MODALS ========== */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.88);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      z-index: 50;
+      padding: 20px;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-title {
+      font-size: 26px;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .modal-sub {
+      font-size: 13px;
+      color: #aaa;
+      margin-bottom: 20px;
+      font-family: monospace;
+    }
+
+    .modal-btn {
+      width: 180px;
+      padding: 12px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+
+    .modal-btn.primary {
+      background: linear-gradient(135deg, var(--gold), #FFA500);
+      color: #000;
+    }
+
+    .modal-btn.secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Leaderboard */
+    .leaderboard {
+      background: rgba(20, 30, 50, 0.9);
+      border-radius: 10px;
+      padding: 12px;
+      margin: 15px 0;
+      width: 200px;
+    }
+
+    .lb-title {
+      font-size: 11px;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .lb-entry {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 8px;
+      color: #fff;
+      font-size: 11px;
+      font-family: monospace;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .lb-entry:last-child {
+      border-bottom: none;
+    }
+
+    .lb-rank {
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    .tutorial {
+      position: absolute;
+      top: 45%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: rgba(255, 255, 255, 0.5);
+      pointer-events: none;
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .tutorial.hidden {
+      display: none;
+    }
+
+    /* ========== GLASSMORPHISM TOOLBAR ========== */
+    .toolbar {
+      position: relative;
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+      width: 100%;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .tool-btn {
+      flex: 1;
+      height: 44px;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .tool-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .tool-btn.active {
+      border-color: var(--gold);
+      box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+    }
+
+    .tool-btn.play-btn {
+      background: linear-gradient(135deg, var(--olympic-yellow), #FFA500);
+      color: #000;
+      flex: 0 0 auto;
+      width: auto;
+      padding: 0 16px;
+    }
+
+    /* Tool container for Draw/Eraser - fills remaining space */
+    .tool-container {
+      position: relative;
+      flex: 1;
+      display: flex;
+    }
+
+    .tool-container .tool-btn {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Popup container */
+    .tool-popup {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease-out;
+      margin-bottom: 8px;
+    }
+
+    .tool-popup.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .popup-content {
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 10px;
+      display: flex;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    /* Ink type buttons */
+    .ink-btn {
+      width: 50px;
+      height: 50px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      font-size: 10px;
+      color: #aaa;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .ink-btn .ink-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      margin-bottom: 4px;
+    }
+
+    .ink-btn[data-type="normal"] .ink-dot {
+      background: #ffffff;
+      box-shadow: 0 0 8px #00ffcc;
+    }
+
+    .ink-btn[data-type="booster"] .ink-dot {
+      background: #ff4444;
+      box-shadow: 0 0 8px #ff6600;
+    }
+
+    .ink-btn[data-type="jump"] .ink-dot {
+      background: #39ff14;
+      box-shadow: 0 0 8px #ccff00;
+    }
+
+    .ink-btn.active {
+      border-color: var(--gold);
+      background: rgba(255, 215, 0, 0.15);
+      color: #fff;
+    }
+
+    .ink-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Eraser slider popup */
+    .eraser-slider-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      min-width: 120px;
+    }
+
+    .eraser-slider-label {
+      font-size: 10px;
+      color: #aaa;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .eraser-slider {
+      width: 100px;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .eraser-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--gold);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+    }
+
+    /* Ink gauge display */
+    .ink-gauge {
+      position: absolute;
+      top: -24px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      color: #888;
+      font-family: 'Outfit', sans-serif;
+      white-space: nowrap;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      z-index: 200;
+    }
+
+    .toast.visible {
+      opacity: 1;
+    }
+
+    /* Ink Gauge Progress Bars */
+    .hud-center {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .ink-bar-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .ink-bar-label {
+      font-size: 12px;
+    }
+
+    .ink-bar {
+      width: 60px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .ink-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease-out;
+    }
+
+    .ink-bar.booster .ink-bar-fill {
+      background: linear-gradient(90deg, #ff4444, #ff6600);
+      box-shadow: 0 0 6px #ff6600;
+    }
+
+    .ink-bar.jump .ink-bar-fill {
+      background: linear-gradient(90deg, #39ff14, #ccff00);
+      box-shadow: 0 0 6px #ccff00;
+    }
+
+    /* ========== LOADING OVERLAY ========== */
+    #loadingOverlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #0a1628 0%, #1a2a4a 50%, #0a1628 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 500;
+      transition: opacity 0.5s ease-out;
+    }
+
+    #loadingOverlay.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #loadingOverlay.hidden {
+      display: none;
+    }
+
+    .loading-icon {
+      font-size: 60px;
+      animation: lugeSpin 1.5s ease-in-out infinite;
+    }
+
+    @keyframes lugeSpin {
+
+      0%,
+      100% {
+        transform: translateY(0) rotate(-15deg);
+      }
+
+      25% {
+        transform: translateY(-10px) rotate(0deg);
+      }
+
+      50% {
+        transform: translateY(0) rotate(15deg);
+      }
+
+      75% {
+        transform: translateY(-5px) rotate(0deg);
+      }
+    }
+
+    .loading-text {
+      color: var(--gold);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      margin-top: 20px;
+      text-transform: uppercase;
+    }
+
+    .loading-dots::after {
+      content: '';
+      animation: dots 1.5s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+
+      0%,
+      20% {
+        content: '';
+      }
+
+      40% {
+        content: '.';
+      }
+
+      60% {
+        content: '..';
+      }
+
+      80%,
+      100% {
+        content: '...';
+      }
+    }
+
+    /* ========== RANKING SCREEN ========== */
+    #rankingScreen {
+      background: rgba(10, 22, 40, 0.95);
+      justify-content: flex-start;
+      padding: 30px 20px;
+    }
+
+    .ranking-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .ranking-stage-title {
+      font-size: 32px;
+      font-weight: 900;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      text-shadow: 0 0 20px var(--olympic-blue);
+    }
+
+    .ranking-list {
+      width: 100%;
+      max-width: 300px;
+      background: rgba(20, 35, 60, 0.8);
+      border-radius: 16px;
+      padding: 15px;
+      margin-bottom: 25px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .ranking-list-title {
+      font-size: 12px;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .ranking-entry {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+    }
+
+    .ranking-entry:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .ranking-medal {
+      font-size: 24px;
+      width: 36px;
+      text-align: center;
+    }
+
+    .ranking-rank {
+      font-size: 16px;
+      font-weight: 800;
+      color: #666;
+      width: 36px;
+      text-align: center;
+    }
+
+    .ranking-name {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      margin-left: 10px;
+    }
+
+    .ranking-time {
+      font-size: 13px;
+      font-family: monospace;
+      color: #00ffcc;
+    }
+
+    .ranking-empty {
+      text-align: center;
+      color: #666;
+      font-size: 12px;
+      padding: 20px;
+    }
+
+    .ranking-loading {
+      text-align: center;
+      color: #aaa;
+      font-size: 12px;
+      padding: 20px;
+    }
+
+    .ranking-buttons {
+      display: flex;
+      flex-direction: row;
+      /* [핵심] 세로(column) -> 가로(row)로 변경 */
+      gap: 10px;
+      /* 버튼 사이 간격 */
+      width: 100%;
+      max-width: 300px;
+      /* 위쪽 랭킹 박스 크기(300px)에 맞춤 */
+      margin-top: 10px;
+    }
+
+    /* [추가] 버튼 2개의 크기와 높이를 강제로 통일시키는 코드 */
+    .ranking-buttons button {
+      flex: 1;
+      /* 공간을 50:50으로 똑같이 나눠 가짐 */
+      width: auto !important;
+      /* 기존에 설정된 너비 무시 */
+      max-width: none !important;
+      margin: 0 !important;
+      height: 52px;
+      /* 버튼 높이 통일 */
+      font-size: 15px;
+      /* 글자 크기 통일 */
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+
+
+    /* ========== OLYMPIC BROADCAST RESULT MODAL ========== */
+    /* result-broadcast는 아래에 새 버전 있음 */
+
+    .result-finish-title {
+      font-size: 42px;
+      font-weight: 900;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      text-shadow: 0 0 30px rgba(255, 215, 0, 0.6),
+        0 4px 0 #B8860B;
+      margin-bottom: 20px;
+    }
+
+    .result-rank-bar {
+      background: rgba(0, 0, 0, 0.7);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .result-rank-label {
+      font-size: 10px;
+      color: var(--gold);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .result-rank-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #fff;
+      flex: 1;
+      text-align: center;
+    }
+
+    .result-rank-time {
+      font-size: 16px;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      color: #00ffcc;
+    }
+
+    /* result-my-record는 아래에 새 버전 있음 */
+
+    .result-my-label {
+      font-size: 10px;
+      color: #88ccff;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .result-my-time {
+      font-size: 22px;
+      font-family: 'Courier New', monospace;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+    }
+
+    .result-gap {
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      padding: 6px 10px;
+      border-radius: 6px;
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .result-gap.slower {
+      background: rgba(255, 70, 70, 0.3);
+      color: #ff6666;
+      border: 1px solid #ff4444;
+    }
+
+    .result-gap.faster {
+      background: rgba(70, 150, 255, 0.3);
+      color: #66aaff;
+      border: 1px solid #4488ff;
+    }
+
+    .result-gap.first {
+      background: rgba(255, 215, 0, 0.3);
+      color: var(--gold);
+      border: 1px solid var(--gold);
+    }
+
+    /* TOP 3 Entries */
+    .result-top3 {
+      width: 100%;
+      margin-bottom: 15px;
+    }
+
+    .top3-entry {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 8px;
+      margin-bottom: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .top3-entry:first-child {
+      border: 1px solid rgba(255, 215, 0, 0.4);
+      background: rgba(255, 215, 0, 0.1);
+    }
+
+    .top3-medal {
+      font-size: 20px;
+      width: 32px;
+      text-align: center;
+    }
+
+    .top3-name {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 700;
+      color: #fff;
+      margin-left: 8px;
+    }
+
+    .top3-time {
+      font-size: 14px;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      color: #00ffcc;
+    }
+
+    /* My Record Content Layout */
+    .result-my-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .result-my-record {
+      background: linear-gradient(90deg,
+          rgba(0, 129, 200, 0.4) 0%,
+          rgba(0, 50, 100, 0.6) 50%,
+          rgba(0, 129, 200, 0.4) 100%);
+      border: 2px solid var(--olympic-blue);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin: 10px 0;
+      
+      /* [핵심 수정] 박스 크기 강제 고정 및 내부 가로 정렬 */
+      width: 100%;             /* 가로 꽉 채우기 */
+      box-sizing: border-box;  /* 테두리 두께 포함해서 크기 계산 */
+      display: flex;
+      flex-direction: row;     /* 세로(column) -> 가로(row)로 변경 */
+      justify-content: space-between; /* 양끝 정렬 (MY - 시간 - Gap) */
+      align-items: center;     /* 수직 중앙 정렬 */
+    }
+
+    .result-fail-reason {
+      font-size: 11px;
+      color: #ff8888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 8px;
+    }
+
+    .result-fail-reason:empty {
+      display: none;
+    }
+
+    /* Button Container */
+    .result-buttons {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      margin-top: 15px;
+    }
+
+    .result-buttons .modal-btn {
+      width: 80%;
+      max-width: 200px;
+    }
+
+    /* Result Broadcast Container */
+    .result-broadcast {
+      width: 100%;
+      max-width: 320px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="gameContainer">
+    <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay">
+      <div class="loading-icon">🛷</div>
+      <div class="loading-text">LOADING<span class="loading-dots"></span></div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <!-- HOME SCREEN -->
+
+    <div class="screen" id="introScreen" style="z-index: 200; background: rgba(10, 22, 40, 0.85);">
+      <div class="medal-icon" style="font-size: 80px; margin-bottom: 20px;">🥇</div>
+      <div class="home-title" style="font-size: 42px;">LUGE<br><span
+          style="font-size: 24px; color:var(--gold);">OLYMPIC</span></div>
+
+      <div style="margin-top: 40px; text-align: center;">
+        <p
+          style="color: #88aacc; font-size: 12px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px;">
+          Athlete Registration</p>
+        <input type="text" id="userNickname" placeholder="닉네임 (3~4자)"
+          style="width: 220px; padding: 15px; border-radius: 12px; border: 2px solid var(--olympic-blue); 
+                      background: rgba(255,255,255,0.1); color: #fff; text-align: center; font-size: 20px; font-family: 'Outfit'; outline: none;">
+        <p id="nickError"
+          style="color: var(--olympic-red); font-size: 12px; margin-top: 10px; visibility: hidden; height: 15px;">
+          한글/영문 3~4자로 입력하세요.
+        </p>
+      </div>
+
+      <button id="btnRegister"
+        style="margin-top: 30px; padding: 16px 50px; font-size: 18px; font-weight: 900; 
+              background: linear-gradient(135deg, var(--olympic-blue), #005090); color: white; border: none; border-radius: 30px; 
+              cursor: pointer; box-shadow: 0 0 20px rgba(0, 129, 200, 0.4); text-transform: uppercase; letter-spacing: 2px; transition: transform 0.2s;">
+        ENTRY
+      </button>
+    </div>
+
+    <div class="screen hidden" id="homeScreen">
+      <div class="olympic-rings">
+        <div class="ring blue"></div>
+        <div class="ring yellow"></div>
+        <div class="ring black"></div>
+        <div class="ring green"></div>
+        <div class="ring red"></div>
+      </div>
+
+      <div style="position: absolute; top: 20px; right: 20px; color: var(--gold); font-size: 12px; font-weight: 700;">
+        PLAYER: <span id="displayNick">Unknown</span>
+      </div>
+
+      <div class="home-title" style="margin-top: 60px;">SELECT STAGE</div>
+      <div class="level-grid" id="levelGrid" style="margin-top: 20px;"></div>
+    </div>
+
+    <!-- RANKING SCREEN -->
+    <div class="screen hidden" id="rankingScreen">
+      <div class="ranking-header">
+        <div class="medal-icon" style="font-size: 50px;">🏆</div>
+        <div class="ranking-stage-title" id="rankingStageTitle">STAGE 1</div>
+      </div>
+
+      <div class="ranking-list">
+        <div class="ranking-list-title">🏅 World Records</div>
+        <div id="rankingEntries">
+          <div class="ranking-loading">Loading...</div>
+        </div>
+      </div>
+
+      <div class="ranking-buttons">
+        <button class="play-btn" id="btnRankingStart">GAME START</button>
+        <button class="modal-btn secondary" id="btnRankingBack">← BACK</button>
+      </div>
+    </div>
+
+    <!-- GAME UI -->
+    <div class="game-ui hidden" id="gameUI">
+      <div class="top-bar">
+        <div class="hud-left">
+          <div class="hud-box">
+            <div class="hud-title">STAGE</div>
+            <div class="hud-value" id="uiStage">1</div>
+          </div>
+
+          <div class="hud-box">
+            <div class="hud-title">TIME</div>
+            <div class="hud-value time" id="uiTime">0.00000</div>
+          </div>
+
+          <div class="hud-center" style="margin-left: 10px;">
+            <div class="ink-bar-container">
+              <div class="ink-bar-label">🔥</div>
+              <div class="ink-bar booster">
+                <div class="ink-bar-fill" id="boosterBar"></div>
+              </div>
+            </div>
+            <div class="ink-bar-container">
+              <div class="ink-bar-label">🦘</div>
+              <div class="ink-bar jump">
+                <div class="ink-bar-fill" id="jumpBar"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hud-right">
+          <button class="hud-btn" id="btnSave" title="Save Setup">💾</button>
+          <button class="hud-btn" id="btnLoad" title="Load Setup">📂</button>
+          <button class="hud-btn" id="btnHome" title="Home">🏠</button>
+        </div>
+      </div>
+
+
+
+
+      <div class="toolbar">
+        <button id="btnStart" class="tool-btn play-btn">Start</button>
+
+        <div class="tool-container">
+          <button id="btnDraw" class="tool-btn active">🖌 Draw</button>
+          <div class="tool-popup" id="drawPopup">
+            <div class="popup-content">
+              <button class="ink-btn active" data-type="normal">
+                <div class="ink-dot"></div>
+                Normal
+              </button>
+              <button class="ink-btn" data-type="booster">
+                <div class="ink-dot"></div>
+                Boost
+              </button>
+              <button class="ink-btn" data-type="jump">
+                <div class="ink-dot"></div>
+                Jump
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tool-container">
+          <button id="btnEraser" class="tool-btn">🧹 Eraser</button>
+          <div class="tool-popup" id="eraserPopup">
+            <div class="popup-content">
+              <div class="eraser-slider-container">
+                <span class="eraser-slider-label">Size: <span id="eraserSizeLabel">15</span>px</span>
+                <input type="range" class="eraser-slider" id="eraserSlider" min="3" max="40" value="15">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="tutorial hidden" id="tutorial">
+      Draw lines to guide<br>the rider to all ⭐!
+    </div>
+
+    <!-- RESULT MODAL (올림픽 중계 스타일) -->
+    <div class="modal-overlay" id="resultModal">
+      <div class="result-broadcast">
+        <div class="result-finish-title" id="resultTitle">FINISH!</div>
+
+        <!-- TOP 3 기록 표시 -->
+        <div class="result-top3" id="resultTop3">
+          <div class="top3-entry" id="top3Entry1">
+            <span class="top3-medal">🥇</span>
+            <span class="top3-name" id="top3Name1">---</span>
+            <span class="top3-time" id="top3Time1">--:--.---</span>
+          </div>
+          <div class="top3-entry" id="top3Entry2">
+            <span class="top3-medal">🥈</span>
+            <span class="top3-name" id="top3Name2">---</span>
+            <span class="top3-time" id="top3Time2">--:--.---</span>
+          </div>
+          <div class="top3-entry" id="top3Entry3">
+            <span class="top3-medal">🥉</span>
+            <span class="top3-name" id="top3Name3">---</span>
+            <span class="top3-time" id="top3Time3">--:--.---</span>
+          </div>
+        </div>
+
+        <!-- 내 기록 바 -->
+        <div class="result-my-record">
+          <div class="result-my-content">
+            <span class="result-my-label">MY</span>
+            <span class="result-my-time" id="resultMyTime">00:00.000</span>
+            <span class="result-gap" id="resultGap">--.---</span>
+          </div>
+          <div class="result-fail-reason" id="resultFailReason"></div>
+        </div>
+
+        <div class="result-buttons">
+          <button class="modal-btn primary" id="btnNext">Next Stage</button>
+          <button class="modal-btn secondary" id="btnRetry">Retry</button>
+          <button class="modal-btn secondary" id="btnResultHome">Home</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // ▼ [중요] 이 줄을 import보다 무조건 위에 적으세요!
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+
+    import { getAuth, signInAnonymously }
+      from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+    import { getFirestore, collection, doc, getDoc, setDoc, query, where, orderBy, limit, getDocs, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+    import { initializeAppCheck, ReCaptchaV3Provider }
+      from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app-check.js";
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+
+
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBhnvoCQh8B38HRzBe0551aBS6Ve6cTRtE",
+      authDomain: "luge-olympic.firebaseapp.com",
+      projectId: "luge-olympic",
+      storageBucket: "luge-olympic.firebasestorage.app",
+      messagingSenderId: "893309182264",
+      appId: "1:893309182264:web:8dc51f15811e352a5921cd",
+      measurementId: "G-GKCHKLN4S8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider("6Lf0J2UsAAAAAEpo6zBHykR9KBIag7CcergAemd8"),
+      isTokenAutoRefreshEnabled: true,
+    });
+
+
+    const db = getFirestore(app);
+
+    const auth = getAuth(app);
+    await signInAnonymously(auth);
+
+
+
+
+    (() => {
+      // ============================================
+      // CONSTANTS
+      // ============================================
+      const VIRTUAL_W = 360;
+      const VIRTUAL_H = 640;
+      const MAX_STAGE = 10;
+
+      const PHYS = {
+        gravity: 800,
+        friction: 0.001,
+        bounce: 0.12,
+        airDrag: 0.0003,
+        rotationSpeed: 3.0
+      };
+
+      // Global ink limits for special types
+      const INK_LIMITS = {
+        booster: 150,
+        jump: 100
+      };
+
+      const STALL_THRESHOLD = 25;
+      const STALL_TIME = 3000;
+
+      // Hardcoded star positions for each stage (each star must be at same or lower Y than previous)
+      // Stages 1-3: Easy - gentle curves
+      // Stages 4-6: Medium - wider spread, some horizontal movement
+      // Stages 7-10: Hard - tight paths, requires precise drawing
+      const STAGE_STARS = {
+        1: [{ x: 200, y: 350 }],
+        2: [{ x: 120, y: 280 }, { x: 260, y: 450 }],
+        3: [{ x: 80, y: 200 }, { x: 220, y: 350 }, { x: 300, y: 500 }],
+        4: [{ x: 280, y: 180 }, { x: 100, y: 280 }, { x: 260, y: 400 }, { x: 140, y: 520 }],
+        5: [{ x: 60, y: 160 }, { x: 180, y: 240 }, { x: 300, y: 320 }, { x: 120, y: 420 }, { x: 280, y: 530 }],
+        6: [{ x: 300, y: 150 }, { x: 100, y: 220 }, { x: 280, y: 300 }, { x: 80, y: 380 }, { x: 250, y: 460 }, { x: 180, y: 540 }],
+        7: [{ x: 50, y: 140 }, { x: 150, y: 180 }, { x: 300, y: 250 }, { x: 100, y: 320 }, { x: 280, y: 390 }, { x: 60, y: 460 }, { x: 240, y: 540 }],
+        8: [{ x: 280, y: 130 }, { x: 80, y: 180 }, { x: 260, y: 240 }, { x: 100, y: 310 }, { x: 300, y: 370 }, { x: 60, y: 430 }, { x: 220, y: 490 }, { x: 160, y: 550 }],
+        9: [{ x: 60, y: 125 }, { x: 200, y: 170 }, { x: 320, y: 220 }, { x: 80, y: 280 }, { x: 260, y: 340 }, { x: 120, y: 400 }, { x: 300, y: 450 }, { x: 60, y: 500 }, { x: 220, y: 555 }],
+        10: [{ x: 300, y: 115 }, { x: 60, y: 160 }, { x: 280, y: 210 }, { x: 100, y: 260 }, { x: 320, y: 310 }, { x: 50, y: 360 }, { x: 260, y: 410 }, { x: 120, y: 460 }, { x: 300, y: 510 }, { x: 180, y: 560 }]
+      };
+
+      // Ink type colors
+      const INK_COLORS = {
+        normal: { line: '#ffffff', glow: '#00ffcc' },
+        booster: { line: '#ff4444', glow: '#ff6600' },
+        jump: { line: '#39ff14', glow: '#ccff00' }
+      };
+
+      // ============================================
+      // DOM ELEMENTS
+      // ============================================
+      const container = document.getElementById('gameContainer');
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d', { alpha: true });
+
+      const homeScreen = document.getElementById('homeScreen');
+      const gameUI = document.getElementById('gameUI');
+      const tutorial = document.getElementById('tutorial');
+      const resultModal = document.getElementById('resultModal');
+      const levelGrid = document.getElementById('levelGrid');
+
+      // ============================================
+      // GAME STATE
+      // ============================================
+      let scale = 1;
+      let offsetX = 0, offsetY = 0;
+
+      // [여기에 선언]
+      let currentUserNickname = "";
+
+      const state = {
+        screen: 'home',
+        mode: 'build',
+        stage: 1,
+        starsCollected: 0,
+        starsTotal: 1,
+        timer: 0,
+        timerRunning: false,
+        stallTimer: 0,
+        currentInkType: 'normal',
+        boosterInkUsed: 0,
+        jumpInkUsed: 0,
+        eraserSize: 15,
+        showEraserPreview: false,
+
+        // ▼▼▼ [신규 추가] 데이터 분석용 변수 ▼▼▼
+        retryCount: 0,       // 현재 스테이지 재시도 횟수
+        strokeCount: 0,      // 선 그리기 횟수
+        eraserCount: 0,      // 지우개 사용 횟수
+        startTime: 0,        // 게임 시작 시간 (플레이 타임 계산용)
+        deathX: 0,           // 죽은 위치 X
+        deathY: 0            // 죽은 위치 Y
+      };
+
+
+
+      // -----------------[여기부터 추가]-----------------
+      async function saveScoreToFirebase(stage, newTime) {
+        if (!currentUserNickname) return;
+        // if (!auth.currentUser) return; // UID가 없어도 닉네임으로 저장하게 이 줄은 주석 처리
+
+        // [핵심 수정] 문서 ID를 'UID' 대신 '닉네임'으로 만듭니다.
+        // 이렇게 하면 '우간다'는 Stage 1에서 무조건 하나의 기록만 갖게 됩니다.
+        const docId = `record_${currentUserNickname}_stage${stage}`;
+        const docRef = doc(db, "rankings", docId);
+
+        try {
+          const docSnap = await getDoc(docRef);
+          
+          const payload = {
+            // uid: auth.currentUser ? auth.currentUser.uid : 'anon', // UID는 참고용으로만 저장
+            nickname: currentUserNickname,
+            stage,
+            time: Number(newTime.toFixed(5)),
+            updatedAt: serverTimestamp(),
+          };
+
+          if (!docSnap.exists()) {
+            // 1. 기록이 아예 없으면 -> 새로 저장
+            await setDoc(docRef, payload);
+          } else {
+            // 2. 기록이 이미 있으면 -> 신기록일 때만 덮어쓰기
+            const oldTime = docSnap.data().time;
+            if (newTime < oldTime) {
+              await setDoc(docRef, payload, { merge: true });
+              console.log("New Record Updated!");
+            } else {
+              console.log("Old record was better, skipping.");
+            }
+          }
+        } catch (e) {
+          console.error("Firebase Save Error:", e);
+        }
+      }
+
+      // ▼▼▼ [신규] 디바이스/시스템 정보 수집 모듈 ▼▼▼
+      function getSystemInfo() {
+        const ua = navigator.userAgent;
+        let os = 'Unknown', osVer = '0', model = 'Unknown';
+        let browser = 'Unknown', engine = 'Unknown';
+        
+        // 1. OS & Version 파싱
+        if (/Android/i.test(ua)) {
+          os = 'Android';
+          const match = ua.match(/Android\s([0-9\.]+)/);
+          if (match) osVer = match[1];
+          // 안드로이드 모델명 추출 시도 (ex: SM-G991N)
+          const modelMatch = ua.match(/;\s([^;]+)\sBuild/);
+          if (modelMatch) model = modelMatch[1];
+        } else if (/iPhone|iPad|iPod/i.test(ua)) {
+          os = 'iOS';
+          const match = ua.match(/OS\s([0-9_]+)/);
+          if (match) osVer = match[1].replace(/_/g, '.');
+          model = /iPhone/i.test(ua) ? 'iPhone' : 'iPad';
+        } else if (/Windows/i.test(ua)) os = 'Windows';
+        else if (/Mac/i.test(ua)) os = 'Mac';
+
+        // 2. Browser 파싱 (카카오톡, 네이버 인앱 등 포함)
+        if (/KAKAOTALK/i.test(ua)) browser = 'KakaoTalk';
+        else if (/NAVER/i.test(ua)) browser = 'NaverApp';
+        else if (/Chrome/i.test(ua)) browser = 'Chrome';
+        else if (/Safari/i.test(ua)) browser = 'Safari';
+        else if (/Firefox/i.test(ua)) browser = 'Firefox';
+
+        // 3. Engine Info
+        if (/AppleWebKit/i.test(ua)) engine = 'AppleWebKit';
+        else if (/Gecko/i.test(ua)) engine = 'Gecko';
+
+        // 4. Platform & Input
+        const isMobile = /Mobi|Android/i.test(ua);
+        const platform = isMobile ? 'MOBILE' : 'PC';
+        const control = ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 'TOUCH' : 'MOUSE';
+        
+        return {
+          os, osVer, browser, model, engine,
+          platform,
+          resolution: `${window.screen.width}x${window.screen.height}`, // 해상도
+          control,
+          raw_ua: ua // 원본 UA (혹시 모를 분석용)
+        };
+      }
+
+
+
+      // ▼▼▼ [수정됨] 시스템 정보가 포함된 로그 저장 함수 ▼▼▼
+      async function saveGameLog(result, failReason = null) {
+        if (!currentUserNickname) return;
+
+        try {
+          // 1. 시스템 정보 가져오기
+          const sys = getSystemInfo(); 
+
+          const logRef = doc(collection(db, "game_logs")); 
+          
+          const logData = {
+            // [Basic Info]
+            nickname: currentUserNickname,
+            uid: auth.currentUser ? auth.currentUser.uid : 'anon',
+            stage: state.stage,
+            result: result,
+            reason: failReason,
+            
+            // [Detailed System Info] - 요청하신 구조 그대로 적용
+            os: sys.os,
+            osVer: sys.osVer,
+            browser: sys.browser,
+            model: sys.model,
+            engine: sys.engine,
+
+            // [Environment Info]
+            platform: sys.platform,
+            screen: sys.resolution,
+            control: sys.control,
+
+            // [Raw Data Archiving]
+            ua_full: sys.raw_ua,
+
+            // [Behavior Data]
+            retry_count: state.retryCount,
+            stroke_count: state.strokeCount,
+            eraser_count: state.eraserCount,
+            
+            // [Ink Usage]
+            ink_booster: Number(state.boosterInkUsed.toFixed(2)),
+            ink_jump: Number(state.jumpInkUsed.toFixed(2)),
+            
+            // [Time & Location]
+            play_time: Number(state.timer.toFixed(3)),
+            death_pos: failReason ? { x: Math.round(state.deathX), y: Math.round(state.deathY) } : null,
+            
+            created_at: serverTimestamp()
+          };
+
+          // 비동기 전송
+          setDoc(logRef, logData).catch(e => console.error("Log Save Error:", e));
+          
+        } catch (e) {
+          console.error("Log System Error:", e);
+        }
+      }
+
+
+      async function getTopScoresFromFirebase(stage) {
+        try {
+          const q = query(collection(db, "rankings"), where("stage", "==", stage), orderBy("time", "asc"), limit(5));
+          const snap = await getDocs(q);
+          return snap.docs.map(d => d.data());
+        } catch (e) { console.error("Leaderboard Error (Index required):", e); return []; }
+      }
+
+      // ==== 로딩 화면 제거 함수 ====
+      function hideLoadingOverlay() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+          overlay.classList.add('fade-out');
+          setTimeout(() => {
+            overlay.classList.add('hidden');
+          }, 500);
+        }
+      }
+
+      // [추가] 자동 로그인: 저장된 닉네임이 있으면 바로 로비로 이동
+      const savedNick = localStorage.getItem('luge_nickname');
+      if (savedNick) {
+        currentUserNickname = savedNick;
+        document.getElementById('displayNick').innerText = currentUserNickname;
+        document.getElementById('introScreen').classList.add('hidden');
+        document.getElementById('homeScreen').classList.remove('hidden');
+      }
+
+      // 로딩 화면 페이드아웃 (0.5초 후)
+      setTimeout(hideLoadingOverlay, 500);
+
+      // 1. [진입] 닉네임 등록 버튼 (중복 검사 추가됨)
+      document.getElementById('btnRegister').onclick = async function () {
+        const nickInput = document.getElementById('userNickname');
+        const errorMsg = document.getElementById('nickError');
+        const btn = this; // 버튼 비활성화를 위해
+        
+        const inputNick = nickInput.value.trim(); // 공백 제거
+        const nickRegex = /^[a-zA-Z0-9가-힣]{3,4}$/;
+
+        // 1. 형식 유효성 검사
+        if (!nickRegex.test(inputNick)) {
+          errorMsg.innerText = "한글/영문 3~4자로 입력하세요.";
+          errorMsg.style.visibility = 'visible';
+          errorMsg.style.color = 'var(--olympic-red)';
+          nickInput.style.borderColor = 'var(--olympic-red)';
+          return;
+        }
+
+        // 2. 중복 검사 진행 중 표시
+        btn.disabled = true;
+        btn.innerText = "CHECKING...";
+        errorMsg.style.visibility = 'hidden';
+
+        try {
+          // Firestore의 'users' 컬렉션에서 해당 닉네임 문서를 찾아봅니다.
+          // (문서 ID를 닉네임으로 설정하여 중복을 원천 봉쇄)
+          const userDocRef = doc(db, "users", inputNick);
+          const userSnap = await getDoc(userDocRef);
+
+          if (userSnap.exists()) {
+            // [중복 발생] 이미 문서가 존재함
+            errorMsg.innerText = "이미 사용 중인 닉네임입니다 😢";
+            errorMsg.style.visibility = 'visible';
+            nickInput.style.borderColor = 'var(--olympic-red)';
+            
+            // 버튼 복구
+            btn.disabled = false;
+            btn.innerText = "ENTRY";
+            return; 
+          }
+
+          // [통과] 사용 가능한 닉네임 -> Firestore에 '내꺼'라고 등록(찜)
+          await setDoc(userDocRef, {
+            uid: auth.currentUser ? auth.currentUser.uid : 'anon',
+            nickname: inputNick,
+            createdAt: serverTimestamp()
+          });
+
+          // [성공 처리] 로컬 저장 및 화면 전환
+          currentUserNickname = inputNick;
+          localStorage.setItem('luge_nickname', currentUserNickname);
+
+          document.getElementById('displayNick').innerText = currentUserNickname;
+          document.getElementById('introScreen').classList.add('hidden');
+          document.getElementById('homeScreen').classList.remove('hidden');
+
+        } catch (e) {
+          console.error("닉네임 검사 오류:", e);
+          errorMsg.innerText = "서버 오류가 발생했습니다.";
+          errorMsg.style.visibility = 'visible';
+          btn.disabled = false;
+          btn.innerText = "ENTRY";
+        }
+      };
+
+      // ==== 랭킹 화면 관련 함수들 ====
+      function selectStage(n) {
+        state.stage = n;
+        document.querySelectorAll('.level-btn').forEach(btn => {
+          btn.style.outline = btn.dataset.stage == n ? '3px solid var(--gold)' : 'none';
+        });
+        showRankingScreen(n);
+      }
+
+      async function showRankingScreen(stage) {
+        document.getElementById('rankingStageTitle').innerText = `STAGE ${stage}`;
+        document.getElementById('homeScreen').classList.add('hidden');
+        document.getElementById('rankingScreen').classList.remove('hidden');
+
+        // 랭킹 데이터 로드
+        await loadRankingData(stage);
+      }
+
+      async function loadRankingData(stage) {
+        const container = document.getElementById('rankingEntries');
+        container.innerHTML = '<div class="ranking-loading">Loading...</div>';
+
+        try {
+          const q = query(
+            collection(db, "rankings"),
+            where("stage", "==", stage),
+            orderBy("time", "asc"),
+            limit(10)
+          );
+          const snap = await getDocs(q);
+
+          container.innerHTML = '';
+
+          if (snap.empty) {
+            container.innerHTML = '<div class="ranking-empty">No records yet. Be the first!</div>';
+            return;
+          }
+
+          snap.docs.forEach((doc, i) => {
+            const data = doc.data();
+            const entry = document.createElement('div');
+            entry.className = 'ranking-entry';
+
+            if (i < 3) {
+              const medals = ['🥇', '🥈', '🥉'];
+              entry.innerHTML = `
+                <span class="ranking-medal">${medals[i]}</span>
+                <span class="ranking-name">${data.nickname}</span>
+                <span class="ranking-time">${formatTime(data.time)}</span>
+              `;
+            } else {
+              entry.innerHTML = `
+                <span class="ranking-rank">${i + 1}</span>
+                <span class="ranking-name">${data.nickname}</span>
+                <span class="ranking-time">${formatTime(data.time)}</span>
+              `;
+            }
+            container.appendChild(entry);
+          });
+        } catch (e) {
+          console.error("Ranking load error:", e);
+          container.innerHTML = '<div class="ranking-empty">Failed to load rankings</div>';
+        }
+      }
+
+      // 랭킹 화면 버튼 이벤트
+      document.getElementById('btnRankingStart').onclick = function () {
+        document.getElementById('rankingScreen').classList.add('hidden');
+        startGame();
+      };
+
+      document.getElementById('btnRankingBack').onclick = function () {
+        document.getElementById('rankingScreen').classList.add('hidden');
+        document.getElementById('homeScreen').classList.remove('hidden');
+      };
+
+
+
+      const level = {
+        start: { x: 0, y: 0 },
+        finish: { x: 0, y: 0, w: 0, h: 0 },
+        stars: []
+      };
+
+      let strokes = [];
+      let activeStroke = null;
+      let eraserMode = false;
+      let eraserPath = [];
+      const particles = [];
+
+      const player = {
+        x: 0, y: 0, vx: 0, vy: 0, angle: 0, onGround: false
+      };
+
+      // SAVE SYSTEM - Unified (no mode separation)
+      // ============================================
+      function getSaveKey() {
+        return 'luge_save';
+      }
+
+      function getSaveData() {
+        const data = localStorage.getItem(getSaveKey());
+        if (!data) {
+          const initial = {};
+          for (let i = 1; i <= MAX_STAGE; i++) {
+            initial[i] = { unlocked: i === 1, cleared: false, bestTime: null };
+          }
+          return initial;
+        }
+        return JSON.parse(data);
+      }
+
+      function saveSaveData(data) {
+        localStorage.setItem(getSaveKey(), JSON.stringify(data));
+      }
+
+      function getSavedLines(stage) {
+        const data = localStorage.getItem(`luge_lines_${stage}`);
+        return data ? JSON.parse(data) : null;
+      }
+
+      function saveLines(stage, strokesData) {
+        localStorage.setItem(`luge_lines_${stage}`, JSON.stringify(strokesData));
+      }
+
+      function clearSavedLines(stage) {
+        localStorage.removeItem(`luge_lines_${stage}`);
+      }
+
+      function getLeaderboardKey() {
+        return `luge_lb_s${state.stage}`;
+      }
+
+      function getLeaderboard() {
+        const data = localStorage.getItem(getLeaderboardKey());
+        return data ? JSON.parse(data) : [];
+      }
+
+      function saveScore() {
+        const scores = getLeaderboard();
+        scores.push({ time: state.timer, date: Date.now() });
+        scores.sort((a, b) => a.time - b.time);
+        while (scores.length > 5) scores.pop();
+        localStorage.setItem(getLeaderboardKey(), JSON.stringify(scores));
+      }
+
+      // ============================================
+      // LEVEL SELECT
+      // ============================================
+      function renderLevelGrid() {
+        levelGrid.innerHTML = '';
+        const saveData = getSaveData();
+
+        for (let i = 1; i <= MAX_STAGE; i++) {
+          const data = saveData[i];
+          const btn = document.createElement('button');
+          btn.className = 'level-btn';
+          btn.dataset.stage = i;
+
+          if (!data.unlocked) {
+            btn.classList.add('locked');
+          } else if (data.cleared) {
+            btn.classList.add('cleared');
+          }
+
+          btn.innerHTML = `${i}<span class="stars-indicator">${'⭐'.repeat(Math.min(i, 3))}</span>`;
+
+          if (data.unlocked) {
+            btn.onclick = () => selectStage(i);
+          }
+
+          levelGrid.appendChild(btn);
+        }
+      }
+
+      // Mode selector removed - unified arcade mode
+
+      // ============================================
+      // INITIALIZATION
+      // ============================================
+      function resizeCanvas() {
+        const rect = container.getBoundingClientRect();
+        canvas.width = rect.width * window.devicePixelRatio;
+        canvas.height = rect.height * window.devicePixelRatio;
+
+        scale = Math.min(canvas.width / VIRTUAL_W, canvas.height / VIRTUAL_H);
+        offsetX = (canvas.width - VIRTUAL_W * scale) / 2;
+        offsetY = (canvas.height - VIRTUAL_H * scale) / 2;
+      }
+
+      function initStage(n, loadSaved = true) {
+        state.stage = n;
+        state.mode = 'build';
+        state.starsTotal = n;
+        state.starsCollected = 0;
+        state.timer = 0;
+        state.timerRunning = false;
+        state.stallTimer = 0;
+        state.currentInkType = 'normal';
+
+        // ▼▼▼ [수정] 데이터 분석 변수 초기화 로직 ▼▼▼
+        state.strokeCount = 0;
+        state.eraserCount = 0;
+        state.deathX = 0;
+        state.deathY = 0;
+        state.startTime = Date.now();
+
+        // 주의: retryCount는 여기서 0으로 만들면 안 됨!
+        // 버튼 클릭 이벤트에서 제어하거나, 스테이지가 바뀔 때만 초기화해야 함.
+        // 아래 '스테이지 변경 감지' 로직 추가:
+        if (state.lastStage !== n) {
+            state.retryCount = 0; // 스테이지가 달라졌을 때만 리셋
+            state.lastStage = n;
+        }
+
+        // Load saved lines or clear
+        if (loadSaved) {
+          const savedLines = getSavedLines(n);
+          if (savedLines) {
+            strokes = savedLines;
+          } else {
+            strokes = [];
+          }
+        } else {
+          strokes = [];
+        }
+
+        // Recalculate ink used per type
+        recalculateInkUsage();
+
+        particles.length = 0;
+
+        // Safe zones
+        const safeTop = 60;
+        const safeBottom = 60;
+
+        level.start.x = 35;
+        level.start.y = safeTop + 25;
+
+        // Smaller finish
+        level.finish.w = 50;
+        level.finish.h = 30;
+        level.finish.x = VIRTUAL_W - 35 - level.finish.w;
+        level.finish.y = VIRTUAL_H - safeBottom - level.finish.h;
+
+        // Load hardcoded stars
+        level.stars = STAGE_STARS[n].map(s => ({ ...s, r: 12, taken: false }));
+
+        resetPlayer();
+        updateUI();
+
+        document.getElementById('btnStart').innerText = 'Start';
+
+        // Reset toolbar UI state
+        eraserMode = false;
+        state.currentInkType = 'normal';
+        const btnDraw = document.getElementById('btnDraw');
+        const btnEraser = document.getElementById('btnEraser');
+        if (btnDraw) btnDraw.classList.add('active');
+        if (btnEraser) btnEraser.classList.remove('active');
+        document.querySelectorAll('.ink-btn').forEach((btn, i) => {
+          btn.classList.toggle('active', i === 0);
+        });
+        closeAllPopups();
+
+        tutorial.classList.remove('hidden');
+      }
+
+      // Recalculate ink usage from strokes array (real-time, accurate)
+      function recalculateInkUsage() {
+        state.boosterInkUsed = 0;
+        state.jumpInkUsed = 0;
+        for (const stroke of strokes) {
+          const len = stroke.len || 0;
+          if (stroke.type === 'booster') {
+            state.boosterInkUsed += len;
+          } else if (stroke.type === 'jump') {
+            state.jumpInkUsed += len;
+          }
+        }
+      }
+
+      function resetPlayer() {
+        player.x = level.start.x;
+        player.y = level.start.y;
+        player.vx = 0;
+        player.vy = 0;
+        player.angle = 0.4;
+        player.onGround = false;
+        level.stars.forEach(s => s.taken = false);
+        state.starsCollected = 0;
+        state.timer = 0;
+        state.timerRunning = false;
+        state.stallTimer = 0;
+      }
+
+      // Soft reset - preserves strokes, returns to build mode
+      function softReset() {
+        resetPlayer();
+        state.mode = 'build';
+        state.timerRunning = false;
+        document.getElementById('btnStart').innerText = 'Start';
+        updateUI();
+      }
+
+      // ============================================
+      // INPUT HANDLING
+      // ============================================
+      function getVirtualPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+        const canvasX = cx * (canvas.width / rect.width);
+        const canvasY = cy * (canvas.height / rect.height);
+
+        return {
+          x: (canvasX - offsetX) / scale,
+          y: (canvasY - offsetY) / scale
+        };
+      }
+
+      // Partial eraser - find segments to cut
+      function eraseAtPoint(px, py, radius) {
+        const newStrokes = [];
+
+        for (const stroke of strokes) {
+          const segments = splitStrokeAtPoint(stroke, px, py, radius);
+          newStrokes.push(...segments);
+        }
+
+        strokes = newStrokes;
+
+        // Real-time recalculation of all ink usage
+        recalculateInkUsage();
+        updateUI();
+      }
+
+      function splitStrokeAtPoint(stroke, px, py, radius) {
+        if (stroke.pts.length < 2) return [];
+
+        const result = [];
+        let currentSegment = { pts: [], len: 0, type: stroke.type || 'normal' };
+        let lastPoint = null;
+
+        for (let i = 0; i < stroke.pts.length; i++) {
+          const pt = stroke.pts[i];
+          const dist = Math.hypot(pt.x - px, pt.y - py);
+
+          if (dist < radius) {
+            if (currentSegment.pts.length >= 2) {
+              result.push(currentSegment);
+            }
+            currentSegment = { pts: [], len: 0, type: stroke.type || 'normal' };
+            lastPoint = pt;
+          } else {
+            if (lastPoint && currentSegment.pts.length > 0) {
+              currentSegment.len += Math.hypot(pt.x - lastPoint.x, pt.y - lastPoint.y);
+            }
+            currentSegment.pts.push({ ...pt });
+            lastPoint = pt;
+          }
+        }
+
+        if (currentSegment.pts.length >= 2) {
+          result.push(currentSegment);
+        }
+
+        return result;
+      }
+
+      canvas.addEventListener('pointerdown', e => {
+        if (state.screen !== 'game' || state.mode !== 'build') return;
+
+        const p = getVirtualPos(e);
+
+        if (eraserMode) {
+          eraserPath = [p];
+          eraseAtPoint(p.x, p.y, state.eraserSize);
+
+          // ▼ [추가] 지우개 사용 횟수 증가
+          state.eraserCount++;
+
+        } else {
+          // Check ink limit for special types
+          const inkType = state.currentInkType;
+          if (inkType === 'booster' && state.boosterInkUsed >= INK_LIMITS.booster) return;
+          if (inkType === 'jump' && state.jumpInkUsed >= INK_LIMITS.jump) return;
+
+          activeStroke = { pts: [p], len: 0, type: inkType };
+          strokes.push(activeStroke);
+          tutorial.classList.add('hidden');
+
+          // ▼ [추가] 드로잉 횟수 증가
+          state.strokeCount++;
+        }
+      });
+
+      canvas.addEventListener('pointermove', e => {
+        if (state.screen !== 'game' || state.mode !== 'build') return;
+
+        const p = getVirtualPos(e);
+
+        if (eraserMode && eraserPath.length > 0) {
+          eraserPath.push(p);
+          eraseAtPoint(p.x, p.y, state.eraserSize);
+          return;
+        }
+
+        if (!activeStroke) return;
+
+        const last = activeStroke.pts[activeStroke.pts.length - 1];
+        const d = Math.hypot(p.x - last.x, p.y - last.y);
+
+        if (d > 2) {
+          const inkType = activeStroke.type;
+          // Check ink limit for special types
+          if (inkType === 'booster' && state.boosterInkUsed + d > INK_LIMITS.booster) return;
+          if (inkType === 'jump' && state.jumpInkUsed + d > INK_LIMITS.jump) return;
+
+          activeStroke.pts.push(p);
+          activeStroke.len += d;
+
+          // Track ink usage by type
+          if (inkType === 'booster') state.boosterInkUsed += d;
+          else if (inkType === 'jump') state.jumpInkUsed += d;
+
+          updateUI();
+        }
+      });
+
+      canvas.addEventListener('pointerup', () => {
+        activeStroke = null;
+        eraserPath = [];
+      });
+      canvas.addEventListener('pointerleave', () => {
+        activeStroke = null;
+        eraserPath = [];
+      });
+      canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+      // ============================================
+      // PHYSICS
+      // ============================================
+      function updatePhysics(dt) {
+        player.vy += PHYS.gravity * dt;
+        player.x += player.vx * dt;
+        player.y += player.vy * dt;
+
+        // Air drag to prevent infinite speed
+        player.vx *= (1 - PHYS.airDrag);
+        player.vy *= (1 - PHYS.airDrag);
+
+        // Rotate character to face velocity direction (anti-jitter: only when moving fast enough)
+        const playerSpeed = Math.hypot(player.vx, player.vy);
+        if (playerSpeed > 35) {
+          const targetAngle = Math.atan2(player.vy, player.vx);
+          let diff = targetAngle - player.angle;
+          // Normalize to [-PI, PI]
+          while (diff <= -Math.PI) diff += Math.PI * 2;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          // Smooth interpolation
+          player.angle += diff * PHYS.rotationSpeed * dt;
+        }
+        player.onGround = false;
+
+        for (const st of strokes) {
+          const lineType = st.type || 'normal';
+          for (let i = 0; i < st.pts.length - 1; i++) {
+            resolveLine(player, st.pts[i], st.pts[i + 1], lineType);
+          }
+        }
+
+        for (const s of level.stars) {
+          if (!s.taken && Math.hypot(player.x - s.x, player.y - s.y) < 22) {
+            s.taken = true;
+            state.starsCollected++;
+            spawnParticles(s.x, s.y, '#ffd700', 12);
+            updateUI();
+          }
+        }
+
+        const f = level.finish;
+        if (player.x > f.x && player.x < f.x + f.w && player.y > f.y && player.y < f.y + f.h) {
+          if (state.starsCollected >= state.starsTotal) {
+            win();
+          } else {
+            fail('Collect all ⭐ first!');
+          }
+        }
+
+        if (player.y > VIRTUAL_H + 50 || player.x < -50 || player.x > VIRTUAL_W + 50) {
+          fail('Out of bounds!');
+        }
+
+        const speed = Math.hypot(player.vx, player.vy);
+        if (speed < STALL_THRESHOLD && player.onGround) {
+          state.stallTimer += dt * 1000;
+          if (state.stallTimer >= STALL_TIME) {
+            fail('Stalled! Keep moving!');
+          }
+        } else {
+          state.stallTimer = 0;
+        }
+      }
+
+      function resolveLine(p, p1, p2, lineType = 'normal') {
+        const dx = p2.x - p1.x, dy = p2.y - p1.y;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return;
+
+        let t = ((p.x - p1.x) * dx + (p.y - p1.y) * dy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+
+        const cx = p1.x + t * dx, cy = p1.y + t * dy;
+        const dist = Math.hypot(p.x - cx, p.y - cy);
+        const radius = 6;
+
+        if (dist < radius) {
+          const nx = (p.x - cx) / dist;
+          const ny = (p.y - cy) / dist;
+
+          p.x += nx * (radius - dist);
+          p.y += ny * (radius - dist);
+
+          const vDotN = p.vx * nx + p.vy * ny;
+          if (vDotN < 0) {
+            const tx = -ny, ty = nx;
+            const vDotT = p.vx * tx + p.vy * ty;
+
+            let friction = PHYS.friction;
+            let boostApplied = false;
+
+            // Type-specific physics
+            if (lineType === 'booster') {
+              // Use dot product to find correct tangent direction (same as velocity)
+              const boostAmt = 245;
+              const vDotT = p.vx * tx + p.vy * ty;
+              // Choose tangent direction that matches velocity direction
+              const sign = vDotT >= 0 ? 1 : -1;
+              const correctTx = tx * sign;
+              const correctTy = ty * sign;
+
+              // Apply boost in correct direction
+              p.vx += correctTx * boostAmt * 0.016;
+              p.vy += correctTy * boostAmt * 0.016;
+
+              // Cap max speed
+              const speed = Math.hypot(p.vx, p.vy);
+              const MAX_SPEED = 560;
+              if (speed > MAX_SPEED) {
+                p.vx = (p.vx / speed) * MAX_SPEED;
+                p.vy = (p.vy / speed) * MAX_SPEED;
+              }
+              boostApplied = true;
+              spawnParticles(p.x, p.y, '#ff6600', 3);
+            } else if (lineType === 'jump') {
+              // 슈퍼 점프: 수직 속도 1.8배 반발
+              const jumpMultiplier = 1.8;
+              const newVn = -vDotN * jumpMultiplier;
+              const newVt = vDotT * 0.98;  // 거의 미끄러짐 (마찰 2%)
+              p.vx = tx * newVt + nx * newVn;
+              p.vy = ty * newVt + ny * newVn;
+              p.onGround = false;  // 바닥에 붙지 않게 강제
+              spawnParticles(p.x, p.y, '#39ff14', 4);
+              boostApplied = true;
+            }
+
+            if (!boostApplied) {
+              const newVt = vDotT * (1 - friction);
+              const newVn = -vDotN * PHYS.bounce;
+              p.vx = tx * newVt + nx * newVn;
+              p.vy = ty * newVt + ny * newVn;
+            }
+            p.onGround = true;
+
+            if (Math.abs(vDotT) > 60 && lineType === 'normal') {
+              spawnParticles(p.x, p.y + 5, '#88ccff', 2);
+            }
+          }
+        }
+      }
+
+      // ============================================
+      // CATMULL-ROM SPLINE
+      // ============================================
+      function catmullRom(p0, p1, p2, p3, t) {
+        const t2 = t * t;
+        const t3 = t2 * t;
+        return 0.5 * (
+          2 * p1 +
+          (-p0 + p2) * t +
+          (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+          (-p0 + 3 * p1 - 3 * p2 + p3) * t3
+        );
+      }
+
+      function drawCatmullRomPath(pts) {
+        if (pts.length < 2) return;
+        if (pts.length < 4) {
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) {
+            ctx.lineTo(pts[i].x, pts[i].y);
+          }
+          return;
+        }
+
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 0; i < pts.length - 1; i++) {
+          const p0 = pts[Math.max(0, i - 1)];
+          const p1 = pts[i];
+          const p2 = pts[Math.min(pts.length - 1, i + 1)];
+          const p3 = pts[Math.min(pts.length - 1, i + 2)];
+
+          for (let t = 0; t <= 1; t += 0.1) {
+            const x = catmullRom(p0.x, p1.x, p2.x, p3.x, t);
+            const y = catmullRom(p0.y, p1.y, p2.y, p3.y, t);
+            ctx.lineTo(x, y);
+          }
+        }
+      }
+
+      // ============================================
+      // RENDERING
+      // ============================================
+      function render() {
+        ctx.save();
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.translate(offsetX, offsetY);
+        ctx.scale(scale, scale);
+
+
+        // Start platform
+        ctx.fillStyle = '#2a4060';
+        ctx.fillRect(level.start.x - 15, level.start.y - 5, 35, 7);
+        ctx.fillStyle = '#88aacc';
+        ctx.font = 'bold 8px Outfit, sans-serif';
+        ctx.fillText('START', level.start.x - 12, level.start.y - 8);
+
+        // Finish - Small checkered flag
+        drawCheckeredFlag();
+
+        // Strokes with type-specific colors and spline smoothing
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        for (const st of strokes) {
+          if (st.pts.length < 2) continue;
+          const colors = INK_COLORS[st.type || 'normal'];
+
+          // Draw glow
+          ctx.beginPath();
+          drawCatmullRomPath(st.pts);
+          ctx.lineWidth = 8;
+          ctx.strokeStyle = colors.glow + '33'; // 20% opacity
+          ctx.stroke();
+
+          // Draw main line
+          ctx.beginPath();
+          drawCatmullRomPath(st.pts);
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = colors.line;
+          ctx.shadowColor = colors.glow;
+          ctx.shadowBlur = 6;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+
+        // Stars
+        for (const s of level.stars) {
+          if (s.taken) continue;
+          drawStar(s.x, s.y, s.r);
+        }
+
+        // Player
+        drawPlayer();
+
+        // Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.15;
+          p.life -= 0.04;
+          if (p.life <= 0) {
+            particles.splice(i, 1);
+            continue;
+          }
+          ctx.globalAlpha = p.life;
+          ctx.fillStyle = p.c;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        // Stall warning
+        if (state.mode === 'run' && state.stallTimer > 1500) {
+          ctx.fillStyle = '#ff4444';
+          ctx.font = 'bold 12px Outfit, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('⚠️ KEEP MOVING!', VIRTUAL_W / 2, VIRTUAL_H / 2);
+          ctx.textAlign = 'left';
+        }
+
+        // Eraser preview circle (center when adjusting slider)
+        if (state.showEraserPreview && state.mode === 'build') {
+          ctx.strokeStyle = 'rgba(255, 80, 80, 0.8)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.arc(VIRTUAL_W / 2, VIRTUAL_H / 2, state.eraserSize, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        ctx.restore();
+      }
+
+      function drawCheckeredFlag() {
+        const f = level.finish;
+        const checkSize = 5;
+
+        // Small flag pole
+        ctx.fillStyle = '#555';
+        ctx.fillRect(f.x + f.w / 2 - 2, f.y - 25, 4, 30);
+
+        // Small flag
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(f.x + f.w / 2 + 2, f.y - 25, 20, 14);
+
+        for (let row = 0; row < 3; row++) {
+          for (let col = 0; col < 4; col++) {
+            if ((row + col) % 2 === 0) {
+              ctx.fillStyle = '#000';
+              ctx.fillRect(f.x + f.w / 2 + 2 + col * checkSize, f.y - 25 + row * checkSize, checkSize, checkSize);
+            }
+          }
+        }
+
+        // Finish zone
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(f.x, f.y, f.w, f.h);
+        ctx.setLineDash([]);
+      }
+
+      function drawStar(x, y, r) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Date.now() / 800);
+
+        const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.8);
+        glow.addColorStop(0, 'rgba(255, 215, 0, 0.4)');
+        glow.addColorStop(1, 'transparent');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 1.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+          const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
+          const px = Math.cos(angle) * r;
+          const py = Math.sin(angle) * r;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#ffd700';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      function drawPlayer() {
+        ctx.save();
+        ctx.translate(player.x, player.y);
+        ctx.rotate(player.angle);
+
+        // Scale down to 60%
+        ctx.scale(0.6, 0.6);
+
+        // Sled (curved luge)
+        ctx.fillStyle = '#c0c0c0';
+        ctx.beginPath();
+        ctx.moveTo(-18, 4);
+        ctx.quadraticCurveTo(-22, 0, -18, -2);
+        ctx.lineTo(20, -2);
+        ctx.quadraticCurveTo(24, 0, 20, 4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Runners
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-16, 5);
+        ctx.lineTo(18, 5);
+        ctx.stroke();
+
+        // Body lying on back (luge position)
+        const bodyColor = '#333';
+        const suitColor = '#1a1a2e';
+
+        // Torso (horizontal)
+        ctx.fillStyle = suitColor;
+        ctx.beginPath();
+        ctx.ellipse(-2, -6, 12, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Legs (bent up at knees)
+        ctx.fillStyle = suitColor;
+        ctx.beginPath();
+        ctx.moveTo(-14, -6);
+        ctx.lineTo(-20, -10);
+        ctx.lineTo(-18, -16);
+        ctx.lineTo(-14, -12);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(-10, -6);
+        ctx.lineTo(-14, -10);
+        ctx.lineTo(-12, -16);
+        ctx.lineTo(-8, -12);
+        ctx.closePath();
+        ctx.fill();
+
+        // Iron Man Helmet
+        const helmX = 10;
+        const helmY = -8;
+
+        // Helmet base (red)
+        ctx.fillStyle = '#8B0000';
+        ctx.beginPath();
+        ctx.ellipse(helmX, helmY, 7, 6, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Face plate (gold)
+        ctx.fillStyle = '#DAA520';
+        ctx.beginPath();
+        ctx.moveTo(helmX + 2, helmY - 4);
+        ctx.lineTo(helmX + 7, helmY - 1);
+        ctx.lineTo(helmX + 7, helmY + 2);
+        ctx.lineTo(helmX + 2, helmY + 5);
+        ctx.lineTo(helmX - 2, helmY + 3);
+        ctx.lineTo(helmX - 2, helmY - 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Visor eyes (glowing)
+        ctx.fillStyle = '#00ffff';
+        ctx.shadowColor = '#00ffff';
+        ctx.shadowBlur = 4;
+        ctx.beginPath();
+        ctx.ellipse(helmX + 3, helmY - 1, 2, 1, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(helmX + 1, helmY + 1, 2, 1, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Arms (at sides holding handles)
+        ctx.fillStyle = suitColor;
+        ctx.strokeStyle = suitColor;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(2, -4);
+        ctx.lineTo(6, 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(-6, -4);
+        ctx.lineTo(-10, 0);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      function spawnParticles(x, y, color, count = 8) {
+        for (let i = 0; i < count; i++) {
+          const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+          const speed = 1.5 + Math.random() * 2.5;
+          particles.push({
+            x, y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 1.5,
+            c: color,
+            r: 2 + Math.random() * 1.5,
+            life: 1
+          });
+        }
+      }
+
+      // ============================================
+      // GAME FLOW
+      // ============================================
+      function win() {
+        state.mode = 'win';
+        state.timerRunning = false;
+
+        // Clear saved lines on win
+        // clearSavedLines(state.stage);
+        // [수정 후] 성공 시, '저장 버튼(💾)'을 누른 것과 똑같이 자동 저장합니다.
+        saveCustomSetup();
+
+        // [추가] Firebase 저장 실행
+        saveScoreToFirebase(state.stage, state.timer);
+
+        // ▼▼▼ [신규 추가] 성공 로그 저장 ▼▼▼
+        saveGameLog('WIN', null);
+
+        // ▼▼▼ [신규 추가] 성공 후 Retry를 눌러도 선이 남아있게 함 ▼▼▼
+        saveLines(state.stage, strokes);
+
+
+        // Update save data
+        const saveData = getSaveData();
+        saveData[state.stage].cleared = true;
+        const currentBest = saveData[state.stage].bestTime;
+        if (currentBest === null ||
+          (state.gameMode === 'speed' && state.timer < currentBest) ||
+          (state.gameMode === 'sloth' && state.timer > currentBest)) {
+          saveData[state.stage].bestTime = state.timer;
+        }
+
+        // Unlock next stage
+        if (state.stage < MAX_STAGE) {
+          saveData[state.stage + 1].unlocked = true;
+        }
+        saveSaveData(saveData);
+
+        // Celebration
+        for (let i = 0; i < 25; i++) {
+          const colors = ['#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'];
+          spawnParticles(
+            player.x + (Math.random() - 0.5) * 40,
+            player.y + (Math.random() - 0.5) * 40,
+            colors[Math.floor(Math.random() * colors.length)],
+            2
+          );
+        }
+
+        saveScore();
+        showResult(true);
+      }
+
+      async function fail(reason) {
+        state.mode = 'fail';
+        state.timerRunning = false;
+
+        // ▼▼▼ [신규 추가] 실패 위치 기록 및 로그 저장 ▼▼▼
+        state.deathX = player.x;
+        state.deathY = player.y;
+        saveGameLog('FAIL', reason);
+        
+        // 실패했으므로 재시도 카운트 증가
+        state.retryCount++;
+
+
+        // Save lines on fail for retry
+        saveLines(state.stage, strokes);
+
+        document.getElementById('resultTitle').innerText = 'FAIL!';
+        document.getElementById('resultMyTime').innerText = formatTime(state.timer);
+        // document.getElementById('resultFailReason').innerText = reason;
+
+        // Top 3 기록 조회 (실패 시에도 표시)
+        const top3 = await getTop3Records(state.stage);
+        displayTop3(top3);
+
+        // Gap 계산 (1위와의 차이)
+        const gapEl = document.getElementById('resultGap');
+        if (top3.length > 0) {
+          const gap = state.timer - top3[0].time;
+          if (gap > 0) {
+            gapEl.innerText = `+ ${gap.toFixed(3)}`;
+            gapEl.className = 'result-gap slower';
+          } else {
+            gapEl.innerText = `- ${Math.abs(gap).toFixed(3)}`;
+            gapEl.className = 'result-gap faster';
+          }
+        } else {
+          gapEl.innerText = '---';
+          gapEl.className = 'result-gap';
+        }
+
+        document.getElementById('btnNext').style.display = 'none';
+        resultModal.classList.add('active');
+      }
+
+      async function showResult(success) {
+        const myTime = state.timer;
+        const myTimeStr = formatTime(myTime);
+
+        document.getElementById('resultTitle').innerText = success ? 'FINISH!' : 'FAIL!';
+        document.getElementById('resultMyTime').innerText = myTimeStr;
+        document.getElementById('resultFailReason').innerText = ''; // 성공 시 실패 사유 제거
+
+        // Top 3 기록 조회
+        const top3 = await getTop3Records(state.stage);
+        displayTop3(top3);
+
+        // Gap 계산
+        const gapEl = document.getElementById('resultGap');
+        if (top3.length > 0) {
+          const gap = myTime - top3[0].time;
+          if (gap > 0) {
+            gapEl.innerText = `+ ${gap.toFixed(3)}`;
+            gapEl.className = 'result-gap slower';
+          } else if (gap < 0) {
+            gapEl.innerText = `- ${Math.abs(gap).toFixed(3)}`;
+            gapEl.className = 'result-gap faster';
+          } else {
+            gapEl.innerText = '🥇 1ST!';
+            gapEl.className = 'result-gap first';
+          }
+        } else {
+          // 첫 기록일 경우
+          gapEl.innerText = '🥇 1ST!';
+          gapEl.className = 'result-gap first';
+        }
+
+        document.getElementById('btnNext').style.display = state.stage < MAX_STAGE ? 'block' : 'none';
+        resultModal.classList.add('active');
+      }
+
+      // Top 3 UI 업데이트
+      function displayTop3(records) {
+        for (let i = 1; i <= 3; i++) {
+          const nameEl = document.getElementById(`top3Name${i}`);
+          const timeEl = document.getElementById(`top3Time${i}`);
+          if (records[i - 1]) {
+            nameEl.innerText = records[i - 1].nickname;
+            timeEl.innerText = formatTime(records[i - 1].time);
+          } else {
+            nameEl.innerText = '---';
+            timeEl.innerText = '--:--.---';
+          }
+        }
+      }
+
+      // Top 3 기록 조회 함수
+      async function getTop3Records(stage) {
+        try {
+          const q = query(
+            collection(db, "rankings"),
+            where("stage", "==", stage),
+            orderBy("time", "asc"),
+            limit(3)
+          );
+          const snap = await getDocs(q);
+          return snap.docs.map(doc => doc.data());
+        } catch (e) {
+          console.error("Top 3 query error:", e);
+          return [];
+        }
+      }
+
+      // 시간 포맷팅 함수 (mm:ss.fff)
+      function formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${String(mins).padStart(2, '0')}:${secs.toFixed(3).padStart(6, '0')}`;
+      }
+
+      // 1위 기록 조회 함수
+      async function getFirstPlaceRecord(stage) {
+        try {
+          const q = query(
+            collection(db, "rankings"),
+            where("stage", "==", stage),
+            orderBy("time", "asc"),
+            limit(1)
+          );
+          const snap = await getDocs(q);
+          if (snap.empty) return null;
+          return snap.docs[0].data();
+        } catch (e) {
+          console.error("First place query error:", e);
+          return null;
+        }
+      }
+
+      async function displayLeaderboard() {
+        const container = document.getElementById('lbEntries');
+        container.innerHTML = '<div style="color:#aaa;text-align:center;">Loading Cloud Data...</div>';
+
+        // Firebase 데이터 호출
+        const scores = await getTopScoresFromFirebase(state.stage);
+
+        container.innerHTML = '';
+        if (scores.length === 0) {
+          container.innerHTML = '<div style="color:#666;text-align:center;padding:8px;font-size:10px;">No Records Yet</div>';
+          return;
+        }
+
+        scores.forEach((s, i) => {
+          const entry = document.createElement('div');
+          entry.className = 'lb-entry';
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+          entry.innerHTML = `<span class="lb-rank">${medal}</span> 
+                             <span style="flex:1; margin-left:10px;">${s.nickname}</span>
+                             <span>${s.time.toFixed(3)}s</span>`;
+          container.appendChild(entry);
+        });
+      }
+
+      // ============================================
+      // UI
+      // ============================================
+      function updateUI() {
+        document.getElementById('uiStage').innerText = state.stage;
+        // document.getElementById('uiStars').innerText = `${state.starsCollected}/${state.starsTotal}`;
+        document.getElementById('uiTime').innerText = state.timer.toFixed(5);
+
+        // Update ink gauge bars
+        const boostPct = Math.max(0, 100 - (state.boosterInkUsed / INK_LIMITS.booster) * 100);
+        const jumpPct = Math.max(0, 100 - (state.jumpInkUsed / INK_LIMITS.jump) * 100);
+
+        const boosterBar = document.getElementById('boosterBar');
+        const jumpBar = document.getElementById('jumpBar');
+        if (boosterBar) boosterBar.style.width = `${boostPct}%`;
+        if (jumpBar) jumpBar.style.width = `${jumpPct}%`;
+      }
+
+      // Toast notification
+      function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.innerText = msg;
+        toast.classList.add('visible');
+        setTimeout(() => toast.classList.remove('visible'), 1500);
+      }
+
+      // Save/Load custom setup
+      function saveCustomSetup() {
+        const data = { strokes, boosterUsed: state.boosterInkUsed, jumpUsed: state.jumpInkUsed };
+        localStorage.setItem(`luge_custom_slot_${state.stage}`, JSON.stringify(data));
+        showToast('💾 Setup Saved!');
+      }
+
+      function loadCustomSetup() {
+        const data = localStorage.getItem(`luge_custom_slot_${state.stage}`);
+        if (data) {
+          const parsed = JSON.parse(data);
+          strokes = parsed.strokes || [];
+          recalculateInkUsage();
+          updateUI();
+          showToast('📂 Setup Loaded!');
+        } else {
+          showToast('No saved setup');
+        }
+      }
+
+      function goToHome() {
+        if (state.screen === 'game' && strokes.length > 0) {
+          saveLines(state.stage, strokes);
+        }
+        state.screen = 'home';
+        state.mode = 'build';
+        homeScreen.classList.remove('hidden');
+        gameUI.classList.add('hidden');
+        resultModal.classList.remove('active');
+        tutorial.classList.add('hidden');
+        closeAllPopups();
+        renderLevelGrid();
+      }
+
+      function startGame() {
+        const saveData = getSaveData();
+        if (!saveData[state.stage].unlocked) return;
+        state.screen = 'game';
+        homeScreen.classList.add('hidden');
+        gameUI.classList.remove('hidden');
+        initStage(state.stage, true);
+      }
+
+      // ============================================
+      // TOOLBAR EVENT HANDLERS
+      // ============================================
+      const drawPopup = document.getElementById('drawPopup');
+      const eraserPopup = document.getElementById('eraserPopup');
+      const btnDraw = document.getElementById('btnDraw');
+      const btnEraserTool = document.getElementById('btnEraser');
+
+      function closeAllPopups() {
+        drawPopup.classList.remove('visible');
+        eraserPopup.classList.remove('visible');
+      }
+
+      function setDrawMode() {
+        eraserMode = false;
+        btnDraw.classList.add('active');
+        btnEraserTool.classList.remove('active');
+        eraserPopup.classList.remove('visible');
+      }
+
+      function setEraserMode() {
+        eraserMode = true;
+        btnEraserTool.classList.add('active');
+        btnDraw.classList.remove('active');
+        drawPopup.classList.remove('visible');
+      }
+
+      // btnPlay 제거됨 - 이제 랜킹 화면을 통해 시작
+
+      document.getElementById('btnStart').onclick = function () {
+        if (state.mode === 'build') {
+          state.mode = 'run';
+          state.timerRunning = true;
+          this.innerText = 'Retry';
+          tutorial.classList.add('hidden');
+          closeAllPopups();
+        } else if (state.mode === 'run') {
+          // softReset: preserve strokes, reset player and return to build mode
+          softReset();
+        }
+      };
+
+      btnDraw.onclick = function () {
+        setDrawMode();
+        drawPopup.classList.toggle('visible');
+      };
+
+      btnEraserTool.onclick = function () {
+        setEraserMode();
+        eraserPopup.classList.toggle('visible');
+      };
+
+      // Ink type selection - auto-close popup
+      document.querySelectorAll('.ink-btn').forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll('.ink-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.currentInkType = btn.dataset.type;
+          drawPopup.classList.remove('visible');
+        };
+      });
+
+      // Eraser slider with preview
+      const eraserSlider = document.getElementById('eraserSlider');
+      eraserSlider.oninput = function () {
+        state.eraserSize = parseInt(this.value);
+        document.getElementById('eraserSizeLabel').innerText = this.value;
+        state.showEraserPreview = true;
+      };
+      eraserSlider.onchange = function () {
+        state.showEraserPreview = false;
+        eraserPopup.classList.remove('visible');
+      };
+
+      document.getElementById('btnSave').onclick = saveCustomSetup;
+      document.getElementById('btnLoad').onclick = loadCustomSetup;
+      document.getElementById('btnHome').onclick = goToHome;
+
+      document.getElementById('btnNext').onclick = function () {
+        resultModal.classList.remove('active');
+        if (state.stage < MAX_STAGE) {
+          state.stage++;
+          initStage(state.stage, true);
+        }
+      };
+
+      document.getElementById('btnRetry').onclick = function () {
+        // ▼▼▼ [신규 추가] 리트라이 버튼 누를 때, 현재 그려진 선 강제 저장 ▼▼▼
+        if (strokes.length > 0) {
+           saveLines(state.stage, strokes);
+        }
+        resultModal.classList.remove('active');
+        // Keep strokes on retry
+        initStage(state.stage, true);
+      };
+
+      document.getElementById('btnResultHome').onclick = goToHome;
+
+      window.addEventListener('resize', resizeCanvas);
+
+      // ============================================
+      // GAME LOOP
+      // ============================================
+      let lastTime = 0;
+
+      function loop(now) {
+        const dt = Math.min((now - lastTime) / 1000, 0.1);
+        lastTime = now;
+
+        if (state.screen === 'game') {
+          if (state.mode === 'run') {
+            for (let i = 0; i < 5; i++) {
+              updatePhysics(dt / 5);
+            }
+
+            if (state.timerRunning) {
+              state.timer += dt;
+              updateUI();
+            }
+          }
+
+          render();
+        }
+
+        requestAnimationFrame(loop);
+      }
+
+      // ============================================
+      // INIT
+      // ============================================
+      resizeCanvas();
+      renderLevelGrid();
+      // selectStage(1) 제거: 업데이트 - 로비에서 스테이지 클릭 시 랜킹 화면 표시
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+
+</html>
