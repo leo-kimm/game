@@ -138,16 +138,63 @@
         © 2026 Leo Kim. All rights reserved.
     </footer>
 
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-                .then((reg) => console.log('Service Worker Registered:', reg.scope))
-                .catch((err) => console.log('Service Worker Failed:', err));
-        });
-    }
-</script>
-</body>
-    
+    <div id="update-toast" style="
+        position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+        background: rgba(0, 210, 255, 0.95); color: #000;
+        padding: 15px 25px; border-radius: 30px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        display: none; align-items: center; gap: 15px; z-index: 9999;
+        font-weight: bold; font-family: sans-serif;
+        border: 2px solid #fff;
+    ">
+        <span>🚀 새 버전이 업데이트되었습니다!</span>
+        <button id="reload-btn" style="
+            background: #000; color: #fff; border: none;
+            padding: 8px 15px; border-radius: 20px; cursor: pointer; font-weight: bold;
+        ">재실행</button>
+    </div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then((reg) => {
+                    console.log('Service Worker Registered');
+
+                    // 1. 이미 업데이트가 대기 중인 경우 (이전에 받았다가 탭을 안 닫았을 때)
+                    if (reg.waiting) {
+                        showUpdateToast(reg.waiting);
+                        return;
+                    }
+
+                    // 2. 새로운 업데이트가 발견되었을 때
+                    reg.onupdatefound = () => {
+                        const newWorker = reg.installing;
+                        newWorker.onstatechange = () => {
+                            // 다운로드가 다 끝나고 'installed' 상태가 되면 알림 띄움
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                showUpdateToast(newWorker);
+                            }
+                        };
+                    };
+                });
+            });
+        }
+
+        function showUpdateToast(worker) {
+            const toast = document.getElementById('update-toast');
+            const btn = document.getElementById('reload-btn');
+            
+            // 팝업 표시
+            toast.style.display = 'flex';
+            
+            // 버튼 클릭 시 강제 새로고침
+            btn.onclick = () => {
+                // 서비스 워커에게 "대기하지 말고 즉시 교체해!" 라고 신호 보냄 (선택 사항이지만 권장)
+                worker.postMessage({ action: 'skipWaiting' });
+                // 페이지 새로고침
+                window.location.reload();
+            };
+        }
+    </script>    
 </body>
 </html>
