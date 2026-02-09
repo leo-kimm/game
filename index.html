@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leo's Game Arcade</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            color: white;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 3rem;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px #00d2ff, 0 0 20px #00d2ff;
+            background: linear-gradient(to right, #00d2ff, #928DAB);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            width: 90%;
+            max-width: 800px;
+            padding: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px 20px;
+            text-align: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 게임별 테마 효과 */
+        .card.neon:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
+            border-color: #0ff;
+        }
+        .card.luge:hover {
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
+            border-color: #ffd700;
+        }
+
+        .icon { 
+            font-size: 4rem; 
+            margin-bottom: 20px; 
+            display: block; 
+            transition: transform 0.3s;
+        }
+        .card:hover .icon { transform: scale(1.2); }
+
+        .title { 
+            font-size: 1.5rem; 
+            font-weight: 800; 
+            display: block; 
+            margin-bottom: 10px; 
+            text-transform: uppercase;
+        }
+        
+        .desc { 
+            font-size: 0.9rem; 
+            color: #aaa; 
+            display: block; 
+            line-height: 1.5;
+        }
+
+        .badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        .badge.new { background: #ff4757; color: white; }
+        .badge.hit { background: #2ed573; color: black; }
+
+        footer {
+            margin-top: 50px;
+            color: #666;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Leo's Arcade</h1>
+
+    <div class="game-grid">
+        <a href="./neon-dodge/" class="card neon">
+            <span class="badge hit">LEGEND</span>
+            <span class="icon">👾</span>
+            <span class="title" style="color: #0ff;">Neon Dodge</span>
+            <span class="desc">초고속 탄막 피하기 액션.<br>극한의 반응속도에 도전하라!</span>
+        </a>
+
+        <a href="./luge/" class="card luge">
+            <span class="badge new">NEW</span>
+            <span class="icon">🛷</span>
+            <span class="title" style="color: #ffd700;">Luge Olympic</span>
+            <span class="desc">물리 기반 드로잉 퍼즐.<br>나만의 트랙을 그려 금메달을 노려라!</span>
+        </a>
+    </div>
+
+    <footer>
+        © 2026 Leo Kim. All rights reserved.
+    </footer>
+
+</body>
+</html>
