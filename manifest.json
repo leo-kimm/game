@@ -10,12 +10,12 @@
     {
       "src": "/game/icon-192.jpg",  <-- [수정] 앞에 /game/ 을 붙이세요!
       "sizes": "192x192",
-      "type": "image/jpg"
+      "type": "image/jpeg"
     },
     {
       "src": "/game/icon-512.jpg",  <-- [수정] 여기도 마찬가지!
       "sizes": "512x512",
-      "type": "image/jpg"
+      "type": "image/jpeg"
     }
   ]
 }
