@@ -8,14 +8,14 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/game/icon-192.png",  <-- [수정] 앞에 /game/ 을 붙이세요!
+      "src": "/game/icon-192.jpg",  <-- [수정] 앞에 /game/ 을 붙이세요!
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/jpg"
     },
     {
-      "src": "/game/icon-512.png",  <-- [수정] 여기도 마찬가지!
+      "src": "/game/icon-512.jpg",  <-- [수정] 여기도 마찬가지!
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/jpg"
     }
   ]
 }
