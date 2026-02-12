@@ -312,6 +312,8 @@
       flex-direction: column;
       justify-content: space-between;
       padding: 10px;
+      padding-bottom: 72px;
+      /* ▼ 툴바 겹침 방지: 하단 여백 확보 */
       z-index: 10;
     }
 
@@ -563,17 +565,23 @@
 
     /* ========== GLASSMORPHISM TOOLBAR ========== */
     .toolbar {
-      position: relative;
+      position: absolute;
+      /* ▼ 하단 고정 배치 */
+      bottom: 0;
+      left: 0;
+      right: 0;
       display: flex;
-      gap: 8px;
+      gap: 6px;
       pointer-events: auto;
       width: 100%;
-      padding: 10px;
-      background: rgba(0, 0, 0, 0.6);
+      padding: 8px 10px;
+      background: rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      border-radius: 14px;
+      border-radius: 14px 14px 0 0;
       border: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: none;
+      z-index: 15;
     }
 
     .tool-btn {
@@ -611,13 +619,26 @@
     /* Tool container for Draw/Eraser - fills remaining space */
     .tool-container {
       position: relative;
-      flex: 1;
+      flex: 0.8;
+      /* ▼ 축소: Undo 버튼 공간 확보 */
       display: flex;
     }
 
     .tool-container .tool-btn {
       width: 100%;
       height: 100%;
+    }
+
+    /* Undo 버튼: 1:1 정사각형 */
+    .tool-btn-square {
+      flex: none !important;
+      width: 44px;
+      height: 44px;
+      aspect-ratio: 1;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     /* Popup container */
@@ -1176,14 +1197,19 @@
       border-radius: 10px;
       padding: 14px 16px;
       margin: 10px 0;
-      
+
       /* [핵심 수정] 박스 크기 강제 고정 및 내부 가로 정렬 */
-      width: 100%;             /* 가로 꽉 채우기 */
-      box-sizing: border-box;  /* 테두리 두께 포함해서 크기 계산 */
+      width: 100%;
+      /* 가로 꽉 채우기 */
+      box-sizing: border-box;
+      /* 테두리 두께 포함해서 크기 계산 */
       display: flex;
-      flex-direction: row;     /* 세로(column) -> 가로(row)로 변경 */
-      justify-content: space-between; /* 양끝 정렬 (MY - 시간 - Gap) */
-      align-items: center;     /* 수직 중앙 정렬 */
+      flex-direction: row;
+      /* 세로(column) -> 가로(row)로 변경 */
+      justify-content: space-between;
+      /* 양끝 정렬 (MY - 시간 - Gap) */
+      align-items: center;
+      /* 수직 중앙 정렬 */
     }
 
     .result-fail-reason {
@@ -1213,7 +1239,6 @@
       max-width: 200px;
     }
 
-    /* Result Broadcast Container */
     .result-broadcast {
       width: 100%;
       max-width: 320px;
@@ -1221,6 +1246,217 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+    }
+
+    /* ========== HALL OF FAME (명예의 전당) ========== */
+    #hallOfFameScreen {
+      background:
+        radial-gradient(ellipse at 50% 20%, rgba(255, 215, 0, 0.08) 0%, transparent 60%),
+        linear-gradient(180deg, #070d1a 0%, #0c1a33 40%, #0a1628 100%);
+      justify-content: flex-start;
+      padding: 24px 16px;
+      overflow-y: auto;
+    }
+
+    .hof-title {
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--gold);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+      margin-bottom: 4px;
+    }
+
+    .hof-season {
+      font-size: 11px;
+      color: #667799;
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+
+    /* 시상대 (Podium) */
+    .podium {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .podium-slot {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border-radius: 10px 10px 0 0;
+      padding: 10px 6px 8px;
+      position: relative;
+    }
+
+    .podium-slot.gold {
+      flex: 1.2;
+      background: linear-gradient(180deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 215, 0, 0.05) 100%);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      min-height: 140px;
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.15), inset 0 1px 0 rgba(255, 215, 0, 0.2);
+    }
+
+    .podium-slot.silver {
+      flex: 1;
+      background: linear-gradient(180deg, rgba(192, 192, 192, 0.12) 0%, rgba(192, 192, 192, 0.04) 100%);
+      border: 1px solid rgba(192, 192, 192, 0.2);
+      min-height: 110px;
+    }
+
+    .podium-slot.bronze {
+      flex: 1;
+      background: linear-gradient(180deg, rgba(205, 127, 50, 0.12) 0%, rgba(205, 127, 50, 0.04) 100%);
+      border: 1px solid rgba(205, 127, 50, 0.2);
+      min-height: 90px;
+    }
+
+    .podium-medal {
+      font-size: 28px;
+      margin-bottom: 4px;
+    }
+
+    .podium-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 2px;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      max-width: 80px;
+      white-space: nowrap;
+    }
+
+    .podium-slot.gold .podium-name {
+      color: var(--gold);
+      text-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+    }
+
+    .podium-time {
+      font-size: 10px;
+      font-family: 'Courier New', monospace;
+      color: #00ffcc;
+    }
+
+    .podium-rank-bar {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      margin-top: 6px;
+    }
+
+    .podium-slot.gold .podium-rank-bar {
+      background: linear-gradient(90deg, var(--gold), #FFA500);
+    }
+
+    .podium-slot.silver .podium-rank-bar {
+      background: linear-gradient(90deg, var(--silver), #aaa);
+    }
+
+    .podium-slot.bronze .podium-rank-bar {
+      background: linear-gradient(90deg, var(--bronze), #a06020);
+    }
+
+    /* 4~10위 리스트 */
+    .hof-list {
+      width: 100%;
+      max-width: 320px;
+      background: rgba(15, 25, 45, 0.8);
+      border-radius: 12px;
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .hof-entry {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .hof-entry:last-child {
+      border-bottom: none;
+    }
+
+    .hof-rank {
+      width: 28px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #556;
+    }
+
+    .hof-name {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 700;
+      color: #ccd;
+    }
+
+    .hof-time {
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      color: #00ddaa;
+    }
+
+    .hof-empty {
+      text-align: center;
+      color: #556;
+      font-size: 12px;
+      padding: 20px;
+    }
+
+    .hof-back-btn {
+      margin-top: 20px;
+      padding: 12px 30px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .hof-back-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--gold);
+    }
+
+    /* Home 화면 Hall of Fame 버튼 */
+    .hof-home-btn {
+      width: 90%;
+      max-width: 300px;
+      padding: 14px;
+      margin-top: 15px;
+      border: 2px solid rgba(255, 215, 0, 0.3);
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(180, 130, 0, 0.15));
+      color: var(--gold);
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      transition: all 0.2s;
+      z-index: 10;
+    }
+
+    .hof-home-btn:hover {
+      border-color: var(--gold);
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+    }
+
+    .hof-home-btn.hidden {
+      display: none;
     }
   </style>
 </head>
@@ -1279,6 +1515,9 @@
 
       <div class="home-title" style="margin-top: 60px;">SELECT STAGE</div>
       <div class="level-grid" id="levelGrid" style="margin-top: 20px;"></div>
+
+      <!-- ▼ 명예의 전당 버튼 (Stage 10 클리어 시에만 표시) -->
+      <button class="hof-home-btn hidden" id="btnHallOfFame">🏆 Hall of Fame</button>
     </div>
 
     <!-- RANKING SCREEN -->
@@ -1375,10 +1614,48 @@
             </div>
           </div>
         </div>
+
+        <!-- ▼ Undo 버튼 (1:1 정사각형) -->
+        <button id="btnUndo" class="tool-btn tool-btn-square" title="Undo">↩️</button>
       </div>
     </div>
 
     <div class="toast" id="toast"></div>
+
+    <!-- HALL OF FAME SCREEN (명예의 전당) -->
+    <div class="screen hidden" id="hallOfFameScreen">
+      <div class="hof-title">🏆 HALL OF FAME</div>
+      <div class="hof-season">SEASON 1 — COMBINED TIME</div>
+
+      <!-- 시상대: 2위(left) - 1위(center) - 3위(right) -->
+      <div class="podium" id="hofPodium">
+        <div class="podium-slot silver" id="podium2">
+          <div class="podium-medal">🥈</div>
+          <div class="podium-name" id="podiumName2">---</div>
+          <div class="podium-time" id="podiumTime2">--:--.---</div>
+          <div class="podium-rank-bar"></div>
+        </div>
+        <div class="podium-slot gold" id="podium1">
+          <div class="podium-medal">🥇</div>
+          <div class="podium-name" id="podiumName1">---</div>
+          <div class="podium-time" id="podiumTime1">--:--.---</div>
+          <div class="podium-rank-bar"></div>
+        </div>
+        <div class="podium-slot bronze" id="podium3">
+          <div class="podium-medal">🥉</div>
+          <div class="podium-name" id="podiumName3">---</div>
+          <div class="podium-time" id="podiumTime3">--:--.---</div>
+          <div class="podium-rank-bar"></div>
+        </div>
+      </div>
+
+      <!-- 4~10위 리스트 -->
+      <div class="hof-list" id="hofList">
+        <div class="hof-empty">Loading...</div>
+      </div>
+
+      <button class="hof-back-btn" id="btnHofBack">← BACK</button>
+    </div>
 
     <div class="tutorial hidden" id="tutorial">
       Draw lines to guide<br>the rider to all ⭐!
@@ -1484,6 +1761,42 @@
         rotationSpeed: 3.0
       };
 
+      // ============================================
+      // [결정론적 시뮬레이션] 핵심 파라미터
+      // ============================================
+      // ── Fixed Time Step ──────────────────────────
+      // 데이터 전략: dt를 고정함으로써 프레임율 독립적 시뮬레이션 보장.
+      // 60Hz 기준으로 설정. 저사양 기기에서 프레임 드랍이 발생해도
+      // accumulator 패턴이 동일 횟수의 물리 업데이트를 보장한다.
+      const FIXED_DT = 1 / 60;            // 고정 물리 타임스텝 (≈16.67ms)
+      const MAX_PHYSICS_STEPS = 5;         // 한 프레임당 최대 물리 연산 횟수
+      const MAX_ACCUMULATOR = FIXED_DT * MAX_PHYSICS_STEPS; // Safety valve (≈83.3ms)
+
+      // ── LUT (Look-Up Table) ──────────────────────
+      // 데이터 전략: 실시간 베지어/스플라인 연산 제거.
+      // pointerup 시점에 모든 선을 2px 간격의 고밀도 좌표로 Pre-bake.
+      // 물리 판정은 LUT 점(거리 기반)으로만 수행 → 연산 결정론 확보.
+      const LUT_DENSITY = 2;              // LUT 포인트 간격 (px)
+      const LUT_COLLISION_RADIUS = 6;     // 충돌 판정 반경 (px)
+
+      // ── Spatial Grid ─────────────────────────────
+      // 데이터 전략: 전체 LUT 순회 O(n)을 Grid 기반 O(1) 조회로 최적화.
+      // 플레이어 주변 3x3 셀(120x120px 영역)만 검사.
+      const GRID_CELL_SIZE = 40;          // 그리드 셀 크기 (px)
+
+      // ── Anti-Tunneling Sub-stepping ──────────────
+      // 데이터 전략: 고속(400px/s↑) 시 dt를 자동 분할하여
+      // 선 관통(tunneling) 현상을 방지. MAX_SUBSTEPS로 연산 상한 제어.
+      const SUB_STEP_THRESHOLD = 400;     // 서브스텝 활성화 속도 임계치 (px/s)
+      const MAX_SUBSTEPS = 4;              // dt 당 최대 서브스텝
+
+      // ── Deterministic PRNG ───────────────────────
+      // 데이터 전략: Math.random() 완전 제거.
+      // 스테이지 번호 × 1000 + 7을 seed로 사용하여
+      // 파티클 등 시각 효과까지 100% 재현 가능.
+      const PRNG_SEED_MULTIPLIER = 1000;
+      const PRNG_SEED_OFFSET = 7;
+
       // Global ink limits for special types
       const INK_LIMITS = {
         booster: 150,
@@ -1492,6 +1805,9 @@
 
       const STALL_THRESHOLD = 25;
       const STALL_TIME = 3000;
+
+      // ── Undo System ───────────────────────────────
+      const UNDO_MAX = 20;                // 최대 스냅샷 저장 수
 
       // Hardcoded star positions for each stage (each star must be at same or lower Y than previous)
       // Stages 1-3: Easy - gentle curves
@@ -1554,7 +1870,13 @@
         eraserSize: 15,
         showEraserPreview: false,
 
-        // ▼▼▼ [신규 추가] 데이터 분석용 변수 ▼▼▼
+        // ▼▼▼ [결정론적 시뮬레이션] 상태 변수 ▼▼▼
+        seed: 0,             // PRNG 시드 (= stage * 1000 + 7)
+        rng: null,           // mulberry32 인스턴스. Math.random() 대체.
+        lutData: [],         // Pre-baked LUT 데이터 배열
+        spatialGrid: {},     // Spatial Grid (해시맵)
+
+        // ▼▼▼ [데이터 분석용] 변수 ▼▼▼
         retryCount: 0,       // 현재 스테이지 재시도 횟수
         strokeCount: 0,      // 선 그리기 횟수
         eraserCount: 0,      // 지우개 사용 횟수
@@ -1564,6 +1886,120 @@
       };
 
 
+
+      // ============================================
+      // [결정론적 시뮬레이션] PRNG (Mulberry32)
+      // ============================================
+      // 데이터 전략: Math.random()의 비결정론적 특성을 제거.
+      // 동일 seed → 동일 난수열을 보장하는 Mulberry32 알고리즘.
+      // 출력 범위: [0, 1) — Math.random()과 동일한 인터페이스.
+      // 참고: https://gist.github.com/tommyettinger/46a874533244883189143505d203312c
+      function mulberry32(seed) {
+        let s = seed | 0;
+        return function () {
+          s = s + 0x6D2B79F5 | 0;
+          let t = Math.imul(s ^ s >>> 15, 1 | s);
+          t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+          return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        };
+      }
+
+      // ============================================
+      // [결정론적 시뮬레이션] LUT (Look-Up Table) Builder
+      // ============================================
+      // 데이터 전략: 유저가 그린 원본 stroke 데이터를
+      // LUT_DENSITY(2px) 간격의 고밀도 좌표 배열로 Pre-bake.
+      // 이후 물리 판정은 이 LUT 데이터만 사용하여
+      // 실시간 곡선 연산을 완전 제거 → 결정론 확보 + 연산 비용 절감.
+      //
+      // 반환 구조: [{ points: [{x,y}, ...], type: 'normal'|'booster'|'jump' }, ...]
+      function buildLUT(strokesArr) {
+        const lut = [];
+        for (const stroke of strokesArr) {
+          if (stroke.pts.length < 2) continue;
+          const lutPoints = [];
+          for (let i = 0; i < stroke.pts.length - 1; i++) {
+            const a = stroke.pts[i], b = stroke.pts[i + 1];
+            const segLen = Math.hypot(b.x - a.x, b.y - a.y);
+            // 세그먼트를 LUT_DENSITY 간격으로 분할하여 포인트 생성
+            const steps = Math.max(1, Math.ceil(segLen / LUT_DENSITY));
+            for (let s = 0; s <= steps; s++) {
+              const t = s / steps;
+              lutPoints.push({
+                x: a.x + (b.x - a.x) * t,
+                y: a.y + (b.y - a.y) * t
+              });
+            }
+          }
+          // 중복 포인트 제거 (인접 포인트 거리 < 0.5px)
+          const deduped = [lutPoints[0]];
+          for (let i = 1; i < lutPoints.length; i++) {
+            const prev = deduped[deduped.length - 1];
+            if (Math.hypot(lutPoints[i].x - prev.x, lutPoints[i].y - prev.y) >= 0.5) {
+              deduped.push(lutPoints[i]);
+            }
+          }
+          if (deduped.length >= 2) {
+            lut.push({ points: deduped, type: stroke.type || 'normal' });
+          }
+        }
+        return lut;
+      }
+
+      // ============================================
+      // [결정론적 시뮬레이션] Spatial Grid Builder
+      // ============================================
+      // 데이터 전략: 전체 LUT 점을 GRID_CELL_SIZE(40px) 기준
+      // 해시 그리드에 등록. 물리 판정 시 플레이어 주변 3x3 셀만
+      // 조회하면 되므로 O(n) → O(k) (k: 주변 셀 내 점 수)로
+      // 검색 비용 대폭 절감.
+      //
+      // Grid 구조: { "cellX,cellY": [{ lutIdx, ptIdx, x, y }, ...], ... }
+      function buildSpatialGrid(lutData) {
+        const grid = {};
+        for (let li = 0; li < lutData.length; li++) {
+          const entry = lutData[li];
+          for (let pi = 0; pi < entry.points.length; pi++) {
+            const p = entry.points[pi];
+            const key = getCellKey(p.x, p.y);
+            if (!grid[key]) grid[key] = [];
+            grid[key].push({ lutIdx: li, ptIdx: pi, x: p.x, y: p.y });
+          }
+        }
+        return grid;
+      }
+
+      // Grid 셀 키 생성: 좌표 → "cellX,cellY" 문자열
+      function getCellKey(x, y) {
+        return `${Math.floor(x / GRID_CELL_SIZE)},${Math.floor(y / GRID_CELL_SIZE)}`;
+      }
+
+      // 플레이어 주변 3x3 셀 내 LUT 포인트 조회
+      // 데이터 전략: 9개 셀만 검사하므로 최악의 경우에도
+      // 한 프레임당 조회 포인트 수가 120x120px 영역으로 제한됨.
+      function getNearbyLUTPoints(grid, px, py) {
+        const results = [];
+        const cx = Math.floor(px / GRID_CELL_SIZE);
+        const cy = Math.floor(py / GRID_CELL_SIZE);
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            const key = `${cx + dx},${cy + dy}`;
+            if (grid[key]) {
+              for (let i = 0; i < grid[key].length; i++) {
+                results.push(grid[key][i]);
+              }
+            }
+          }
+        }
+        return results;
+      }
+
+      // LUT + Spatial Grid 동시 재생성 헬퍼
+      // pointerup, eraseAtPoint, Start 버튼 등에서 호출.
+      function rebuildCollisionData() {
+        state.lutData = buildLUT(strokes);
+        state.spatialGrid = buildSpatialGrid(state.lutData);
+      }
 
       // -----------------[여기부터 추가]-----------------
       async function saveScoreToFirebase(stage, newTime) {
@@ -1577,7 +2013,7 @@
 
         try {
           const docSnap = await getDoc(docRef);
-          
+
           const payload = {
             // uid: auth.currentUser ? auth.currentUser.uid : 'anon', // UID는 참고용으로만 저장
             nickname: currentUserNickname,
@@ -1609,7 +2045,7 @@
         const ua = navigator.userAgent;
         let os = 'Unknown', osVer = '0', model = 'Unknown';
         let browser = 'Unknown', engine = 'Unknown';
-        
+
         // 1. OS & Version 파싱
         if (/Android/i.test(ua)) {
           os = 'Android';
@@ -1641,7 +2077,7 @@
         const isMobile = /Mobi|Android/i.test(ua);
         const platform = isMobile ? 'MOBILE' : 'PC';
         const control = ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 'TOUCH' : 'MOUSE';
-        
+
         return {
           os, osVer, browser, model, engine,
           platform,
@@ -1659,10 +2095,10 @@
 
         try {
           // 1. 시스템 정보 가져오기
-          const sys = getSystemInfo(); 
+          const sys = getSystemInfo();
 
-          const logRef = doc(collection(db, "game_logs")); 
-          
+          const logRef = doc(collection(db, "game_logs"));
+
           const logData = {
             // [Basic Info]
             nickname: currentUserNickname,
@@ -1670,7 +2106,7 @@
             stage: state.stage,
             result: result,
             reason: failReason,
-            
+
             // [Detailed System Info] - 요청하신 구조 그대로 적용
             os: sys.os,
             osVer: sys.osVer,
@@ -1690,21 +2126,21 @@
             retry_count: state.retryCount,
             stroke_count: state.strokeCount,
             eraser_count: state.eraserCount,
-            
+
             // [Ink Usage]
             ink_booster: Number(state.boosterInkUsed.toFixed(2)),
             ink_jump: Number(state.jumpInkUsed.toFixed(2)),
-            
+
             // [Time & Location]
             play_time: Number(state.timer.toFixed(3)),
             death_pos: failReason ? { x: Math.round(state.deathX), y: Math.round(state.deathY) } : null,
-            
+
             created_at: serverTimestamp()
           };
 
           // 비동기 전송
           setDoc(logRef, logData).catch(e => console.error("Log Save Error:", e));
-          
+
         } catch (e) {
           console.error("Log System Error:", e);
         }
@@ -1730,25 +2166,50 @@
         }
       }
 
-      // [추가] 자동 로그인: 저장된 닉네임이 있으면 바로 로비로 이동
+      // [추가] 자동 로그인: UID 검증 포함
       const savedNick = localStorage.getItem('luge_nickname');
       if (savedNick) {
-        currentUserNickname = savedNick;
-        document.getElementById('displayNick').innerText = currentUserNickname;
-        document.getElementById('introScreen').classList.add('hidden');
-        document.getElementById('homeScreen').classList.remove('hidden');
+        // ▼ Firestore에서 UID 일치 확인 후 진행
+        (async () => {
+          try {
+            const userDocRef = doc(db, "users", savedNick);
+            const userSnap = await getDoc(userDocRef);
+            const myUid = auth.currentUser ? auth.currentUser.uid : null;
+
+            if (userSnap.exists() && myUid && userSnap.data().uid === myUid) {
+              // UID 일치 → 동일인 → 자동 로그인
+              currentUserNickname = savedNick;
+              document.getElementById('displayNick').innerText = currentUserNickname;
+              document.getElementById('introScreen').classList.add('hidden');
+              document.getElementById('homeScreen').classList.remove('hidden');
+              renderLevelGrid();
+              updateHofButtonVisibility();
+            } else {
+              // UID 불일치 → 캐시 삭제 → 재입력
+              localStorage.removeItem('luge_nickname');
+            }
+          } catch (e) {
+            // 오프라인 등 오류 시 캐시 닉네임으로 진행 (graceful fallback)
+            currentUserNickname = savedNick;
+            document.getElementById('displayNick').innerText = currentUserNickname;
+            document.getElementById('introScreen').classList.add('hidden');
+            document.getElementById('homeScreen').classList.remove('hidden');
+            renderLevelGrid();
+            updateHofButtonVisibility();
+          }
+        })();
       }
 
       // 로딩 화면 페이드아웃 (0.5초 후)
       setTimeout(hideLoadingOverlay, 500);
 
-      // 1. [진입] 닉네임 등록 버튼 (중복 검사 추가됨)
+      // 1. [진입] 닉네임 등록 버튼 (UID 매핑 + 기기 잠금)
       document.getElementById('btnRegister').onclick = async function () {
         const nickInput = document.getElementById('userNickname');
         const errorMsg = document.getElementById('nickError');
-        const btn = this; // 버튼 비활성화를 위해
-        
-        const inputNick = nickInput.value.trim(); // 공백 제거
+        const btn = this;
+
+        const inputNick = nickInput.value.trim();
         const nickRegex = /^[a-zA-Z0-9가-힣]{3,4}$/;
 
         // 1. 형식 유효성 검사
@@ -1766,26 +2227,36 @@
         errorMsg.style.visibility = 'hidden';
 
         try {
-          // Firestore의 'users' 컬렉션에서 해당 닉네임 문서를 찾아봅니다.
-          // (문서 ID를 닉네임으로 설정하여 중복을 원천 봉쇄)
           const userDocRef = doc(db, "users", inputNick);
           const userSnap = await getDoc(userDocRef);
+          const myUid = auth.currentUser ? auth.currentUser.uid : 'anon';
 
           if (userSnap.exists()) {
-            // [중복 발생] 이미 문서가 존재함
-            errorMsg.innerText = "이미 사용 중인 닉네임입니다 😢";
-            errorMsg.style.visibility = 'visible';
-            nickInput.style.borderColor = 'var(--olympic-red)';
-            
-            // 버튼 복구
-            btn.disabled = false;
-            btn.innerText = "ENTRY";
-            return; 
+            const serverUid = userSnap.data().uid;
+
+            if (serverUid === myUid) {
+              // ▼ UID 일치 → 동일인 → 진행 허용
+              currentUserNickname = inputNick;
+              localStorage.setItem('luge_nickname', currentUserNickname);
+              document.getElementById('displayNick').innerText = currentUserNickname;
+              document.getElementById('introScreen').classList.add('hidden');
+              document.getElementById('homeScreen').classList.remove('hidden');
+              renderLevelGrid();
+              updateHofButtonVisibility();
+            } else {
+              // ▼ UID 불일치 → 차단 (닉네임 선점 방지)
+              errorMsg.innerText = "이미 사용 중인 닉네임입니다 😢";
+              errorMsg.style.visibility = 'visible';
+              nickInput.style.borderColor = 'var(--olympic-red)';
+              btn.disabled = false;
+              btn.innerText = "ENTRY";
+            }
+            return;
           }
 
-          // [통과] 사용 가능한 닉네임 -> Firestore에 '내꺼'라고 등록(찜)
+          // [통과] 사용 가능한 닉네임 → Firestore에 UID 매핑 저장
           await setDoc(userDocRef, {
-            uid: auth.currentUser ? auth.currentUser.uid : 'anon',
+            uid: myUid,
             nickname: inputNick,
             createdAt: serverTimestamp()
           });
@@ -1797,6 +2268,8 @@
           document.getElementById('displayNick').innerText = currentUserNickname;
           document.getElementById('introScreen').classList.add('hidden');
           document.getElementById('homeScreen').classList.remove('hidden');
+          renderLevelGrid();
+          updateHofButtonVisibility();
 
         } catch (e) {
           console.error("닉네임 검사 오류:", e);
@@ -1896,6 +2369,22 @@
       let eraserMode = false;
       let eraserPath = [];
       const particles = [];
+
+      // ── Undo System ────────────────────────────────
+      let historyStack = []; // strokes 스냅샷 배열 (최대 UNDO_MAX)
+
+      function pushHistory() {
+        historyStack.push(JSON.parse(JSON.stringify(strokes)));
+        if (historyStack.length > UNDO_MAX) historyStack.shift();
+      }
+
+      function undo() {
+        if (historyStack.length === 0 || state.mode === 'run') return;
+        strokes = historyStack.pop();
+        recalculateInkUsage();
+        rebuildCollisionData();
+        updateUI();
+      }
 
       const player = {
         x: 0, y: 0, vx: 0, vy: 0, angle: 0, onGround: false
@@ -2007,6 +2496,19 @@
         state.stallTimer = 0;
         state.currentInkType = 'normal';
 
+        // ▼▼▼ [결정론적 시뮬레이션] PRNG 시드 초기화 ▼▼▼
+        // 데이터 전략: 스테이지별 고유 시드로 PRNG 리셋.
+        // 동일 스테이지 → 동일 난수열 → 동일 파티클 연출 보장.
+        state.seed = n * PRNG_SEED_MULTIPLIER + PRNG_SEED_OFFSET;
+        state.rng = mulberry32(state.seed);
+
+        // ▼▼▼ [결정론적 시뮬레이션] LUT + Grid 초기화 ▼▼▼
+        state.lutData = [];
+        state.spatialGrid = {};
+
+        // ▼ Undo 히스토리 초기화
+        historyStack = [];
+
         // ▼▼▼ [수정] 데이터 분석 변수 초기화 로직 ▼▼▼
         state.strokeCount = 0;
         state.eraserCount = 0;
@@ -2018,8 +2520,8 @@
         // 버튼 클릭 이벤트에서 제어하거나, 스테이지가 바뀔 때만 초기화해야 함.
         // 아래 '스테이지 변경 감지' 로직 추가:
         if (state.lastStage !== n) {
-            state.retryCount = 0; // 스테이지가 달라졌을 때만 리셋
-            state.lastStage = n;
+          state.retryCount = 0; // 스테이지가 달라졌을 때만 리셋
+          state.lastStage = n;
         }
 
         // Load saved lines or clear
@@ -2036,6 +2538,8 @@
 
         // Recalculate ink used per type
         recalculateInkUsage();
+        // ▼ [결정론적 시뮬레이션] 로드된 선 데이터로 LUT 재생성
+        rebuildCollisionData();
 
         particles.length = 0;
 
@@ -2142,6 +2646,8 @@
 
         // Real-time recalculation of all ink usage
         recalculateInkUsage();
+        // ▼ [결정론적 시뮬레이션] 지우개 사용 후 LUT 재생성
+        rebuildCollisionData();
         updateUI();
       }
 
@@ -2184,6 +2690,7 @@
         const p = getVirtualPos(e);
 
         if (eraserMode) {
+          pushHistory(); // ▼ Undo 스냅샷 저장
           eraserPath = [p];
           eraseAtPoint(p.x, p.y, state.eraserSize);
 
@@ -2196,6 +2703,7 @@
           if (inkType === 'booster' && state.boosterInkUsed >= INK_LIMITS.booster) return;
           if (inkType === 'jump' && state.jumpInkUsed >= INK_LIMITS.jump) return;
 
+          pushHistory(); // ▼ Undo 스냅샷 저장
           activeStroke = { pts: [p], len: 0, type: inkType };
           strokes.push(activeStroke);
           tutorial.classList.add('hidden');
@@ -2239,71 +2747,103 @@
       });
 
       canvas.addEventListener('pointerup', () => {
+        // ▼ [결정론적 시뮬레이션] 선 그리기/지우기 완료 시 LUT + Grid 재생성
+        // 데이터 전략: pointerup 시점에만 Pre-bake를 실행하므로
+        // pointermove 중에는 LUT 연산 부하가 0.
+        if (activeStroke || eraserPath.length > 0) {
+          rebuildCollisionData();
+        }
         activeStroke = null;
         eraserPath = [];
       });
       canvas.addEventListener('pointerleave', () => {
+        if (activeStroke || eraserPath.length > 0) {
+          rebuildCollisionData();
+        }
         activeStroke = null;
         eraserPath = [];
       });
       canvas.addEventListener('contextmenu', e => e.preventDefault());
 
       // ============================================
-      // PHYSICS
+      // PHYSICS [결정론적 시뮬레이션 재설계]
       // ============================================
+      // 데이터 전략: dt는 항상 FIXED_DT(1/60)로 들어온다 (game loop에서 보장).
+      // 충돌 판정은 Spatial Grid + LUT 기반으로 수행.
+      // 고속(400px/s↑) 시 Adaptive Sub-stepping으로 터널링 방지.
       function updatePhysics(dt) {
-        player.vy += PHYS.gravity * dt;
-        player.x += player.vx * dt;
-        player.y += player.vy * dt;
-
-        // Air drag to prevent infinite speed
-        player.vx *= (1 - PHYS.airDrag);
-        player.vy *= (1 - PHYS.airDrag);
-
-        // Rotate character to face velocity direction (anti-jitter: only when moving fast enough)
-        const playerSpeed = Math.hypot(player.vx, player.vy);
-        if (playerSpeed > 35) {
-          const targetAngle = Math.atan2(player.vy, player.vx);
-          let diff = targetAngle - player.angle;
-          // Normalize to [-PI, PI]
-          while (diff <= -Math.PI) diff += Math.PI * 2;
-          while (diff > Math.PI) diff -= Math.PI * 2;
-          // Smooth interpolation
-          player.angle += diff * PHYS.rotationSpeed * dt;
-        }
-        player.onGround = false;
-
-        for (const st of strokes) {
-          const lineType = st.type || 'normal';
-          for (let i = 0; i < st.pts.length - 1; i++) {
-            resolveLine(player, st.pts[i], st.pts[i + 1], lineType);
-          }
-        }
-
-        for (const s of level.stars) {
-          if (!s.taken && Math.hypot(player.x - s.x, player.y - s.y) < 22) {
-            s.taken = true;
-            state.starsCollected++;
-            spawnParticles(s.x, s.y, '#ffd700', 12);
-            updateUI();
-          }
-        }
-
-        const f = level.finish;
-        if (player.x > f.x && player.x < f.x + f.w && player.y > f.y && player.y < f.y + f.h) {
-          if (state.starsCollected >= state.starsTotal) {
-            win();
-          } else {
-            fail('Collect all ⭐ first!');
-          }
-        }
-
-        if (player.y > VIRTUAL_H + 50 || player.x < -50 || player.x > VIRTUAL_W + 50) {
-          fail('Out of bounds!');
-        }
-
+        // ── Adaptive Sub-stepping ──────────────────
+        // 데이터 전략: 속도가 SUB_STEP_THRESHOLD(400px/s)를 초과하면
+        // dt를 자동 분할하여 물리 연산 해상도를 높인다.
+        // 이로써 선을 관통하는 tunneling 현상을 방지.
         const speed = Math.hypot(player.vx, player.vy);
-        if (speed < STALL_THRESHOLD && player.onGround) {
+        let subSteps = 1;
+        if (speed > SUB_STEP_THRESHOLD) {
+          // 속도에 비례하여 서브스텝 수 결정 (최대 MAX_SUBSTEPS)
+          subSteps = Math.min(MAX_SUBSTEPS, Math.ceil(speed / SUB_STEP_THRESHOLD));
+        }
+        const subDt = dt / subSteps;
+
+        for (let sub = 0; sub < subSteps; sub++) {
+          // 종료 조건 체크 (서브스텝 도중 win/fail 발생 시 중단)
+          if (state.mode !== 'run') return;
+
+          // 1. 중력 적용
+          player.vy += PHYS.gravity * subDt;
+
+          // 2. 위치 업데이트
+          player.x += player.vx * subDt;
+          player.y += player.vy * subDt;
+
+          // 3. 공기 저항 (무한 가속 방지)
+          player.vx *= (1 - PHYS.airDrag);
+          player.vy *= (1 - PHYS.airDrag);
+
+          // 4. 회전 보간 (속도 방향 추종, 저속 시 떨림 방지)
+          const curSpeed = Math.hypot(player.vx, player.vy);
+          if (curSpeed > 35) {
+            const targetAngle = Math.atan2(player.vy, player.vx);
+            let diff = targetAngle - player.angle;
+            while (diff <= -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            player.angle += diff * PHYS.rotationSpeed * subDt;
+          }
+          player.onGround = false;
+
+          // 5. LUT 기반 충돌 판정 (Spatial Grid 조회)
+          resolveWithLUT(player, state.lutData, state.spatialGrid);
+
+          // 6. 별 수집
+          for (const s of level.stars) {
+            if (!s.taken && Math.hypot(player.x - s.x, player.y - s.y) < 22) {
+              s.taken = true;
+              state.starsCollected++;
+              spawnParticles(s.x, s.y, '#ffd700', 12);
+              updateUI();
+            }
+          }
+
+          // 7. 골인 판정
+          const f = level.finish;
+          if (player.x > f.x && player.x < f.x + f.w && player.y > f.y && player.y < f.y + f.h) {
+            if (state.starsCollected >= state.starsTotal) {
+              win();
+            } else {
+              fail('Collect all ⭐ first!');
+            }
+            return; // win/fail 후 서브스텝 중단
+          }
+
+          // 8. 경계 벗어남 판정
+          if (player.y > VIRTUAL_H + 50 || player.x < -50 || player.x > VIRTUAL_W + 50) {
+            fail('Out of bounds!');
+            return;
+          }
+        } // end sub-step loop
+
+        // 9. Stall 감지 (서브스텝 외부에서 1회 판정)
+        const finalSpeed = Math.hypot(player.vx, player.vy);
+        if (finalSpeed < STALL_THRESHOLD && player.onGround) {
           state.stallTimer += dt * 1000;
           if (state.stallTimer >= STALL_TIME) {
             fail('Stalled! Keep moving!');
@@ -2313,6 +2853,54 @@
         }
       }
 
+      // ============================================
+      // [결정론적 시뮬레이션] LUT 기반 충돌 판정
+      // ============================================
+      // 데이터 전략: 원본 stroke 배열 대신 Pre-baked LUT 데이터로
+      // 충돌 판정. Spatial Grid로 플레이어 주변 점만 조회하여
+      // 가장 가까운 LUT 세그먼트를 찾아 resolveLine 수행.
+      function resolveWithLUT(p, lutData, spatialGrid) {
+        // Grid에서 플레이어 주변 3x3 셀 내 점들 조회
+        const nearby = getNearbyLUTPoints(spatialGrid, p.x, p.y);
+        if (nearby.length === 0) return;
+
+        // LUT 세그먼트별 충돌 판정
+        // 데이터 전략: 각 nearby 점에서 해당 점과 다음 점으로
+        // 라인 세그먼트를 구성하여 resolveLine을 호출.
+        // 중복 세그먼트 체크를 위해 Set 사용.
+        const processed = new Set();
+
+        for (const pt of nearby) {
+          const entry = lutData[pt.lutIdx];
+          if (!entry) continue;
+          const points = entry.points;
+          const lineType = entry.type || 'normal';
+
+          // 현재 점 → 다음 점 세그먼트
+          if (pt.ptIdx < points.length - 1) {
+            const segKey = `${pt.lutIdx}_${pt.ptIdx}`;
+            if (!processed.has(segKey)) {
+              processed.add(segKey);
+              resolveLine(p, points[pt.ptIdx], points[pt.ptIdx + 1], lineType);
+            }
+          }
+          // 이전 점 → 현재 점 세그먼트
+          if (pt.ptIdx > 0) {
+            const segKey = `${pt.lutIdx}_${pt.ptIdx - 1}`;
+            if (!processed.has(segKey)) {
+              processed.add(segKey);
+              resolveLine(p, points[pt.ptIdx - 1], points[pt.ptIdx], lineType);
+            }
+          }
+        }
+      }
+
+      // ============================================
+      // LINE SEGMENT COLLISION RESOLVER (기존 로직 보존)
+      // ============================================
+      // 데이터 전략: 개별 선분(두 점) 수준의 충돌 해결 로직.
+      // LUT_COLLISION_RADIUS(6px) 내 진입 시 반발 + 마찰.
+      // lineType에 따라 booster(가속), jump(점프) 물리 적용.
       function resolveLine(p, p1, p2, lineType = 'normal') {
         const dx = p2.x - p1.x, dy = p2.y - p1.y;
         const lenSq = dx * dx + dy * dy;
@@ -2323,9 +2911,9 @@
 
         const cx = p1.x + t * dx, cy = p1.y + t * dy;
         const dist = Math.hypot(p.x - cx, p.y - cy);
-        const radius = 6;
+        const radius = LUT_COLLISION_RADIUS;
 
-        if (dist < radius) {
+        if (dist < radius && dist > 0.001) {
           const nx = (p.x - cx) / dist;
           const ny = (p.y - cy) / dist;
 
@@ -2342,35 +2930,30 @@
 
             // Type-specific physics
             if (lineType === 'booster') {
-              // Use dot product to find correct tangent direction (same as velocity)
               const boostAmt = 245;
-              const vDotT = p.vx * tx + p.vy * ty;
-              // Choose tangent direction that matches velocity direction
-              const sign = vDotT >= 0 ? 1 : -1;
+              const vDotT2 = p.vx * tx + p.vy * ty;
+              const sign = vDotT2 >= 0 ? 1 : -1;
               const correctTx = tx * sign;
               const correctTy = ty * sign;
 
-              // Apply boost in correct direction
-              p.vx += correctTx * boostAmt * 0.016;
-              p.vy += correctTy * boostAmt * 0.016;
+              p.vx += correctTx * boostAmt * FIXED_DT;
+              p.vy += correctTy * boostAmt * FIXED_DT;
 
-              // Cap max speed
-              const speed = Math.hypot(p.vx, p.vy);
+              const spd = Math.hypot(p.vx, p.vy);
               const MAX_SPEED = 560;
-              if (speed > MAX_SPEED) {
-                p.vx = (p.vx / speed) * MAX_SPEED;
-                p.vy = (p.vy / speed) * MAX_SPEED;
+              if (spd > MAX_SPEED) {
+                p.vx = (p.vx / spd) * MAX_SPEED;
+                p.vy = (p.vy / spd) * MAX_SPEED;
               }
               boostApplied = true;
               spawnParticles(p.x, p.y, '#ff6600', 3);
             } else if (lineType === 'jump') {
-              // 슈퍼 점프: 수직 속도 1.8배 반발
               const jumpMultiplier = 1.8;
               const newVn = -vDotN * jumpMultiplier;
-              const newVt = vDotT * 0.98;  // 거의 미끄러짐 (마찰 2%)
+              const newVt = vDotT * 0.98;
               p.vx = tx * newVt + nx * newVn;
               p.vy = ty * newVt + ny * newVn;
-              p.onGround = false;  // 바닥에 붙지 않게 강제
+              p.onGround = false;
               spawnParticles(p.x, p.y, '#39ff14', 4);
               boostApplied = true;
             }
@@ -2693,15 +3276,19 @@
       }
 
       function spawnParticles(x, y, color, count = 8) {
+        // ▼ [결정론적 시뮬레이션] Math.random() → state.rng() 교체
+        // 데이터 전략: 동일 seed에서 생성된 rng를 사용하므로
+        // 파티클의 각도, 속도, 크기 모두 결정론적.
+        const rng = state.rng || Math.random; // Safety fallback
         for (let i = 0; i < count; i++) {
-          const angle = (Math.PI * 2 * i) / count + Math.random() * 0.4;
-          const speed = 1.5 + Math.random() * 2.5;
+          const angle = (Math.PI * 2 * i) / count + rng() * 0.4;
+          const speed = 1.5 + rng() * 2.5;
           particles.push({
             x, y,
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed - 1.5,
             c: color,
-            r: 2 + Math.random() * 1.5,
+            r: 2 + rng() * 1.5,
             life: 1
           });
         }
@@ -2745,19 +3332,40 @@
         }
         saveSaveData(saveData);
 
-        // Celebration
+        // Celebration [결정론적 PRNG]
+        const rng = state.rng || Math.random;
         for (let i = 0; i < 25; i++) {
           const colors = ['#ffd700', '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'];
           spawnParticles(
-            player.x + (Math.random() - 0.5) * 40,
-            player.y + (Math.random() - 0.5) * 40,
-            colors[Math.floor(Math.random() * colors.length)],
+            player.x + (rng() - 0.5) * 40,
+            player.y + (rng() - 0.5) * 40,
+            colors[Math.floor(rng() * colors.length)],
             2
           );
         }
 
         saveScore();
         showResult(true);
+
+        // ▼ Stage 10 클리어 시 명예의 전당 자동 표시
+        if (state.stage === MAX_STAGE) {
+          // 추가 축하 폭죽 파티클
+          const rng2 = state.rng || Math.random;
+          for (let i = 0; i < 40; i++) {
+            const colors2 = ['#ffd700', '#ff4444', '#00ffcc', '#ff69b4', '#8b5cf6'];
+            spawnParticles(
+              VIRTUAL_W * 0.5 + (rng2() - 0.5) * VIRTUAL_W * 0.8,
+              VIRTUAL_H * 0.3 + (rng2() - 0.5) * 100,
+              colors2[Math.floor(rng2() * colors2.length)],
+              3
+            );
+          }
+          // 1.5초 후 명예의 전당 오픈
+          setTimeout(() => {
+            resultModal.classList.remove('active');
+            showHallOfFame();
+          }, 1500);
+        }
       }
 
       async function fail(reason) {
@@ -2768,7 +3376,7 @@
         state.deathX = player.x;
         state.deathY = player.y;
         saveGameLog('FAIL', reason);
-        
+
         // 실패했으므로 재시도 카운트 증가
         state.retryCount++;
 
@@ -2960,6 +3568,8 @@
           const parsed = JSON.parse(data);
           strokes = parsed.strokes || [];
           recalculateInkUsage();
+          // ▼ [결정론적 시뮬레이션] 로드된 선 데이터로 LUT 재생성
+          rebuildCollisionData();
           updateUI();
           showToast('📂 Setup Loaded!');
         } else {
@@ -2979,6 +3589,7 @@
         tutorial.classList.add('hidden');
         closeAllPopups();
         renderLevelGrid();
+        updateHofButtonVisibility();
       }
 
       function startGame() {
@@ -3021,6 +3632,12 @@
 
       document.getElementById('btnStart').onclick = function () {
         if (state.mode === 'build') {
+          // ▼ [결정론적 시뮬레이션] Start 시 최종 LUT 재생성
+          // 데이터 전략: 마지막으로 완성된 stroke 배열로 LUT를 생성.
+          // 이 시점 이후 물리 연산은 오직 이 LUT 데이터만 사용.
+          rebuildCollisionData();
+          // ▼ [결정론적 시뮬레이션] PRNG도 리셋하여 동일 시드 보장
+          state.rng = mulberry32(state.seed);
           state.mode = 'run';
           state.timerRunning = true;
           this.innerText = 'Retry';
@@ -3079,7 +3696,7 @@
       document.getElementById('btnRetry').onclick = function () {
         // ▼▼▼ [신규 추가] 리트라이 버튼 누를 때, 현재 그려진 선 강제 저장 ▼▼▼
         if (strokes.length > 0) {
-           saveLines(state.stage, strokes);
+          saveLines(state.stage, strokes);
         }
         resultModal.classList.remove('active');
         // Keep strokes on retry
@@ -3091,22 +3708,194 @@
       window.addEventListener('resize', resizeCanvas);
 
       // ============================================
-      // GAME LOOP
+      // UNDO BUTTON HANDLER
       // ============================================
+      document.getElementById('btnUndo').onclick = undo;
+
+      // ============================================
+      // HALL OF FAME (명예의 전당)
+      // ============================================
+      // 데이터 전략: rankings 컬렉션에서 모든 유저의 스테이지 1~10 기록을
+      // 집계하여 totalTime 기준 오름차순 상위 10명 표시.
+      // 10개 스테이지 모두 클리어한 유저만 대상.
+      // 소수점 5자리 정밀도로 동점 방지.
+
+      function updateHofButtonVisibility() {
+        const saveData = getSaveData();
+        const btn = document.getElementById('btnHallOfFame');
+        if (saveData[MAX_STAGE] && saveData[MAX_STAGE].cleared) {
+          btn.classList.remove('hidden');
+        } else {
+          btn.classList.add('hidden');
+        }
+      }
+
+      async function loadHallOfFame() {
+        try {
+          // 모든 rankings 문서를 가져와서 클라이언트에서 집계
+          const q = query(
+            collection(db, "rankings"),
+            orderBy("time", "asc")
+          );
+          const snap = await getDocs(q);
+
+          // 닉네임별 스테이지별 최고 기록 수집
+          const userStages = {}; // { nickname: { 1: time, 2: time, ... } }
+          snap.docs.forEach(d => {
+            const data = d.data();
+            const nick = data.nickname;
+            const stage = data.stage;
+            const time = data.time;
+
+            if (!userStages[nick]) userStages[nick] = {};
+            // 가장 빠른 기록만 유지
+            if (!userStages[nick][stage] || time < userStages[nick][stage]) {
+              userStages[nick][stage] = time;
+            }
+          });
+
+          // 10개 스테이지 모두 클리어한 유저만 totalTime 계산
+          const hallData = [];
+          for (const nick of Object.keys(userStages)) {
+            let allCleared = true;
+            let total = 0;
+            for (let s = 1; s <= MAX_STAGE; s++) {
+              if (userStages[nick][s] === undefined) {
+                allCleared = false;
+                break;
+              }
+              total += userStages[nick][s];
+            }
+            if (allCleared) {
+              hallData.push({
+                nickname: nick,
+                totalTime: Number(total.toFixed(5))
+              });
+            }
+          }
+
+          // totalTime 오름차순 정렬, 상위 10명
+          hallData.sort((a, b) => a.totalTime - b.totalTime);
+          return hallData.slice(0, 10);
+        } catch (e) {
+          console.error("Hall of Fame load error:", e);
+          return [];
+        }
+      }
+
+      function formatTotalTime(seconds) {
+        const min = Math.floor(seconds / 60);
+        const sec = (seconds % 60).toFixed(3);
+        return `${min}:${sec.padStart(6, '0')}`;
+      }
+
+      async function showHallOfFame() {
+        // 화면 전환
+        document.getElementById('homeScreen').classList.add('hidden');
+        document.getElementById('hallOfFameScreen').classList.remove('hidden');
+
+        // 로딩 표시
+        document.getElementById('hofList').innerHTML = '<div class="hof-empty">Loading...</div>';
+        ['podiumName1', 'podiumName2', 'podiumName3'].forEach(id => {
+          document.getElementById(id).innerText = '---';
+        });
+        ['podiumTime1', 'podiumTime2', 'podiumTime3'].forEach(id => {
+          document.getElementById(id).innerText = '--:--.---';
+        });
+
+        const data = await loadHallOfFame();
+
+        if (data.length === 0) {
+          document.getElementById('hofList').innerHTML =
+            '<div class="hof-empty">아직 전 스테이지를 클리어한 유저가 없습니다</div>';
+          return;
+        }
+
+        // 시상대 (Top 3)
+        const podiumIds = [
+          { name: 'podiumName1', time: 'podiumTime1' },
+          { name: 'podiumName2', time: 'podiumTime2' },
+          { name: 'podiumName3', time: 'podiumTime3' }
+        ];
+
+        for (let i = 0; i < 3; i++) {
+          if (data[i]) {
+            document.getElementById(podiumIds[i].name).innerText = data[i].nickname;
+            document.getElementById(podiumIds[i].time).innerText = formatTotalTime(data[i].totalTime);
+          }
+        }
+
+        // 4~10위 리스트
+        const listEl = document.getElementById('hofList');
+        if (data.length <= 3) {
+          listEl.innerHTML = '<div class="hof-empty">4위 이하 기록이 아직 없습니다</div>';
+        } else {
+          listEl.innerHTML = '';
+          for (let i = 3; i < data.length; i++) {
+            const entry = document.createElement('div');
+            entry.className = 'hof-entry';
+            entry.innerHTML = `
+              <span class="hof-rank">${i + 1}</span>
+              <span class="hof-name">${data[i].nickname}</span>
+              <span class="hof-time">${formatTotalTime(data[i].totalTime)}</span>
+            `;
+            listEl.appendChild(entry);
+          }
+        }
+      }
+
+      // Hall of Fame 버튼 이벤트
+      document.getElementById('btnHallOfFame').onclick = showHallOfFame;
+      document.getElementById('btnHofBack').onclick = function () {
+        document.getElementById('hallOfFameScreen').classList.add('hidden');
+        document.getElementById('homeScreen').classList.remove('hidden');
+      };
+
+      // ============================================
+      // GAME LOOP [결정론적 시뮬레이션 재설계]
+      // ============================================
+      // 데이터 전략: requestAnimationFrame의 가변 dt를 폐기하고
+      // FIXED_DT(1/60) 고정 타임스텝 + accumulator 패턴을 도입.
+      // 저사양 기기 보호: MAX_ACCUMULATOR로 연산량 폭주 방지.
+      //
+      // 이점:
+      // 1. 어떤 프레임율에서든 동일한 물리 결과 (120Hz 모니터, 30fps 모바일 동일)
+      // 2. 프레임 드랍 시에도 물리가 대충하지 않고 정수배만 수행
+      // 3. MAX_PHYSICS_STEPS(5)로 한 프레임당 최대 연산량 제한
       let lastTime = 0;
+      let accumulator = 0;  // 실제 경과 시간 적립
 
       function loop(now) {
-        const dt = Math.min((now - lastTime) / 1000, 0.1);
+        // 데이터 전략: frameDt가 250ms 이상이면 브라우저 탭 전환 등으로
+        // 간주. 이 경우 대량 밀림 연산을 방지하기 위해 250ms로 cap.
+        const frameDt = Math.min((now - lastTime) / 1000, 0.25);
         lastTime = now;
 
         if (state.screen === 'game') {
           if (state.mode === 'run') {
-            for (let i = 0; i < 5; i++) {
-              updatePhysics(dt / 5);
+            accumulator += frameDt;
+
+            // Safety Valve: 저사양 기기에서 accumulator 폭주 방지
+            // MAX_ACCUMULATOR(≈83.3ms = 5 * FIXED_DT)로 상한 설정.
+            if (accumulator > MAX_ACCUMULATOR) {
+              accumulator = MAX_ACCUMULATOR;
+            }
+
+            // ▼ 결정론적 물리 루프: 항상 FIXED_DT(1/60)씩 정수배 실행
+            let steps = 0;
+            while (accumulator >= FIXED_DT && steps < MAX_PHYSICS_STEPS) {
+              updatePhysics(FIXED_DT);
+              accumulator -= FIXED_DT;
+              steps++;
+              // win/fail 발생 시 즉시 중단
+              if (state.mode !== 'run') {
+                accumulator = 0;
+                break;
+              }
             }
 
             if (state.timerRunning) {
-              state.timer += dt;
+              state.timer += frameDt;
               updateUI();
             }
           }
