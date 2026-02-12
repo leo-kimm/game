@@ -1788,7 +1788,16 @@
       // 데이터 전략: 고속(400px/s↑) 시 dt를 자동 분할하여
       // 선 관통(tunneling) 현상을 방지. MAX_SUBSTEPS로 연산 상한 제어.
       const SUB_STEP_THRESHOLD = 400;     // 서브스텝 활성화 속도 임계치 (px/s)
-      const MAX_SUBSTEPS = 4;              // dt 당 최대 서브스텝
+      const MAX_SUBSTEPS = 10;             // dt 당 최대 서브스텝 (▲ 4→10)
+
+      // ── Dynamic Collision Radius ───────────────────
+      // 데이터 전략: 고속 이동 시 충돌 반경을 속도 비례로 확장.
+      // baseRadius + (speed * DYNAMIC_RADIUS_K)
+      const DYNAMIC_RADIUS_K = 0.015;     // 동적 반경 확장 계수
+
+      // ── CCD & Soft-Clamping ────────────────────────
+      // 데이터 전략: 부스터 선 위에서 과도한 반발력 억제.
+      const BOOSTER_SNAP_FACTOR = 0.35;   // 부스터 선 위치 보정 강도 (0~1)
 
       // ── Deterministic PRNG ───────────────────────
       // 데이터 전략: Math.random() 완전 제거.
@@ -2772,17 +2781,28 @@
       // 충돌 판정은 Spatial Grid + LUT 기반으로 수행.
       // 고속(400px/s↑) 시 Adaptive Sub-stepping으로 터널링 방지.
       function updatePhysics(dt) {
-        // ── Adaptive Sub-stepping ──────────────────
-        // 데이터 전략: 속도가 SUB_STEP_THRESHOLD(400px/s)를 초과하면
-        // dt를 자동 분할하여 물리 연산 해상도를 높인다.
-        // 이로써 선을 관통하는 tunneling 현상을 방지.
+        // ── [1] Adaptive Sub-stepping (High-Velocity Detection) ───
+        // 데이터 전략: 프레임 내 이동 거리(speed * dt)가 충돌 반경을
+        // 초과하면 서브스텝을 유동적으로 증가 (MAX_SUBSTEPS=10).
         const speed = Math.hypot(player.vx, player.vy);
+        const dynamicRadius = LUT_COLLISION_RADIUS + speed * DYNAMIC_RADIUS_K;
+        const frameDisplacement = speed * dt;
         let subSteps = 1;
-        if (speed > SUB_STEP_THRESHOLD) {
-          // 속도에 비례하여 서브스텝 수 결정 (최대 MAX_SUBSTEPS)
+
+        if (frameDisplacement > dynamicRadius) {
+          // 이동 거리 / 충돌 반경 → 필요 서브스텝 수 결정
+          subSteps = Math.min(MAX_SUBSTEPS, Math.ceil(frameDisplacement / dynamicRadius));
+        } else if (speed > SUB_STEP_THRESHOLD) {
           subSteps = Math.min(MAX_SUBSTEPS, Math.ceil(speed / SUB_STEP_THRESHOLD));
         }
         const subDt = dt / subSteps;
+
+        // ── [3] Proximity-based Optimization (Spatial Grid Culling) ──
+        // 데이터 전략: 자유 낙하 상태(Grid 근처 LUT 없음)에서는
+        // 정밀 충돌 연산을 건너뛰어 CPU 부하 절감.
+        const hasNearbyLines = getNearbyLUTPoints(
+          state.spatialGrid, player.x, player.y
+        ).length > 0;
 
         for (let sub = 0; sub < subSteps; sub++) {
           // 종료 조건 체크 (서브스텝 도중 win/fail 발생 시 중단)
@@ -2790,6 +2810,10 @@
 
           // 1. 중력 적용
           player.vy += PHYS.gravity * subDt;
+
+          // ── [2] CCD: 예상 위치 계산 (위치 업데이트 전) ──
+          const prevX = player.x;
+          const prevY = player.y;
 
           // 2. 위치 업데이트
           player.x += player.vx * subDt;
@@ -2811,7 +2835,13 @@
           player.onGround = false;
 
           // 5. LUT 기반 충돌 판정 (Spatial Grid 조회)
-          resolveWithLUT(player, state.lutData, state.spatialGrid);
+          //    [3] Culling: 근처 LUT 없으면 충돌 검사 생략
+          if (hasNearbyLines || sub === 0) {
+            resolveWithLUT(
+              player, state.lutData, state.spatialGrid,
+              dynamicRadius, prevX, prevY
+            );
+          }
 
           // 6. 별 수집
           for (const s of level.stars) {
@@ -2831,7 +2861,7 @@
             } else {
               fail('Collect all ⭐ first!');
             }
-            return; // win/fail 후 서브스텝 중단
+            return;
           }
 
           // 8. 경계 벗어남 판정
@@ -2854,20 +2884,14 @@
       }
 
       // ============================================
-      // [결정론적 시뮬레이션] LUT 기반 충돌 판정
+      // [결정론적 시뮬레이션] LUT 기반 충돌 판정 + CCD
       // ============================================
-      // 데이터 전략: 원본 stroke 배열 대신 Pre-baked LUT 데이터로
-      // 충돌 판정. Spatial Grid로 플레이어 주변 점만 조회하여
-      // 가장 가까운 LUT 세그먼트를 찾아 resolveLine 수행.
-      function resolveWithLUT(p, lutData, spatialGrid) {
-        // Grid에서 플레이어 주변 3x3 셀 내 점들 조회
+      // 데이터 전략: Spatial Grid 조회 → CCD 터널링 감지 →
+      // Surface Snap → resolveLine(Dynamic Radius).
+      function resolveWithLUT(p, lutData, spatialGrid, dynRadius, prevX, prevY) {
         const nearby = getNearbyLUTPoints(spatialGrid, p.x, p.y);
         if (nearby.length === 0) return;
 
-        // LUT 세그먼트별 충돌 판정
-        // 데이터 전략: 각 nearby 점에서 해당 점과 다음 점으로
-        // 라인 세그먼트를 구성하여 resolveLine을 호출.
-        // 중복 세그먼트 체크를 위해 Set 사용.
         const processed = new Set();
 
         for (const pt of nearby) {
@@ -2881,7 +2905,17 @@
             const segKey = `${pt.lutIdx}_${pt.ptIdx}`;
             if (!processed.has(segKey)) {
               processed.add(segKey);
-              resolveLine(p, points[pt.ptIdx], points[pt.ptIdx + 1], lineType);
+              const A = points[pt.ptIdx];
+              const B = points[pt.ptIdx + 1];
+
+              // ── [2] CCD: 예측 위치 터널링 감지 ──
+              if (prevX !== undefined) {
+                if (segmentIntersect(prevX, prevY, p.x, p.y, A.x, A.y, B.x, B.y)) {
+                  snapToSurface(p, A, B, dynRadius);
+                }
+              }
+
+              resolveLine(p, A, B, lineType, dynRadius);
             }
           }
           // 이전 점 → 현재 점 세그먼트
@@ -2889,19 +2923,35 @@
             const segKey = `${pt.lutIdx}_${pt.ptIdx - 1}`;
             if (!processed.has(segKey)) {
               processed.add(segKey);
-              resolveLine(p, points[pt.ptIdx - 1], points[pt.ptIdx], lineType);
+              const A = points[pt.ptIdx - 1];
+              const B = points[pt.ptIdx];
+
+              if (prevX !== undefined) {
+                if (segmentIntersect(prevX, prevY, p.x, p.y, A.x, A.y, B.x, B.y)) {
+                  snapToSurface(p, A, B, dynRadius);
+                }
+              }
+
+              resolveLine(p, A, B, lineType, dynRadius);
             }
           }
         }
       }
 
-      // ============================================
-      // LINE SEGMENT COLLISION RESOLVER (기존 로직 보존)
-      // ============================================
-      // 데이터 전략: 개별 선분(두 점) 수준의 충돌 해결 로직.
-      // LUT_COLLISION_RADIUS(6px) 내 진입 시 반발 + 마찰.
-      // lineType에 따라 booster(가속), jump(점프) 물리 적용.
-      function resolveLine(p, p1, p2, lineType = 'normal') {
+      // ── CCD 보조: 선분-선분 교차 검사 (결정론적) ──────
+      // 반환: true 이면 이동 경로(p0→p1)가 선분(a→b)을 관통
+      function segmentIntersect(p0x, p0y, p1x, p1y, ax, ay, bx, by) {
+        const d1x = p1x - p0x, d1y = p1y - p0y;
+        const d2x = bx - ax, d2y = by - ay;
+        const cross = d1x * d2y - d1y * d2x;
+        if (cross === 0) return false; // 평행
+        const s = ((ax - p0x) * d2y - (ay - p0y) * d2x) / cross;
+        const t = ((ax - p0x) * d1y - (ay - p0y) * d1x) / cross;
+        return s >= 0 && s <= 1 && t >= 0 && t <= 1;
+      }
+
+      // ── CCD 보조: 선 표면으로 강제 스냅 ───────────────
+      function snapToSurface(p, p1, p2, radius) {
         const dx = p2.x - p1.x, dy = p2.y - p1.y;
         const lenSq = dx * dx + dy * dy;
         if (lenSq === 0) return;
@@ -2911,14 +2961,49 @@
 
         const cx = p1.x + t * dx, cy = p1.y + t * dy;
         const dist = Math.hypot(p.x - cx, p.y - cy);
-        const radius = LUT_COLLISION_RADIUS;
+        if (dist < 0.001) return;
+
+        // 법선 방향으로 radius만큼 떨어진 위치로 스냅
+        const nx = (p.x - cx) / dist;
+        const ny = (p.y - cy) / dist;
+        p.x = cx + nx * radius;
+        p.y = cy + ny * radius;
+      }
+
+      // ============================================
+      // LINE SEGMENT COLLISION RESOLVER
+      // ============================================
+      // 데이터 전략: Dynamic Radius + Soft-clamping for Booster.
+      // [4] 부동 소수점 오차 최소화: 동일 입력 → 동일 결과 보장.
+      function resolveLine(p, p1, p2, lineType, dynRadius) {
+        const dx = p2.x - p1.x, dy = p2.y - p1.y;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return;
+
+        let t = ((p.x - p1.x) * dx + (p.y - p1.y) * dy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+
+        const cx = p1.x + t * dx, cy = p1.y + t * dy;
+        const dist = Math.hypot(p.x - cx, p.y - cy);
+
+        // [1] Dynamic Radius: 속도 비례 충돌 반경
+        const radius = dynRadius !== undefined ? dynRadius : LUT_COLLISION_RADIUS;
 
         if (dist < radius && dist > 0.001) {
           const nx = (p.x - cx) / dist;
           const ny = (p.y - cy) / dist;
 
-          p.x += nx * (radius - dist);
-          p.y += ny * (radius - dist);
+          // [2] Soft-clamping for Booster: 침투 깊이에 따른 위치 보정
+          const penetration = radius - dist;
+          if (lineType === 'booster') {
+            // 부드러운 위치 보정: 전체 침투량의 BOOSTER_SNAP_FACTOR만 보정
+            p.x += nx * penetration * BOOSTER_SNAP_FACTOR;
+            p.y += ny * penetration * BOOSTER_SNAP_FACTOR;
+          } else {
+            // 일반/점프 선: 즉 보정
+            p.x += nx * penetration;
+            p.y += ny * penetration;
+          }
 
           const vDotN = p.vx * nx + p.vy * ny;
           if (vDotN < 0) {
@@ -2945,6 +3030,14 @@
                 p.vx = (p.vx / spd) * MAX_SPEED;
                 p.vy = (p.vy / spd) * MAX_SPEED;
               }
+
+              // [2] Soft-clamping: 법선 방향 속도 억제 (과도한 튕김 방지)
+              const nVel = p.vx * nx + p.vy * ny;
+              if (nVel < 0) {
+                p.vx -= nx * nVel * 0.8;
+                p.vy -= ny * nVel * 0.8;
+              }
+
               boostApplied = true;
               spawnParticles(p.x, p.y, '#ff6600', 3);
             } else if (lineType === 'jump') {
