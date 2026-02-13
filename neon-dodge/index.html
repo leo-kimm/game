@@ -774,6 +774,23 @@
         <canvas id="gameCanvas"></canvas>
 
         <div id="start-screen" class="overlay">
+            <div id="settings-ui" style="position: absolute; top: 20px; right: 20px; z-index: 1001;">
+                <button id="gear-btn" onclick="toggleSettings()" style="background:none; border:none; box-shadow:none; font-size: 1.5em; cursor:pointer; padding:10px;">⚙️</button>
+                
+                <div id="settings-panel" style="display:none; position: absolute; top: 50px; right: 0; background: rgba(0,20,30,0.95); border: 2px solid #0ff; padding: 15px; border-radius: 8px; width: 180px; box-shadow: 0 0 20px rgba(0,255,255,0.2);">
+                    <h4 style="margin:0 0 12px 0; font-size: 14px; color: #0ff; font-family: 'Orbitron';">CONTROL</h4>
+                    <div style="display:flex; flex-direction:column; gap:12px; color:white; font-family: 'Orbitron'; font-size: 12px;">
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+                            <input type="radio" name="ctrl-mode" value="JOYSTICK" onclick="setControlMode('JOYSTICK')"> JOYSTICK
+                        </label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+                            <input type="radio" name="ctrl-mode" value="TOUCH" checked onclick="setControlMode('TOUCH')"> SIDE TOUCH
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+
             <h1>NEON DODGE</h1>
             <span class="season-badge">SEASON 2</span>
 
@@ -877,7 +894,7 @@
 
             let gameState = {
                 isRunning: false, score: 0,
-                player: { x: 215, y: 720, w: 20, h: 20, speed: 500 },
+                player: { x: 215, y: 720, w: 20, h: 20, speed: 750 },
                 enemies: [], items: [], bullets: [], keys: {},
                 skillMode: 'NORMAL', skillTimer: 0,
                 lives: 3, maxLives: 3, isInvincible: false, invincibilityTimer: 0,
@@ -911,6 +928,27 @@
             };
 
             let lastTime = performance.now();
+            // [찾기] let lastTime = performance.now(); 아래에 삽입
+            gameState.controlMode = localStorage.getItem('prefControlMode') || 'TOUCH';
+
+            function toggleSettings() {
+                const panel = document.getElementById('settings-panel');
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
+
+            function setControlMode(mode) {
+                gameState.controlMode = mode;
+                localStorage.setItem('prefControlMode', mode);
+                // 라디오 버튼 상태 강제 업데이트
+                const radios = document.querySelectorAll('input[name="ctrl-mode"]');
+                radios.forEach(r => r.checked = (r.value === mode));
+            }
+
+            window.addEventListener('load', () => {
+                const savedMode = localStorage.getItem('prefControlMode') || 'TOUCH';
+                setControlMode(savedMode);
+            });
+
             let gridOffset = 0;
 
 
@@ -1543,7 +1581,7 @@
                 const ty = (touch.clientY - rect.top) * scaleY;
 
                 // 조이스틱 헤드 이동 및 거리 제한 (최대 50px)
-                const maxDist = 50;
+                const maxDist = 30;
                 const dx = tx - gameState.joystick.baseX;
                 const dy = ty - gameState.joystick.baseY;
                 const dist = Math.sqrt(dx * dx + dy * dy);
@@ -2781,18 +2819,27 @@
                 if (gameState.joystick && gameState.joystick.active) {
                     const dir = gameState.isGlitchActive ? -1 : 1;
 
-                    // X축
-                    gameState.player.x += gameState.joystick.vecX * gameState.player.speed * dt * dir;
+                    if (gameState.controlMode === 'JOYSTICK') {
+                        // [A] 가상 조이스틱 방식 (현재 방식)
+                        gameState.player.x += gameState.joystick.vecX * gameState.player.speed * dt * dir;
+                        const nextY = gameState.player.y + gameState.joystick.vecY * gameState.player.speed * dt * dir;
+                        if (nextY > topLimit && nextY < bottomLimit) {
+                            gameState.player.y = nextY;
+                        }
+                    } else {
+                        // [B] 좌우 터치 방식 (클래식)
+                        const touchX = gameState.joystick.baseX; // 터치 시작점 기준
+                        const deadZone = 10; // 중앙 기준 좌우 10px씩 총 20px
+                        if (Math.abs(touchX - canvas.width / 2) < deadZone) return; // 중앙 터치 시 이동 중단
 
-                    // Y축
-                    const nextY = gameState.player.y + gameState.joystick.vecY * gameState.player.speed * dt * dir;
-                    if (nextY > topLimit && nextY < bottomLimit) {
-                        gameState.player.y = nextY;
+
+                        if (touchX < canvas.width / 2) {
+                            gameState.player.x -= gameState.player.speed * dt * dir; // 왼쪽 이동
+                        } else {
+                            gameState.player.x += gameState.player.speed * dt * dir; // 오른쪽 이동
+                        }
+                        // 클래식 방식은 보통 상하 이동을 제외하거나 제한적으로 사용합니다.
                     }
-
-                    // 화면 밖 이탈 방지
-                    if (gameState.player.x < 0) gameState.player.x = 0;
-                    if (gameState.player.x > canvas.width - gameState.player.w) gameState.player.x = canvas.width - gameState.player.w;
                 }
 
                 // (구형 추적 로직은 삭제되었습니다)
@@ -4092,7 +4139,7 @@
                 }
 
                 // [CDSO Patch] 가상 조이스틱 UI 렌더링
-                if (gameState.joystick && gameState.joystick.active) {
+                if (gameState.joystick && gameState.joystick.active && gameState.controlMode === 'JOYSTICK') { // <--- 여기에 조건을 추가합니다.
                     ctx.save();
 
                     // 1. 베이스 (몸체)
@@ -4120,6 +4167,12 @@
 
             function drawPlayer() {
                 const p = gameState.player, cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+
+                // [추가] 조이스틱 방향에 따른 기울기 값 계산 (보편적 수치: 0.2~0.3)
+                let tilt = 0;
+                if (gameState.joystick && gameState.joystick.active) {
+                    tilt = gameState.joystick.vecX * 0.25; 
+                }
 
 
                 // ▼▼▼ [CDSO Fix] 누락된 퀀텀 고스트(잔상) 렌더링 복구 ▼▼▼
@@ -4151,8 +4204,6 @@
                     });
                     ctx.restore();
                 }
-
-
 
 
 
@@ -4238,6 +4289,7 @@
                 // 2. 기체 본체 그리기 (Main Body)
                 ctx.save();
                 ctx.translate(cx, cy);
+                ctx.rotate(tilt); // <--- 이 라인을 여기에 추가하세요!
 
                 // 변신 여부에 따라 날개 펼침 정도가 다름
                 const wingSpread = gameState.isTransformed ? 28 : 22;
