@@ -106,6 +106,13 @@
         }
         .badge.new { background: #ff4757; color: white; }
         .badge.hit { background: #2ed573; color: black; }
+        
+        /* [추가] 시즌2 뱃지 스타일 */
+        .badge.season2 { 
+            background: #ff00de; 
+            color: white; 
+            box-shadow: 0 0 10px #ff00de;
+        }
 
         footer {
             margin-top: 50px;
@@ -120,9 +127,9 @@
 
     <div class="game-grid">
         <a href="./neon-dodge/" class="card neon">
-            <span class="badge hit">LEGEND</span>
+            <span class="badge season2">SEASON 2</span>
             <span class="icon">👾</span>
-            <span class="title" style="color: #0ff;">Neon Dodge</span>
+            <span class="title" style="color: #0ff;">Neon Dodge Season 2</span>
             <span class="desc">초고속 탄막 피하기 액션.<br>극한의 반응속도에 도전하라!</span>
         </a>
 
@@ -195,6 +202,6 @@
                 window.location.reload();
             };
         }
-    </script>    
+    </script>     
 </body>
 </html>
