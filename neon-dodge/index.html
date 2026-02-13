@@ -77,6 +77,12 @@
             }
         }
         */
+        /* PC 화면(너비 501px 이상)에서는 설정 버튼 숨김 */
+        @media (min-width: 501px) {
+            #settings-ui {
+                display: none !important;
+            }
+        }
 
 
 
@@ -2842,9 +2848,13 @@
                     }
                 }
 
-                // (구형 추적 로직은 삭제되었습니다)
 
                 // 3. 캠핑 방지 로직
+                // 하드 캡(Hard Cap) 데이터 검증 로직 추가
+                gameState.player.x = Math.max(0, Math.min(canvas.width - gameState.player.w, gameState.player.x));
+                gameState.player.y = Math.max(topLimit, Math.min(bottomLimit, gameState.player.y));
+
+
                 const edgeThreshold = 60;
                 const isCamping = (gameState.player.x < edgeThreshold || gameState.player.x > canvas.width - gameState.player.w - edgeThreshold);
                 if (isCamping && !gameState.isTransformed && gameState.currentStage <= 5) {
