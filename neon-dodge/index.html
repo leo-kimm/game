@@ -1022,7 +1022,7 @@
                 // [CDSO 로직] 모드에 따라 버추얼 패드 표시/숨김
                 const vPad = document.getElementById('virtual-pad');
                 if (vPad) {
-                    vPad.style.display = (mode === 'BUTTONS' && isMobileDevice()) ? 'grid' : 'none';
+                    vPad.style.display = (mode === 'BUTTONS' && isMobileDevice() && gameState.isRunning) ? 'grid' : 'none';
                 }
             }
             
@@ -1751,13 +1751,51 @@
             }
 
 
-            // 자동 일시정지 (전화/홈 화면 전환 시)
+            // -----------------------------------------------------------
+            // [CDSO Architecture] 세션 복구 및 자동 일시정지 시스템
+            // -----------------------------------------------------------
+
+            function resumeGame() {
+                // 1. 시작 화면(일시정지 화면) 닫기
+                document.getElementById('start-screen').style.display = 'none';
+                
+                // 2. 가상 패드 복구 (BUTTONS 모드일 때만)
+                if (gameState.controlMode === 'BUTTONS' && isMobileDevice()) {
+                    const vPad = document.getElementById('virtual-pad');
+                    if (vPad) vPad.style.display = 'grid';
+                }
+                
+                // 3. 시작 버튼 기능 원상 복구 (게임 오버 후 다음 게임을 위해)
+                const startBtn = document.querySelector('#step-1-ranking button');
+                if (startBtn) {
+                    startBtn.textContent = '전투 시작';
+                    startBtn.setAttribute('onclick', 'goToNameInput()');
+                }
+
+                // 4. 게임 루프 재가동 (데이터 초기화 없이 이어서 실행)
+                gameState.isRunning = true;
+                lastTime = performance.now(); // 일시정지 시간 동안의 dt 오차 보정
+                requestAnimationFrame(gameLoop);
+            }
+
+            // 자동 일시정지 이벤트 감지
             document.addEventListener('visibilitychange', function () {
                 if (document.hidden && gameState.isRunning) {
-                    gameState.isRunning = false;
+                    gameState.isRunning = false; // 게임 멈춤
                     document.getElementById('start-screen').style.display = 'flex';
                     document.querySelector('#start-screen h1').textContent = 'PAUSED';
-                    document.querySelector('#start-screen button').textContent = 'RESUME';
+                    
+                    // [구조 결함 수정] 기존 로직은 톱니바퀴(설정) 버튼을 타겟팅하는 버그가 있었음. 
+                    // 정확히 '전투 시작' 버튼을 타겟팅하여 이벤트 변경
+                    const startBtn = document.querySelector('#step-1-ranking button');
+                    if (startBtn) {
+                        startBtn.textContent = 'RESUME';
+                        startBtn.setAttribute('onclick', 'resumeGame()'); // 복구 함수 연결
+                    }
+                    
+                    // 일시정지 화면을 가리지 않도록 가상 패드 숨김
+                    const vPad = document.getElementById('virtual-pad');
+                    if (vPad) vPad.style.display = 'none';
                 }
             });
 
@@ -1888,6 +1926,14 @@
                 resetState();
                 gameState.isRunning = true;
                 requestAnimationFrame(gameLoop);
+
+                // [추가] 게임 루프 진입 직전 가상 패드 활성화
+                if (gameState.controlMode === 'BUTTONS' && isMobileDevice()) {
+                    document.getElementById('virtual-pad').style.display = 'grid';
+                }
+
+                requestAnimationFrame(gameLoop);
+
             }
 
             function resetState() {
@@ -2615,6 +2661,12 @@
 
 
             async function autoSaveProcess(title) {
+
+                // [추가] 결과 화면 출력 전 패드 강제 종료
+                const vPad = document.getElementById('virtual-pad');
+                if (vPad) vPad.style.display = 'none';
+
+
                 // 1. 결과 화면 기본 세팅
                 const finalScore = Math.round(gameState.score);
                 document.getElementById('res-title').textContent = title;
@@ -4899,6 +4951,12 @@
 
                     // 보스 스테이지면 보스 즉시 소환 준비는 하지 않음 (타이머 흐른 뒤 등장)
                     // 만약 즉시 보스전을 원하면 gameState.stageTimer = 0; 으로 설정
+                }
+
+                // ▼▼▼ [CDSO 로직 추가] 관리자 워프 시에도 가상 패드 정상 전개 ▼▼▼
+                if (gameState.controlMode === 'BUTTONS' && isMobileDevice()) {
+                    const vPad = document.getElementById('virtual-pad');
+                    if (vPad) vPad.style.display = 'grid';
                 }
 
                 requestAnimationFrame(gameLoop);
