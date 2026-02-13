@@ -723,7 +723,55 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* [CDSO Design] 8-Way Virtual Pad */
+        #virtual-pad {
+            display: none; /* 설정에서 활성화 시 grid로 변경됨 */
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 100%; height: 33%; /* 하단 3분의 1 */
+            background: rgba(0, 15, 30, 0.4);
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 4px; padding: 10px;
+            box-sizing: border-box;
+            z-index: 900;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
 
+        .v-btn {
+            background: rgba(0, 255, 255, 0.05);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 12px;
+            color: rgba(0, 255, 255, 0.5);
+            font-size: 28px;
+            display: flex; align-items: center; justify-content: center;
+            touch-action: none; user-select: none; -webkit-user-select: none;
+            transition: background 0.1s, color 0.1s;
+        }
+
+        /* 터치 시 시각적 피드백 */
+        .v-btn:active {
+            background: rgba(0, 255, 255, 0.3);
+            color: #0ff;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        /* 중앙 필살기 버튼 특별 디자인 */
+        .v-btn.ult {
+            background: rgba(255, 0, 255, 0.1);
+            border: 2px solid rgba(255, 0, 255, 0.5);
+            border-radius: 50%; /* 완전한 원형 */
+            color: #f0f;
+            font-size: 16px; font-weight: bold; font-family: 'Orbitron';
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.3);
+        }
+
+        .v-btn.ult:active {
+            background: rgba(255, 0, 255, 0.5);
+            box-shadow: 0 0 25px #f0f;
+            color: #fff;
+        }
 
 
 
@@ -779,6 +827,18 @@
 
         <canvas id="gameCanvas"></canvas>
 
+        <div id="virtual-pad">
+            <div class="v-btn" data-key="ArrowUp,ArrowLeft">↖</div>
+            <div class="v-btn" data-key="ArrowUp">⬆</div>
+            <div class="v-btn" data-key="ArrowUp,ArrowRight">↗</div>
+            <div class="v-btn" data-key="ArrowLeft">⬅</div>
+            <div class="v-btn ult" id="v-btn-ult">ULT</div>
+            <div class="v-btn" data-key="ArrowRight">➡</div>
+            <div class="v-btn" data-key="ArrowDown,ArrowLeft">↙</div>
+            <div class="v-btn" data-key="ArrowDown">⬇</div>
+            <div class="v-btn" data-key="ArrowDown,ArrowRight">↘</div>
+        </div>
+
         <div id="start-screen" class="overlay">
             <div id="settings-ui" style="position: absolute; top: 20px; right: 20px; z-index: 1001;">
                 <button id="gear-btn" onclick="toggleSettings()" style="background:none; border:none; box-shadow:none; font-size: 1.5em; cursor:pointer; padding:10px;">⚙️</button>
@@ -788,6 +848,9 @@
                     <div style="display:flex; flex-direction:column; gap:12px; color:white; font-family: 'Orbitron'; font-size: 12px;">
                         <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
                             <input type="radio" name="ctrl-mode" value="JOYSTICK" onclick="setControlMode('JOYSTICK')"> JOYSTICK
+                        </label>
+                        <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+                            <input type="radio" name="ctrl-mode" value="BUTTONS" onclick="setControlMode('BUTTONS')"> BUTTONS
                         </label>
                         <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
                             <input type="radio" name="ctrl-mode" value="TOUCH" checked onclick="setControlMode('TOUCH')"> TRACKING
@@ -948,11 +1011,55 @@
                 // 라디오 버튼 상태 강제 업데이트
                 const radios = document.querySelectorAll('input[name="ctrl-mode"]');
                 radios.forEach(r => r.checked = (r.value === mode));
-            }
 
+                // [CDSO 로직] 모드에 따라 버추얼 패드 표시/숨김
+                const vPad = document.getElementById('virtual-pad');
+                if (vPad) {
+                    vPad.style.display = (mode === 'BUTTONS' && isMobileDevice()) ? 'grid' : 'none';
+                }
+            }
+            
+
+            // [CDSO 컨트롤러] 8-Way 버튼 이벤트를 키보드 데이터로 매핑
+            // -----------------------------------------------------------
             window.addEventListener('load', () => {
+                // 1. 초기 패드 렌더링 동기화
                 const savedMode = localStorage.getItem('prefControlMode') || 'TOUCH';
                 setControlMode(savedMode);
+
+                // 2. 방향키 터치 이벤트 매핑
+                document.querySelectorAll('.v-btn').forEach(btn => {
+                    if (btn.id === 'v-btn-ult') return; // ULT 버튼은 제외
+
+                    const keys = btn.getAttribute('data-key').split(',');
+                    
+                    // 누를 때 (키보드 keyDown 효과)
+                    btn.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        keys.forEach(k => gameState.keys[k] = true);
+                        if(navigator.vibrate) navigator.vibrate(10); // 미세 햅틱 피드백
+                    }, {passive: false});
+
+                    // 뗄 때 (키보드 keyUp 효과)
+                    const releaseKeys = (e) => {
+                        e.preventDefault();
+                        keys.forEach(k => gameState.keys[k] = false);
+                    };
+                    btn.addEventListener('touchend', releaseKeys);
+                    btn.addEventListener('touchcancel', releaseKeys);
+                });
+
+                // 3. 필살기(ULT) 버튼 독립 매핑
+                const ultBtn = document.getElementById('v-btn-ult');
+                if(ultBtn) {
+                    ultBtn.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        if (gameState.ultGauge >= 1 && !gameState.rainbowWave) {
+                            activateRainbowWave();
+                            if(navigator.vibrate) navigator.vibrate(50);
+                        }
+                    });
+                }
             });
 
             let gridOffset = 0;
@@ -1873,6 +1980,10 @@
             // [CDSO 전략 수정] 점수 획득 로직 (Rookie Boost vs Infinite Penalty)
             function addScore(amount) {
                 let finalAmount = amount;
+
+                // [CDSO 플랫폼 페널티] PC 환경일 경우 획득 점수의 70%만 반영
+                if (!isMobileDevice()) {
+                    finalAmount = Math.floor(finalAmount * 0.7);
 
                 // [CDSO 전략 수정] 우선순위 변경: 지옥 페널티 > 루키 부스트
 
@@ -2826,7 +2937,7 @@
                     gameState.player.y += gameState.player.speed * dt;
 
                 // 2. 모바일 조이스틱 이동 (신규 로직)
-                if (gameState.joystick && gameState.joystick.active) {
+                if (gameState.joystick && gameState.joystick.active && gameState.controlMode !== 'BUTTONS') {
                     const dir = gameState.isGlitchActive ? -1 : 1;
 
                     if (gameState.controlMode === 'JOYSTICK') {
