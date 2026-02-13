@@ -1788,7 +1788,7 @@
       // 데이터 전략: 고속(400px/s↑) 시 dt를 자동 분할하여
       // 선 관통(tunneling) 현상을 방지. MAX_SUBSTEPS로 연산 상한 제어.
       const SUB_STEP_THRESHOLD = 400;     // 서브스텝 활성화 속도 임계치 (px/s)
-      const MAX_SUBSTEPS = 10;             // dt 당 최대 서브스텝 (▲ 4→10)
+      const MAX_SUBSTEPS = 20;             // [변경] 고속 충돌 정밀도 향상 (10 -> 20)
 
       // ── Dynamic Collision Radius ───────────────────
       // 데이터 전략: 고속 이동 시 충돌 반경을 속도 비례로 확장.
@@ -2886,6 +2886,60 @@
       // ============================================
       // [결정론적 시뮬레이션] LUT 기반 충돌 판정 + CCD
       // ============================================
+      // [신규 추가] 물리 반사 로직 모듈화 (데이터 일관성 확보)
+      function applyReflection(p, nx, ny, tx, ty, lineType) {
+        const vDotN = p.vx * nx + p.vy * ny;
+        const vDotT = p.vx * tx + p.vy * ty;
+
+        let boostApplied = false;
+
+        // Type-specific physics
+        if (lineType === 'booster') {
+          const boostAmt = 245;
+          const sign = vDotT >= 0 ? 1 : -1; // 진행 방향 판별
+          
+          p.vx += tx * sign * boostAmt * (1/60); // FIXED_DT 직접 사용
+          p.vy += ty * sign * boostAmt * (1/60);
+
+          const spd = Math.hypot(p.vx, p.vy);
+          const MAX_SPEED = 560;
+          if (spd > MAX_SPEED) {
+            p.vx = (p.vx / spd) * MAX_SPEED;
+            p.vy = (p.vy / spd) * MAX_SPEED;
+          }
+
+          // 부스터 위에서는 튕김 억제 (Soft Landing)
+          if (vDotN < 0) {
+            p.vx -= nx * vDotN * 0.8;
+            p.vy -= ny * vDotN * 0.8;
+          }
+          boostApplied = true;
+          spawnParticles(p.x, p.y, '#ff6600', 3);
+
+        } else if (lineType === 'jump') {
+          const jumpMultiplier = 1.8;
+          const newVn = -vDotN * jumpMultiplier;
+          const newVt = vDotT * 0.98;
+          p.vx = tx * newVt + nx * newVn;
+          p.vy = ty * newVt + ny * newVn;
+          p.onGround = false;
+          boostApplied = true;
+          spawnParticles(p.x, p.y, '#39ff14', 4);
+        }
+
+        // 일반 반사 (Normal Reflection)
+        if (!boostApplied) {
+          const newVt = vDotT * (1 - PHYS.friction);
+          const newVn = -vDotN * PHYS.bounce;
+          p.vx = tx * newVt + nx * newVn;
+          p.vy = ty * newVt + ny * newVn;
+          p.onGround = true;
+
+          if (Math.abs(vDotT) > 60 && lineType === 'normal') {
+            spawnParticles(p.x, p.y + 5, '#88ccff', 2);
+          }
+        }
+      }
       // 데이터 전략: Spatial Grid 조회 → CCD 터널링 감지 →
       // Surface Snap → resolveLine(Dynamic Radius).
       function resolveWithLUT(p, lutData, spatialGrid, dynRadius, prevX, prevY) {
@@ -2893,6 +2947,8 @@
         if (nearby.length === 0) return;
 
         const processed = new Set();
+        // [Data Strategy] 고속 이동 시 터널링 방지를 위한 안전 계수
+        const SAFETY_MARGIN = 1.05;
 
         for (const pt of nearby) {
           const entry = lutData[pt.lutIdx];
@@ -2900,38 +2956,46 @@
           const points = entry.points;
           const lineType = entry.type || 'normal';
 
-          // 현재 점 → 다음 점 세그먼트
-          if (pt.ptIdx < points.length - 1) {
-            const segKey = `${pt.lutIdx}_${pt.ptIdx}`;
-            if (!processed.has(segKey)) {
-              processed.add(segKey);
-              const A = points[pt.ptIdx];
-              const B = points[pt.ptIdx + 1];
+          // 세그먼트 구성
+          const segments = [];
+          if (pt.ptIdx < points.length - 1) segments.push({ A: points[pt.ptIdx], B: points[pt.ptIdx + 1], key: `${pt.lutIdx}_${pt.ptIdx}` });
+          if (pt.ptIdx > 0) segments.push({ A: points[pt.ptIdx - 1], B: points[pt.ptIdx], key: `${pt.lutIdx}_${pt.ptIdx - 1}` });
 
-              // ── [2] CCD: 예측 위치 터널링 감지 ──
-              if (prevX !== undefined) {
-                if (segmentIntersect(prevX, prevY, p.x, p.y, A.x, A.y, B.x, B.y)) {
-                  snapToSurface(p, A, B, dynRadius);
+          for (const seg of segments) {
+            if (processed.has(seg.key)) continue;
+            processed.add(seg.key);
+
+            const A = seg.A;
+            const B = seg.B;
+
+            // ── [CCD Logic] 터널링 감지 및 '강제' 반사 ──
+            let tunnelingDetected = false;
+
+            if (prevX !== undefined) {
+              if (segmentIntersect(prevX, prevY, p.x, p.y, A.x, A.y, B.x, B.y)) {
+                tunnelingDetected = true;
+
+                // 1. 위치 보정 (표면으로 스냅)
+                snapToSurface(p, A, B, dynRadius * SAFETY_MARGIN);
+
+                // 2. [핵심 수정] 속도 벡터 강제 반사
+                const dx = B.x - A.x;
+                const dy = B.y - A.y;
+                const len = Math.hypot(dx, dy);
+                const nx = -dy / len; // 법선 X
+                const ny = dx / len;  // 법선 Y
+
+                // 현재 속도가 벽을 향할 때만 반사
+                const vDotN = p.vx * nx + p.vy * ny;
+                if (vDotN < 0) {
+                  const tx = -ny, ty = nx;
+                  applyReflection(p, nx, ny, tx, ty, lineType);
                 }
               }
-
-              resolveLine(p, A, B, lineType, dynRadius);
             }
-          }
-          // 이전 점 → 현재 점 세그먼트
-          if (pt.ptIdx > 0) {
-            const segKey = `${pt.lutIdx}_${pt.ptIdx - 1}`;
-            if (!processed.has(segKey)) {
-              processed.add(segKey);
-              const A = points[pt.ptIdx - 1];
-              const B = points[pt.ptIdx];
 
-              if (prevX !== undefined) {
-                if (segmentIntersect(prevX, prevY, p.x, p.y, A.x, A.y, B.x, B.y)) {
-                  snapToSurface(p, A, B, dynRadius);
-                }
-              }
-
+            // 터널링이 없었다면 일반 충돌 처리 수행
+            if (!tunnelingDetected) {
               resolveLine(p, A, B, lineType, dynRadius);
             }
           }
@@ -2986,82 +3050,25 @@
         const cx = p1.x + t * dx, cy = p1.y + t * dy;
         const dist = Math.hypot(p.x - cx, p.y - cy);
 
-        // [1] Dynamic Radius: 속도 비례 충돌 반경
+        // [1] Dynamic Radius
         const radius = dynRadius !== undefined ? dynRadius : LUT_COLLISION_RADIUS;
 
         if (dist < radius && dist > 0.001) {
           const nx = (p.x - cx) / dist;
           const ny = (p.y - cy) / dist;
 
-          // [2] Soft-clamping for Booster: 침투 깊이에 따른 위치 보정
+          // [2] Soft-clamping & Penetration Resolution
           const penetration = radius - dist;
-          if (lineType === 'booster') {
-            // 부드러운 위치 보정: 전체 침투량의 BOOSTER_SNAP_FACTOR만 보정
-            p.x += nx * penetration * BOOSTER_SNAP_FACTOR;
-            p.y += ny * penetration * BOOSTER_SNAP_FACTOR;
-          } else {
-            // 일반/점프 선: 즉 보정
-            p.x += nx * penetration;
-            p.y += ny * penetration;
-          }
+          const correctionFactor = (lineType === 'booster') ? BOOSTER_SNAP_FACTOR : 1.0;
 
+          p.x += nx * penetration * correctionFactor;
+          p.y += ny * penetration * correctionFactor;
+
+          // 속도 반사 (Velocity Reflection) - 모듈화된 함수 호출
           const vDotN = p.vx * nx + p.vy * ny;
           if (vDotN < 0) {
             const tx = -ny, ty = nx;
-            const vDotT = p.vx * tx + p.vy * ty;
-
-            let friction = PHYS.friction;
-            let boostApplied = false;
-
-            // Type-specific physics
-            if (lineType === 'booster') {
-              const boostAmt = 245;
-              const vDotT2 = p.vx * tx + p.vy * ty;
-              const sign = vDotT2 >= 0 ? 1 : -1;
-              const correctTx = tx * sign;
-              const correctTy = ty * sign;
-
-              p.vx += correctTx * boostAmt * FIXED_DT;
-              p.vy += correctTy * boostAmt * FIXED_DT;
-
-              const spd = Math.hypot(p.vx, p.vy);
-              const MAX_SPEED = 560;
-              if (spd > MAX_SPEED) {
-                p.vx = (p.vx / spd) * MAX_SPEED;
-                p.vy = (p.vy / spd) * MAX_SPEED;
-              }
-
-              // [2] Soft-clamping: 법선 방향 속도 억제 (과도한 튕김 방지)
-              const nVel = p.vx * nx + p.vy * ny;
-              if (nVel < 0) {
-                p.vx -= nx * nVel * 0.8;
-                p.vy -= ny * nVel * 0.8;
-              }
-
-              boostApplied = true;
-              spawnParticles(p.x, p.y, '#ff6600', 3);
-            } else if (lineType === 'jump') {
-              const jumpMultiplier = 1.8;
-              const newVn = -vDotN * jumpMultiplier;
-              const newVt = vDotT * 0.98;
-              p.vx = tx * newVt + nx * newVn;
-              p.vy = ty * newVt + ny * newVn;
-              p.onGround = false;
-              spawnParticles(p.x, p.y, '#39ff14', 4);
-              boostApplied = true;
-            }
-
-            if (!boostApplied) {
-              const newVt = vDotT * (1 - friction);
-              const newVn = -vDotN * PHYS.bounce;
-              p.vx = tx * newVt + nx * newVn;
-              p.vy = ty * newVt + ny * newVn;
-            }
-            p.onGround = true;
-
-            if (Math.abs(vDotT) > 60 && lineType === 'normal') {
-              spawnParticles(p.x, p.y + 5, '#88ccff', 2);
-            }
+            applyReflection(p, nx, ny, tx, ty, lineType);
           }
         }
       }
