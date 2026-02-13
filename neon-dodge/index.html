@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="ko">
 
 <head>
@@ -95,18 +95,73 @@
             text-align: center;
         }
 
-        .ui-panel {
+        /* [교체] 전체 UI 패널 (좌측 상단 정렬을 위해 수정) */
+        /* [UI 패널 전체] */
+        #ui-layer-v2 {
             position: absolute;
-            top: 0;
+            top: 0; left: 0;
             width: 100%;
-            padding: 10px;
+            padding: 15px;
+            
+            /* ▼▼▼ [수정 핵심] 처음엔 숨겨둡니다! ▼▼▼ */
+            display: none; 
+            /* ▲▲▲ 게임 시작 시 JS로 flex로 바꿀 겁니다 ▲▲▲ */
+
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 9999;
+            box-sizing: border-box;
+        }
+
+        .top-left-v2 {
+            display: flex;
+            flex-direction: column; /* 세로 정렬 확실하게 */
+            align-items: flex-start;
+        }
+
+        #lives-v2 {
+            font-size: 1.2em;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 0 0 5px #f00;
+            margin-bottom: 8px; /* 아래쪽 여백 강제 */
+            display: block;
+        }
+
+        #hud-panel-v2 {
+            position: relative; /* absolute 아님! 흐름에 따름 */
+            width: 140px;
+            padding: 6px 10px;
+            background: rgba(0, 15, 30, 0.75);
+            border-left: 3px solid #0ff;
+            border-radius: 0 5px 5px 0;
+            margin-top: 0; /* lives-v2의 margin-bottom으로 간격 확보 */
+            box-shadow: 0 0 10px rgba(0,255,255,0.1);
+        }
+
+        .hud-row-v2 {
             display: flex;
             justify-content: space-between;
-            box-sizing: border-box;
-            text-shadow: 0 0 5px #0ff;
-            pointer-events: none;
-            font-size: 0.9em;
+            margin-bottom: 4px;
+            font-size: 0.8em;
+            color: #fff;
+            font-weight: bold;
         }
+
+        .hud-bar-track {
+            width: 100%; height: 4px;
+            background: rgba(255,255,255,0.2);
+        }
+
+        #hud-progress {
+            height: 100%; width: 0%;
+            background: #0ff;
+            transition: width 0.1s;
+        }
+
+        /* 기존에 있던 큰 HUD 스타일들 숨김 */
+        .hud-header, .hud-icon { display: none; }
 
         #current-score {
             position: absolute;
@@ -579,6 +634,93 @@
                 box-shadow: 0 0 20px #00fff2, inset 0 0 10px rgba(0, 255, 242, 0.5);
             }
         }
+
+        /* [CDSO Design] 사이버펑크 HUD 스타일 */
+        #hud-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 20px;
+            width: 220px;
+            padding: 12px 15px;
+            
+            /* 유리 질감 배경 */
+            background: rgba(10, 20, 30, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            
+            /* 테두리 및 장식 */
+            border-left: 4px solid #0ff;
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 0 15px 0 0; /* 우측 상단만 둥글게 */
+            
+            /* 텍스트 스타일 */
+            font-family: 'Orbitron', sans-serif;
+            color: #fff;
+            pointer-events: none; /* 클릭 통과 */
+            z-index: 50;
+            
+            /* 등장 애니메이션 */
+            transform: skewX(-10deg); /* 약간 기울여서 속도감 표현 */
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.1);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .hud-header {
+            display: flex;
+            align-items: center;
+            font-size: 0.7em;
+            color: #888;
+            margin-bottom: 4px;
+            letter-spacing: 2px;
+        }
+
+        .hud-icon {
+            margin-right: 6px;
+            font-size: 1.2em;
+            animation: spinSlow 4s linear infinite;
+        }
+
+        .hud-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 1.1em;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            margin-bottom: 6px;
+        }
+
+        #hud-timer {
+            font-size: 0.8em;
+            color: #ff0;
+        }
+
+        /* 타이머 게이지 바 */
+        .hud-bar-bg {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        #hud-progress {
+            width: 0%; /* JS로 제어 */
+            height: 100%;
+            background: linear-gradient(90deg, #0ff, #fff);
+            box-shadow: 0 0 10px #0ff;
+            transition: width 0.1s linear, background 0.3s;
+        }
+
+        @keyframes spinSlow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+
+
+
+
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 
@@ -586,7 +728,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         // [중요 수정] 아래 import 줄 끝부분에 where, getDocs가 반드시 포함되어야 합니다.
-        import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs }
+        import { getFirestore, collection, addDoc, updateDoc,query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs }
             from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -602,19 +744,33 @@
         window.firebaseDB = getFirestore(window.firebaseApp);
 
         // 2. window.firebaseModules 목록에도 where, getDocs 추가
-        window.firebaseModules = { collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs };
+        window.firebaseModules = { collection, addDoc, updateDoc, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs };
         window.dispatchEvent(new Event('firebase-ready'));
     </script>
 </head>
 
 <body>
     <div id="game-container">
-        <div class="ui-panel">
-            <div id="lives">LIVES: ♥♥♥</div>
+        <div id="ui-layer-v2">
+            
+            <div class="top-left-v2">
+                <div id="lives-v2">LIVES: ♥♥♥</div>
+                
+                <div id="hud-panel-v2">
+                    <div class="hud-row-v2">
+                        <span id="hud-mode">SYSTEM NORMAL</span>
+                        <span id="hud-timer"></span>
+                    </div>
+                    <div class="hud-bar-track">
+                        <div id="hud-progress"></div>
+                    </div>
+                </div>
+            </div>
+
             <div id="current-score">0</div>
             <div id="stage-info">STAGE 1 | TIME: 30</div>
         </div>
-        <div id="skill-display" class="active-skill"></div>
+
         <canvas id="gameCanvas"></canvas>
 
         <div id="start-screen" class="overlay">
@@ -625,7 +781,10 @@
                 <ul id="leaderboard">
                     <li>Loading...</li>
                 </ul>
-                <button onclick="goToNameInput()">READY TO DIVE</button>
+
+                <ul id="my-rank-list" style="display:none; margin-bottom: 10px;"></ul>
+
+                <button onclick="goToNameInput()">전투 시작</button>
 
             </div>
 
@@ -965,55 +1124,88 @@
                     if (dist < 100) { isGreedyDeath = true; break; }
                 }
 
-                const { collection, addDoc, serverTimestamp } = window.firebaseModules;
+                const { collection, addDoc, updateDoc, query, where, getDocs, serverTimestamp } = window.firebaseModules;
+
                 try {
-                // [수정 1] 랭킹 데이터 저장 (가볍게 유지: 순위표 표시에 꼭 필요한 것만)
-                await addDoc(collection(window.firebaseDB, 'rankings_v2'), {
-                    name: name,
-                    score: score,
-                    stage: stage,
-                    platform: sys.platform, // PC/Mobile 아이콘 표시용
-                    timestamp: serverTimestamp() // 동점자 처리용
-                });
+                    // ============================================================
+                    // [PART 1] 랭킹 데이터 처리 (최고 기록 갱신 로직)
+                    // ============================================================
+                    
+                    // 1. 먼저 같은 닉네임이 있는지 찾아봅니다.
+                    const rankRef = collection(window.firebaseDB, 'rankings_v2');
+                    const q = query(rankRef, where('name', '==', name));
+                    const snapshot = await getDocs(q);
 
-                // [수정 2] 게임 로그 저장 (상세하게: 분석에 필요한 모든 정보)
-                // 별도의 컬렉션(game_logs_v2)에 저장하여 랭킹 로딩 속도에 영향을 주지 않음
-                await addDoc(collection(window.firebaseDB, 'game_logs_v2'), {
-                    // 매칭 정보
-                    name: name,
-                    score: score,
-                    stage: stage,
-                    timestamp: serverTimestamp(),
+                    if (!snapshot.empty) {
+                        // 2. 이미 등록된 유저가 있다면?
+                        const existingDoc = snapshot.docs[0]; // 첫 번째 검색 결과
+                        const oldData = existingDoc.data();
 
-                    // 시스템 상세 정보 (구조화해서 저장하면 보기 편함)
-                    system: {
-                        os: sys.os,
-                        osVer: sys.osVer,
-                        browser: sys.browser,
-                        model: sys.model,
-                        engine: sys.engine,
-                        platform: sys.platform,
-                        screen: sys.resolution,
-                        control: sys.control,
-                        ua_full: sys.raw_ua
-                    },
-
-                    // 플레이 분석 데이터
-                    gameplay: {
-                        playTimeSec: playTimeSec,
-                        deathReason: gameState.lastHitBy,
-                        itemCollectionRate: collectionRate,
-                        isGreedyDeath: isGreedyDeath,
-                        finalLives: gameState.lives
+                        // 3. 신기록인 경우에만 업데이트! (같거나 낮으면 무시)
+                        if (score > oldData.score) {
+                            await updateDoc(existingDoc.ref, {
+                                score: score,
+                                stage: stage,
+                                platform: sys.platform,
+                                timestamp: serverTimestamp() // 갱신 시점 업데이트
+                            });
+                            console.log("✅ Existing record updated with new high score!");
+                        } else {
+                            console.log("⏹ Score is not higher. Ranking preserved.");
+                        }
+                    } else {
+                        // 4. 등록된 적 없는 신규 유저라면? -> 새로 추가 (기존 방식)
+                        await addDoc(rankRef, {
+                            name: name,
+                            score: score,
+                            stage: stage,
+                            platform: sys.platform,
+                            timestamp: serverTimestamp()
+                        });
+                        console.log("✨ New challenger registered!");
                     }
-                });
+
+                    // ============================================================
+                    // [PART 2] 게임 로그 저장 (무조건 저장 - 분석용)
+                    // ============================================================
+                    // 로그는 갱신 개념이 아니라 '역사'이므로 모든 판을 다 기록합니다.
+                    await addDoc(collection(window.firebaseDB, 'game_logs_v2'), {
+                        name: name,
+                        score: score,
+                        stage: stage,
+                        timestamp: serverTimestamp(),
+                        
+                        system: {
+                            os: sys.os,
+                            osVer: sys.osVer,
+                            browser: sys.browser,
+                            model: sys.model,
+                            engine: sys.engine,
+                            platform: sys.platform,
+                            screen: sys.resolution,
+                            control: sys.control,
+                            ua_full: sys.raw_ua
+                        },
+
+                        gameplay: {
+                            playTimeSec: playTimeSec,
+                            deathReason: gameState.lastHitBy,
+                            itemCollectionRate: collectionRate,
+                            isGreedyDeath: isGreedyDeath,
+                            finalLives: gameState.lives
+                        }
+                    });
 
                     lastSavedName = name;
+                    
+                    // 등수 계산 및 반환
                     const rank = await updateMyRank(name, score, stage);
                     return rank;
 
+                } catch (e) { 
+                    console.error("Save Failed:", e); 
+                    return null; 
                 }
-                catch (e) { console.error(e); return null; }
             }
 
 
@@ -1222,18 +1414,13 @@
 
             // [CDSO 수정] 기존 updateLivesUI 함수를 아래 코드로 완전히 덮어쓰기 하십시오.
             function updateLivesUI() {
-                // 1. 데이터 클렌징: 생명력이 음수면 강제로 0으로 취급
-                const safeLives = Math.max(0, gameState.lives);
-
-                // 2. 최대 체력 데이터 정합성 체크
-                const safeMax = Math.max(gameState.maxLives, safeLives);
-
-                // 3. 빈 하트 개수 계산 (음수 방지)
-                const emptyCount = Math.max(0, safeMax - safeLives);
-
-                // 4. UI 렌더링 (이제 -1이 들어갈 일이 없어 에러가 발생하지 않음)
-                document.getElementById('lives').textContent =
-                    `LIVES: ${'♥'.repeat(safeLives)}${'♡'.repeat(emptyCount)}`;
+                // ID 변경 반영 (lives -> lives-v2)
+                const livesEl = document.getElementById('lives-v2');
+                if (livesEl) {
+                    livesEl.innerHTML = `LIVES: ${'♥'.repeat(Math.max(0, gameState.lives))}`;
+                    if (gameState.lives <= 1) livesEl.style.color = '#f00';
+                    else livesEl.style.color = '#fff';
+                }
             }
 
             function updateDrones(dt) {
@@ -1414,12 +1601,22 @@
 
             // [CDSO Strategy] 2-Step Launch Protocol
             function goToNameInput() {
+                // [CDSO FIX] 저장된 닉네임이 있으면 입력 단계 건너뛰기
+                const savedName = localStorage.getItem('lastPilotName');
+                const inputEl = document.getElementById('pilot-name-input');
+                
+                // 1. 저장된 이름이 있고, 입력창에도 그 값이 잘 들어가 있다면?
+                if (savedName && inputEl && inputEl.value === savedName) {
+                    startGame(); // 입력 화면 없이 바로 게임 시작!
+                    return;
+                }
+
+                // 2. 저장된 게 없으면 원래대로 입력 화면 보여줌
                 document.getElementById('step-1-ranking').style.display = 'none';
                 document.getElementById('step-2-input').style.display = 'flex';
 
-                // 이전에 저장된 이름이 있으면 자동 포커스
-                const input = document.getElementById('pilot-name-input');
-                if (input) input.focus();
+                // 포커스
+                if (inputEl) inputEl.focus();
             }
 
             function backToRanking() {
@@ -1428,6 +1625,11 @@
             }
 
             function startGame() {
+                // [CDSO FIX] 게임 시작 시 UI 패널 보이기
+                const uiLayer = document.getElementById('ui-layer-v2');
+                if (uiLayer) uiLayer.style.display = 'flex';
+
+
                 const nameInput = document.getElementById('pilot-name-input');
                 if (!nameInput) return;
 
@@ -1760,7 +1962,7 @@
                     if (gameState.boss.type === 'LUNAR') {
                         spawnInterval = 1.2; eliteTypes = ['HOMING', 'ZIGZAG'];
                     } else if (gameState.boss.type === 'SUN') {
-                        spawnInterval = 3.0; eliteTypes = ['SHOOTER', 'BOMBER', 'LASER_ENEMY'];
+                        spawnInterval = 1.5; eliteTypes = ['SHOOTER', 'BOMBER', 'LASER_ENEMY'];
                     }
 
                     if (gameState.bossResurrected) spawnInterval *= 0.7;
@@ -1902,6 +2104,37 @@
                 boss.shootTimer += dt;
 
                 if (boss.type === 'LUNAR') {
+                    // 1. 오비탈 비트 (위성) 시스템
+                    // 위성 회전 각도 업데이트 (계속 뱅글뱅글 돔)
+                    boss.orbitAngle = (boss.orbitAngle || 0) + dt * 1.5; 
+                    
+                    // 위성 공격 타이머
+                    boss.satelliteTimer = (boss.satelliteTimer || 0) + dt;
+                    
+                    // 0.8초마다 위성 2개에서 총알 발사
+                    if (boss.satelliteTimer > 0.8) {
+                        const bx = boss.x + boss.w / 2;
+                        const by = boss.y + boss.h / 2;
+                        
+                        for(let i=0; i<2; i++) {
+                            // 위성 현재 위치 계산
+                            const angle = boss.orbitAngle + (i * Math.PI); // 180도 간격 (서로 반대편)
+                            const satX = bx + Math.cos(angle) * 90; // 본체로부터 거리 90
+                            const satY = by + Math.sin(angle) * 90;
+                            
+                            // 위성 탄환 발사 (직선으로 아래로 꽂음)
+                            gameState.enemies.push({
+                                x: satX - 5, y: satY, 
+                                w: 10, h: 10, 
+                                speed: 0, type: 'ENEMY_BULLET',
+                                vx: 0, vy: 450, // 속도 빠름
+                                color: '#fff'   // 흰색 탄환
+                            });
+                        }
+                        boss.satelliteTimer = 0;
+                    }
+
+
                     // 유성 공격 (METEOR)
                     if (boss.shootTimer > 1.0) {
                         for (let angle = -30; angle <= 30; angle += 30) {
@@ -2257,24 +2490,24 @@
                 // 4. 저장 완료 후 UI 업데이트
                 statusMsg.style.display = 'none'; // '저장중' 메시지 숨김
 
-                // 랭킹 리스트 표시
-                if (myRank) {
-                    const top5Content = document.getElementById('leaderboard').innerHTML;
-                    const myRankHTML = `
-                    <li class="rank-me">
-                        <span class="rank-badge">${myRank}</span>
-                        <span class="player-name">${name}</span>
-                        <span class="player-score">${finalScore.toLocaleString()}</span>
-                        <span class="player-stage">ST.${gameState.currentStage}</span>
-                    </li>
-                `;
-                    resultList.innerHTML = top5Content + myRankHTML;
-                    resultList.style.display = 'block';
-                } else {
-                    // 네트워크 에러 시
-                    resultList.innerHTML = '<li style="color:#f00; text-align:center;">Network Error<br>Save Failed</li>';
-                    resultList.style.display = 'block';
-                }
+                // // 랭킹 리스트 표시
+                // if (myRank) {
+                //     const top5Content = document.getElementById('leaderboard').innerHTML;
+                //     const myRankHTML = `
+                //     <li class="rank-me">
+                //         <span class="rank-badge">${myRank}</span>
+                //         <span class="player-name">${name}</span>
+                //         <span class="player-score">${finalScore.toLocaleString()}</span>
+                //         <span class="player-stage">ST.${gameState.currentStage}</span>
+                //     </li>
+                // `;
+                //     resultList.innerHTML = top5Content + myRankHTML;
+                //     resultList.style.display = 'block';
+                // } else {
+                //     // 네트워크 에러 시
+                //     resultList.innerHTML = '<li style="color:#f00; text-align:center;">Network Error<br>Save Failed</li>';
+                //     resultList.style.display = 'block';
+                // }
 
                 // 5. 버튼 보이기 (재시작/공유)
                 actionBtns.style.display = 'flex';
@@ -2362,7 +2595,7 @@
                     gameState.ghostHistory.push({ 
                         x: gameState.player.x, 
                         y: gameState.player.y,
-                        isFiring: (gameState.autoFireTimer < 0.05) // 사격 직후인가?
+                        isFiring: (gameState.autoFireTimer === 0)
                     });
                     if (gameState.ghostHistory.length > 90) gameState.ghostHistory.shift();
 
@@ -2370,12 +2603,15 @@
                     if (gameState.ghostHistory.length >= 2) {
                         const ghostAction = gameState.ghostHistory[0];
                         
-                        // 고스트 사격 (30% 확률로 탄환 생성)
-                        if (ghostAction.isFiring && Math.random() < 0.3) {
+                        // [수정] 확률 체크(Math.random) 삭제 -> 기록된 대로 무조건 발사
+                        if (ghostAction.isFiring) {
                             gameState.bullets.push({
-                                x: ghostAction.x + 5, y: ghostAction.y, w: 10, h: 15, speed: 550,
-                                color: '#0f0', // 녹색 탄환
-                                isGhostBullet: true 
+                                x: ghostAction.x + 5, 
+                                y: ghostAction.y, 
+                                w: 10, h: 15, 
+                                speed: 550,
+                                color: '#0f0',      // 고스트 전용 녹색 탄환
+                                isGhostBullet: true // 게이지 충전 방지용 태그
                             });
                         }
 
@@ -2575,19 +2811,112 @@
                 } else {
                     gameState.campingTimer = 0;
                 }
-                // -----------------------------------------------------------
 
-                // 스킬 타이머 표시
+                // -----------------------------------------------------------
+                // [CDSO Design] 신규 HUD 시스템 업데이트 로직
+                // -----------------------------------------------------------
+                
+                // 1. 스킬 타이머 감소 (기존 로직 유지)
                 if (gameState.skillTimer > 0) {
                     gameState.skillTimer -= dt;
-                    document.getElementById('skill-display').textContent = `${gameState.skillMode}: ${gameState.skillTimer.toFixed(1)}s`;
+                    if (gameState.skillTimer <= 0) gameState.skillMode = 'NORMAL';
                 } else {
                     gameState.skillMode = 'NORMAL';
-                    let displayText = '';
-                    if (gameState.isHomingMode) displayText = `HOMING: ${gameState.homingTimer.toFixed(1)}s`;
-                    else if (gameState.isLaserMode) displayText = `LASER: ${gameState.laserTimer.toFixed(1)}s`;
-                    else if (gameState.isLunarMode) displayText = 'LUNAR MODE';
-                    document.getElementById('skill-display').textContent = displayText;
+                }
+
+                // 2. HUD 요소 가져오기
+                const hudPanel = document.getElementById('hud-panel');
+                const hudMode = document.getElementById('hud-mode');
+                const hudTimer = document.getElementById('hud-timer');
+                const hudProgress = document.getElementById('hud-progress');
+                const hudLabel = document.getElementById('hud-label');
+
+                // HUD가 HTML에 존재하는지 확인 (안전장치)
+                if (hudPanel && hudMode) {
+                    let currentMode = "NORMAL";
+                    let currentTime = 0;
+                    let maxTime = 1; // 0으로 나누기 방지
+                    let hudColor = "#0ff"; // 기본 청록색
+
+                    // 3. 상태 우선순위 판별 및 데이터 설정
+                    if (gameState.skillTimer > 0) {
+                        // 아이템 스킬 (박스)
+                        currentMode = gameState.skillMode;
+                        currentTime = gameState.skillTimer;
+                        maxTime = (currentMode.includes("ERROR")) ? 5.0 : 10.0; 
+                        
+                        // 색상 결정
+                        if (currentMode.includes("VOID")) hudColor = "#a0f"; // 보라
+                        else if (currentMode.includes("REFLECT")) hudColor = "#ff0"; // 노랑
+                        else if (currentMode.includes("GHOST")) hudColor = "#0f0"; // 녹색
+                        else if (currentMode.includes("ERROR")) hudColor = "#f00"; // 빨강
+                        else hudColor = "#0ff";
+                        
+                        hudLabel.textContent = "ACTIVE SKILL";
+
+                    } else if (gameState.isTransformed) {
+                        // 변신 상태
+                        if (gameState.isLaserMode) {
+                            currentMode = "LASER CANNON";
+                            currentTime = gameState.laserTimer;
+                            maxTime = 3.0;
+                            hudColor = "#ff0";
+                            hudLabel.textContent = "WEAPON SYSTEM";
+                        } else if (gameState.isSideMissileActive) {
+                            currentMode = "GOLDEN WING";
+                            currentTime = 1; maxTime = 1; 
+                            hudColor = "#ffd700";
+                            hudLabel.textContent = "FLIGHT MODE";
+                        } else {
+                            currentMode = "GOLDEN WING";
+                            currentTime = 1; maxTime = 1;
+                            hudColor = "#ffd700";
+                            hudLabel.textContent = "FLIGHT MODE";
+                        }
+
+                    } else if (gameState.isHomingMode) {
+                        // 유도탄 모드
+                        currentMode = "HOMING MISSILE";
+                        currentTime = gameState.homingTimer;
+                        maxTime = 7.0;
+                        hudColor = "#c4f";
+                        hudLabel.textContent = "WEAPON SYSTEM";
+
+                    } else if (gameState.isLunarMode) {
+                        // 루나 모드
+                        currentMode = "LUNAR BIT";
+                        currentTime = 1; maxTime = 1;
+                        hudColor = "#88f";
+                        hudLabel.textContent = "SUPPORT UNIT";
+
+                    } else {
+                        // 기본 상태
+                        currentMode = "SYSTEM NORMAL";
+                        currentTime = 0;
+                        maxTime = 1;
+                        hudColor = "#0ff";
+                        hudLabel.textContent = "STANDBY";
+                    }
+
+                    // 4. 화면 업데이트
+                    hudMode.textContent = currentMode;
+                    hudPanel.style.borderLeftColor = hudColor;
+                    
+                    if (hudProgress) {
+                        hudProgress.style.background = `linear-gradient(90deg, ${hudColor}, #fff)`;
+                        hudProgress.style.boxShadow = `0 0 10px ${hudColor}`;
+                        
+                        // 타이머바 움직임
+                        if (currentTime > 0 && currentMode !== "SYSTEM NORMAL" && currentTime !== 1) {
+                            hudTimer.textContent = currentTime.toFixed(1) + "s";
+                            const percent = Math.max(0, (currentTime / maxTime) * 100);
+                            hudProgress.style.width = percent + "%";
+                        } else {
+                            hudTimer.textContent = "";
+                            // 무한 지속 상태면 꽉 채우고, 아니면 비움
+                            hudProgress.style.width = (currentMode === "SYSTEM NORMAL") ? "0%" : "100%"; 
+                        }
+                    }
                 }
 
                 if (gameState.isTransformed && !gameState.isLaserMode && Math.random() < 0.06) {
@@ -2720,23 +3049,34 @@
                         gameState.itemsCollected++;
                         if (it.type === 'DRONE') {
                             if (!gameState.isTransformed) {
+                                // 드론 수집 및 변신 로직
                                 gameState.drones.push({ offsetX: (gameState.drones.length === 0 ? -1 : 1) * 35, shootTimer: 0 });
+                                
+                                // 3개 모으면 변신!
                                 if (gameState.drones.length >= 3) {
-                                    gameState.isTransformed = true; gameState.drones = [];
-                                    gameState.droneOverload = 0; gameState.isSideMissileActive = false;
-                                    document.getElementById('skill-display').textContent = "GOLDEN MODE: ACTIVATED";
+                                    gameState.isTransformed = true; 
+                                    gameState.drones = [];
+                                    gameState.droneOverload = 0; 
+                                    gameState.isSideMissileActive = false;
+                                    
+                                    // [수정 완료] 에러를 유발하던 텍스트 코드 삭제함
+                                    // (새로운 HUD가 알아서 'GOLDEN WING'이라고 띄워줍니다)
+                                    
                                     gameState.skillTimer = 2.0;
                                 }
                             } else {
+                                // 이미 변신 상태라면? -> 추가 무장 장착
                                 gameState.droneOverload = (gameState.droneOverload || 0) + 1;
+                                
                                 if (gameState.droneOverload === 1) {
                                     gameState.isSideMissileActive = true;
-                                    document.getElementById('skill-display').textContent = "WEAPON UPGRADE: SIDE MISSILES";
-                                    gameState.skillTimer = 2.0; addScore(500);
+                                    gameState.skillTimer = 2.0; 
+                                    addScore(500);
                                 } else if (gameState.droneOverload >= 2) {
                                     gameState.ultGauge = 1.0;
-                                    document.getElementById('skill-display').textContent = "ULTIMATE CHARGED!!";
-                                    gameState.skillTimer = 1.5; addScore(500); triggerHaptic(50);
+                                    gameState.skillTimer = 1.5; 
+                                    addScore(500); 
+                                    triggerHaptic(50);
                                 }
                             }
                         } else if (it.type === 'BLASTER') {
@@ -2760,7 +3100,8 @@
 
                             // REFLECT 제거 후 확률 재분배 (각 25%)
                             if (chance < 25) {
-                                gameState.slowTimer = duration;
+                                // ▼▼▼ [수정] 여기를 원하는 시간(초)으로 바꾸세요! ▼▼▼
+                                gameState.slowTimer = 5.0; // 예: 5초로 줄이기 (기존 duration 대신 숫자 입력)
                                 gameState.timeScale = 0.2;
                                 msg = "⏳ TIME SLOW"; color = "#0ff";
                             }
@@ -2782,8 +3123,8 @@
                                 msg = "💀 ERROR 💀"; color = "#f00";
                             }
 
-                            const skillDisplay = document.getElementById('skill-display');
-                            if (skillDisplay) skillDisplay.style.color = color;
+                            // const skillDisplay = document.getElementById('skill-display');
+                            // if (skillDisplay) skillDisplay.style.color = color;
 
                             gameState.skillMode = msg;
                             gameState.skillTimer = (msg.includes("ERROR")) ? 5.0 : duration;
@@ -2914,7 +3255,9 @@
                 let stageText = '';
                 if (gameState.currentStage >= 11) stageText = `STAGE ∞ | OVERDRIVE x${gameState.infiniteDifficulty.toFixed(2)}`;
                 else {
-                    let stageDisplay = lvl.isBoss ? (gameState.bossPhase === 'BOSS' ? 'BOSS!' : (gameState.bossPhase === 'SURVIVAL' ? 'SURVIVE!' : '')) : (gameState.survivalMode ? 'SURVIVE!' : '');
+                    // 보스전일 때만 'BOSS!' 표시 유지
+                    let stageDisplay = lvl.isBoss && gameState.bossPhase === 'BOSS' ? 'BOSS!' : '';
+                    
                     stageText = `STAGE ${gameState.currentStage}${stageDisplay ? ' | ' + stageDisplay : ''}`;
                 }
                 document.getElementById('stage-info').textContent = stageText;
@@ -2924,6 +3267,11 @@
 
                 // [CDSO Decoupling] 배경 그리드 오프셋 업데이트 (draw에서 분리)
                 gridOffset = (gridOffset + dt * gameState.timeScale * 100) % 50;
+
+                // [CDSO FIX] 매 프레임 HUD 갱신 호출 (이게 없으면 안 움직입니다!)
+                updateHUD();
+
+
             } // ← update(dt) 함수 종료
 
 
@@ -3108,523 +3456,215 @@
 
 
             function drawAlien(en, stage) {
-
-                // [CDSO Safety Wrapper] 개별 적 그리기 시작 전 상태 저장
+                // [안전 장치] 상태 저장 (함수 시작)
                 ctx.save();
-
 
                 const cx = en.x + en.w / 2, cy = en.y + en.h / 2;
                 const isCold = stage <= 5;
 
-                // ENEMY_BULLET 렌더링
+                // 1. ENEMY_BULLET (회전하는 플라즈마)
                 if (en.type === 'ENEMY_BULLET') {
-                    // 기존 단순 원형 -> 회전하는 플라즈마 결정체로 변경
-                    ctx.save();
                     ctx.translate(cx, cy);
-
-                    // 탄환이 날아가는 속도감을 위해 빠르게 회전
                     ctx.rotate(Date.now() / 150);
 
-                    // 1. 네온 광원 (Glow)
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = '#f00';
-
-                    // 2. 코어 (다이아몬드 형태)
-                    ctx.fillStyle = '#fff'; // 핵은 하얗게 타오름
-                    ctx.beginPath();
-                    ctx.moveTo(0, -6);
-                    ctx.lineTo(4, 0);
-                    ctx.lineTo(0, 6);
-                    ctx.lineTo(-4, 0);
-                    ctx.fill();
-
-                    // 3. 외곽 에너지 (붉은색)
-                    ctx.strokeStyle = '#f44';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(0, -8); // 조금 더 길게
-                    ctx.lineTo(6, 0);
-                    ctx.lineTo(0, 8);
-                    ctx.lineTo(-6, 0);
-                    ctx.closePath();
-                    ctx.stroke();
-
-                    ctx.restore();
-                    return; // 여기서 그리기 종료
+                    ctx.shadowBlur = 10; ctx.shadowColor = '#f00';
+                    ctx.fillStyle = '#fff';
+                    ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(4, 0); ctx.lineTo(0, 6); ctx.lineTo(-4, 0); ctx.fill();
+                    
+                    ctx.strokeStyle = '#f44'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(6, 0); ctx.lineTo(0, 8); ctx.lineTo(-6, 0); ctx.closePath(); ctx.stroke();
+                    
+                    ctx.restore(); return; // [필수] 복구 후 종료
                 }
 
-                // SHOOTER 렌더링 (붉은 삼각형)
+                // 2. SHOOTER (헥스 캐논)
                 if (en.type === 'SHOOTER') {
-                    // 맥동 효과 (살아있는 기계 느낌)
-                    const pulse = 1 + Math.sin(Date.now() / 200) * 0.1;
-
-                    ctx.save();
                     ctx.translate(cx, cy);
-
-                    // 그림자 및 광원 설정
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = '#d00';
-
-                    // 1. 상부 껍질 (Outer Shell) - 부채꼴 장갑
-                    // 어두운 붉은색 베이스로 단단함 표현
-                    ctx.fillStyle = '#800';
-                    ctx.beginPath();
-                    // 힌지(Hinge)에서 시작하여 넓게 퍼지는 부채꼴
-                    ctx.moveTo(0, -10);
-                    ctx.arc(0, -10, en.w / 1.1, 0.2 * Math.PI, 0.8 * Math.PI);
-                    ctx.closePath();
-                    ctx.fill();
-
-                    // 2. 껍질 결 (Ridges) - 네온 텍스처
-                    // 조개 특유의 방사형 무늬를 네온 라인으로 표현
-                    ctx.strokeStyle = '#f44'; // 밝은 붉은색 라인
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-
-                    // 3개의 결을 그립니다
-                    for (let i = -1; i <= 1; i++) {
-                        const angle = Math.PI / 2 + (i * 0.4); // 각도 계산
-                        const length = en.w / 1.1;
-
-                        ctx.moveTo(0, -10); // 힌지에서 시작
-                        ctx.lineTo(Math.cos(angle) * length, Math.sin(angle) * length - 10);
-                    }
-                    ctx.stroke();
-
-                    // 3. 하부 껍질 (Lower Jaw) - 입 부분
-                    ctx.fillStyle = '#500';
-                    ctx.beginPath();
-                    ctx.arc(0, 5, en.w / 2.5, 0, Math.PI); // 반원 형태의 아래턱
-                    ctx.fill();
-
-                    // 4. 진주 (The Pearl) - 에너지 코어
-                    // 공격 중(shotsFired > 0)일 때는 하얗게 빛나고, 평소엔 노란색
-                    const isActive = en.shotsFired > 0;
-
-                    ctx.shadowColor = isActive ? '#fff' : '#ff0';
-                    ctx.shadowBlur = isActive ? 30 : 10;
-                    ctx.fillStyle = isActive ? '#fff' : '#ffd700'; // 발사 시 화이트, 평소엔 골드
-
-                    ctx.beginPath();
-                    // 펄스 효과를 주어 에너지가 응축된 느낌 전달
-                    ctx.arc(0, 5, 5 * pulse, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    // 5. 힌지 (연결부) 디테일
-                    ctx.fillStyle = '#f00';
-                    ctx.shadowBlur = 0; // 디테일은 깔끔하게
-                    ctx.beginPath();
-                    ctx.arc(0, -10, 3, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    ctx.restore();
-                    return; // 그리기 종료
-                }
-
-
-                // BOMBER 렌더링 (주황 원)
-                if (en.type === 'BOMBER') {
-                    // 기존 주황 원 -> 불안정한 가시 기뢰로 변경
-                    // 맥동 속도를 높여 긴박감 조성
-                    const pulse = 1 + Math.sin(Date.now() / 60) * 0.25;
-
-                    ctx.shadowBlur = 25;
-                    ctx.shadowColor = '#ff4400'; // 강렬한 붉은 오렌지
-
-                    ctx.save();
-                    ctx.translate(cx, cy);
-
-                    // 천천히 회전하며 위협
-                    ctx.rotate(Date.now() / 800);
-
-                    // 1. 위협적인 가시 (Spikes) - 6개
-                    ctx.fillStyle = '#ff2200';
-                    for (let i = 0; i < 6; i++) {
-                        const angle = (Math.PI / 3) * i;
-                        ctx.save();
-                        ctx.rotate(angle);
-
-                        ctx.beginPath();
-                        ctx.moveTo(0, -en.w / 2); // 중심에서 시작
-                        // 맥동에 따라 가시 길이 변화
-                        ctx.lineTo(5, -(en.w / 1.4 * pulse));
-                        ctx.lineTo(-5, -(en.w / 1.4 * pulse));
-                        ctx.fill();
-                        ctx.restore();
-                    }
-                }
-
-                // LASER_ENEMY 렌더링 (기존: 보라색 사각형 -> 변경: 오징어)
-                if (en.type === 'LASER_ENEMY') {
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = '#a0f';
-                    ctx.fillStyle = '#c4f';
-
-                    // 오징어 그리기 로직 (Squid Rendering)
-                    const squidHeadR = en.w / 2;     // 머리 반지름
-                    const legLen = en.h * 0.5;       // 다리 길이
-
-                    // 1. 머리 (반원 + 직사각형)
-                    ctx.beginPath();
-                    ctx.arc(cx, en.y + squidHeadR, squidHeadR, Math.PI, 0); // 둥근 머리 위쪽
-                    ctx.lineTo(en.x + en.w, en.y + en.h - legLen);          // 오른쪽 몸통
-                    ctx.lineTo(en.x, en.y + en.h - legLen);                 // 왼쪽 몸통
-                    ctx.closePath();
-                    ctx.fill();
-
-                    // 2. 다리 (꾸불꾸불한 촉수 4개)
-                    ctx.strokeStyle = '#c4f';
-                    ctx.lineWidth = 3;
-                    ctx.lineCap = 'round';
-
-                    // 다리가 움직이는 애니메이션 효과 (Squid Wiggle)
-                    const wiggle = Math.sin(Date.now() / 100) * 3;
-
-                    for (let i = 0; i < 4; i++) {
-                        const legX = en.x + (en.w / 4) * i + (en.w / 8);
-                        const legStartY = en.y + en.h - legLen;
-
-                        ctx.beginPath();
-                        ctx.moveTo(legX, legStartY);
-                        // 베지어 곡선으로 다리 표현
-                        ctx.bezierCurveTo(
-                            legX + wiggle, legStartY + legLen / 2,
-                            legX - wiggle, legStartY + legLen,
-                            legX, legStartY + legLen
-                        );
-                        ctx.stroke();
-                    }
-
-                    // 3. 눈 (구분을 위해 흰색 추가)
-                    ctx.fillStyle = '#fff';
-                    const eyeY = en.y + squidHeadR + 2;
-                    ctx.beginPath(); ctx.arc(cx - 5, eyeY, 3, 0, Math.PI * 2); ctx.fill(); // 왼쪽 눈
-                    ctx.beginPath(); ctx.arc(cx + 5, eyeY, 3, 0, Math.PI * 2); ctx.fill(); // 오른쪽 눈
-
-
-                    // (기존 차징 로직 유지)
-                    if (en.locked && !en.fired) {
-                        const chargeProgress = Math.min((en.chargeTimer || 0) / 1.0, 1);
-                        ctx.fillStyle = '#fff';
-                        ctx.fillRect(en.x, en.y + en.h, en.w, 3);
-                        ctx.fillStyle = '#f0f';
-                        ctx.fillRect(en.x, en.y + en.h, en.w * chargeProgress, 3);
-
-                        // 차징 중이면 눈이 빨개짐 (Angry Mode)
-                        ctx.fillStyle = '#f00';
-                        ctx.beginPath(); ctx.arc(cx - 5, eyeY, 2, 0, Math.PI * 2); ctx.fill();
-                        ctx.beginPath(); ctx.arc(cx + 5, eyeY, 2, 0, Math.PI * 2); ctx.fill();
-                    }
-                    ctx.shadowBlur = 0;
-                    return; // 여기서 함수 종료
-                }
-
-                // [CDSO Patch: 비주얼 임팩트 강화 - 신규 적 디자인]
-                // 기존 로직보다 먼저 실행되어(Intercept), 새로운 디자인을 적용합니다.
-                // ============================================================
-
-                // 1. NORMAL: 데이터 크리스탈 (Data Crystal)
-                if (en.type === 'NORMAL') {
-                    ctx.shadowBlur = 15; ctx.shadowColor = en.color || '#0ff';
-                    const coreSize = en.w / 4;
-
-                    // 중앙 코어
-                    ctx.fillStyle = '#fff';
-                    ctx.beginPath();
-                    ctx.moveTo(cx, en.y + en.h / 2 - coreSize);
-                    ctx.lineTo(cx + coreSize, en.y + en.h / 2);
-                    ctx.lineTo(cx, en.y + en.h / 2 + coreSize);
-                    ctx.lineTo(cx - coreSize, en.y + en.h / 2);
-                    ctx.fill();
-
-                    // 회전하는 외곽 파편
-                    ctx.strokeStyle = en.color || '#0ff';
-                    ctx.lineWidth = 2;
-                    const angleOffset = Date.now() / 1000;
-
-                    for (let i = 0; i < 4; i++) {
-                        const angle = angleOffset + (Math.PI / 2 * i);
-                        const dist = en.w / 2.2;
-                        const px = cx + Math.cos(angle) * dist;
-                        const py = cy + Math.sin(angle) * dist;
-
-                        ctx.beginPath();
-                        ctx.moveTo(px, py - 5);
-                        ctx.lineTo(px + 5, py);
-                        ctx.lineTo(px, py + 5);
-                        ctx.lineTo(px - 5, py);
-                        ctx.closePath();
-                        ctx.stroke();
-                    }
-                    ctx.shadowBlur = 0;
-                    ctx.restore(); // ★ [추가] 반드시 restore 후 리턴해야 함
-                    return; // ★ 여기서 종료되므로 아래쪽 기존 로직은 실행되지 않음
-                }
-
-                // 2. ZIGZAG: 스파크 윙 (Spark Wing)
-                if (en.type === 'ZIGZAG') {
-                    ctx.shadowBlur = 20; ctx.shadowColor = en.color || '#ff0';
-                    ctx.strokeStyle = en.color || '#ff0';
-                    ctx.lineWidth = 3;
-                    ctx.lineCap = 'round';
-                    ctx.lineJoin = 'round';
-
-                    // V자 날개
-                    ctx.beginPath();
-                    ctx.moveTo(en.x, en.y);
-                    ctx.lineTo(cx, en.y + en.h);
-                    ctx.lineTo(en.x + en.w, en.y);
-                    ctx.stroke();
-
-                    // 에너지 코어
-                    ctx.fillStyle = '#fff';
-                    ctx.beginPath();
-                    ctx.arc(cx, en.y + en.h * 0.3, 4, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    // 잔상 글리치 효과
-                    ctx.lineWidth = 1;
-                    ctx.globalAlpha = 0.6;
-                    const glitchY = Math.sin(Date.now() / 50) * 3;
-                    ctx.beginPath();
-                    ctx.moveTo(en.x + 5, en.y - 10 + glitchY);
-                    ctx.lineTo(cx, en.y + en.h - 10 + glitchY);
-                    ctx.lineTo(en.x + en.w - 5, en.y - 10 + glitchY);
-                    ctx.stroke();
-                    ctx.globalAlpha = 1.0;
-
-                    ctx.shadowBlur = 0;
-                    ctx.restore(); // ★ [추가] 반드시 restore 후 리턴해야 함
-                    return;
-                }
-
-                // 3. HOMING: MK-III 사이버 소서 (UFO) - 원반형 기체
-                if (en.type === 'HOMING') {
-                    // 회전 애니메이션 (라이트가 뱅글뱅글 돔)
-                    const spin = Date.now() / 150;
-                    // 부유감 (둥실둥실)
-                    const hover = Math.sin(Date.now() / 300) * 3;
-
-                    ctx.save();
-                    ctx.translate(cx, cy + hover); // 부유 효과 적용
-
-                    // 1. 하단 추진체 글로우 (Engine Glow)
-                    ctx.shadowBlur = 20;
-                    ctx.shadowColor = '#00ffcc';
-                    ctx.fillStyle = 'rgba(0, 255, 204, 0.3)';
-                    ctx.beginPath();
-                    ctx.ellipse(0, 5, en.w / 2, en.h / 4, 0, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    // 2. 메인 원반 (Main Disk) - 금속성 다크 그레이
-                    ctx.shadowBlur = 10;
-                    ctx.fillStyle = '#2F4F4F'; // Dark Slate Gray
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, en.w / 2, en.h / 3.5, 0, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    // 원반 테두리 (Mint Rim)
-                    ctx.strokeStyle = '#00ffcc';
-                    ctx.lineWidth = 1.5;
-                    ctx.stroke();
-
-                    // 3. 콕핏 돔 (Cockpit Dome) - 밝은 민트 글래스
-                    ctx.fillStyle = '#00ffcc';
-                    ctx.shadowBlur = 15;
-                    ctx.beginPath();
-                    ctx.arc(0, -3, en.w / 5, Math.PI, 0); // 반원
-                    // 돔 밑단 연결
-                    ctx.bezierCurveTo(en.w / 5, 0, -en.w / 5, 0, -en.w / 5, -3);
-                    ctx.fill();
-
-                    // 4. 회전하는 항법등 (Rotating Lights)
-                    const lightCount = 4;
-                    const radius = en.w / 2.5; // 원반 가장자리
-
-                    for (let i = 0; i < lightCount; i++) {
-                        // 각도 계산 (시간에 따라 회전)
-                        const angle = spin + (i * (Math.PI * 2 / lightCount));
-
-                        // 원근감을 위해 y축 압축 (타원 궤도)
-                        const lx = Math.cos(angle) * radius;
-                        const ly = Math.sin(angle) * (radius * 0.4); // 0.4배로 납작하게
-
-                        // 뒤쪽에 있는 라이트는 어둡게 (깊이감 연출)
-                        const isBack = Math.sin(angle) < 0;
-                        ctx.fillStyle = isBack ? '#005544' : '#ccffff'; // 뒤:어두움, 앞:흰색
-
-                        ctx.beginPath();
-                        ctx.arc(lx, ly, isBack ? 1.5 : 2.5, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-
-                    ctx.restore();
-                    ctx.shadowBlur = 0;
-                    return;
-                }
-
-                // 4. SHOOTER: 헥스 캐논 (Hex-Cannon) - 수정됨
-                if (en.type === 'SHOOTER') {
-                    ctx.shadowBlur = 20; ctx.shadowColor = '#f44';
+                    ctx.shadowBlur = 15; ctx.shadowColor = '#d00';
                     const size = en.w / 2;
-
-                    // [수정] 좌표계 저장을 위해 save 호출
-                    ctx.save();
-                    ctx.translate(cx, cy);
 
                     // 육각형 본체
                     ctx.fillStyle = '#c22';
                     ctx.beginPath();
                     for (let i = 0; i < 6; i++) {
                         const angle = (Math.PI / 3) * i;
-                        const hx = Math.cos(angle) * size; // cx, cy 제거 (translate 했으므로)
+                        const hx = Math.cos(angle) * size; 
                         const hy = Math.sin(angle) * size;
                         i === 0 ? ctx.moveTo(hx, hy) : ctx.lineTo(hx, hy);
                     }
-                    ctx.closePath();
-                    ctx.fill();
+                    ctx.closePath(); ctx.fill();
 
-                    // 중앙 포신
-                    ctx.fillStyle = '#500';
-                    ctx.fillRect(-6, -5, 12, 15);
-
-                    // 에너지 코어
+                    // 중앙 포신 & 코어
+                    ctx.fillStyle = '#500'; ctx.fillRect(-6, -5, 12, 15);
                     ctx.fillStyle = en.shotsFired > 0 ? '#ff0' : '#f00';
-                    ctx.beginPath();
-                    ctx.arc(0, 0, 6, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
 
                     // 장갑 디테일
-                    ctx.strokeStyle = '#f88';
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(-size / 2, -size / 1.5);
-                    ctx.lineTo(size / 2, -size / 1.5);
-                    ctx.stroke();
+                    ctx.strokeStyle = '#f88'; ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.moveTo(-size / 2, -size / 1.5); ctx.lineTo(size / 2, -size / 1.5); ctx.stroke();
 
-                    // [CDSO 긴급 패치] 누락된 restore 추가!
-                    ctx.restore();
-
-                    ctx.shadowBlur = 0;
-                    return;
+                    ctx.restore(); return;
                 }
 
-                // 5. BOMBER: 플라즈마 기뢰 (Plasma Mine) - 수정됨
+                // 3. BOMBER (플라즈마 기뢰)
                 if (en.type === 'BOMBER') {
                     const pulse = 1 + Math.sin(Date.now() / 80) * 0.2;
-
                     ctx.shadowBlur = 30; ctx.shadowColor = '#f80';
-
-                    // [수정] 좌표계 저장
-                    ctx.save();
                     ctx.translate(cx, cy);
-                    ctx.rotate(Date.now() / 800); // 회전 효과 적용
+                    ctx.rotate(Date.now() / 800);
 
-                    // 가시 (Spikes)
+                    // 가시
                     ctx.fillStyle = '#f60';
                     for (let i = 0; i < 8; i++) {
                         const angle = (Math.PI / 4) * i;
-                        // 맥동 효과 적용
-                        const sx = Math.cos(angle) * (en.w / 1.5 * pulse);
-                        const sy = Math.sin(angle) * (en.w / 1.5 * pulse);
-
-                        ctx.beginPath();
-                        ctx.moveTo(0, 0);
-                        ctx.lineTo(sx, sy);
-                        ctx.strokeStyle = '#f80';
-                        ctx.lineWidth = 3;
-                        ctx.stroke();
+                        ctx.save(); ctx.rotate(angle);
+                        const sx = Math.cos(angle) * (en.w / 1.5 * pulse); // 맥동 보정
+                        ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(5, -(en.w / 1.4 * pulse)); ctx.lineTo(-5, -(en.w / 1.4 * pulse)); 
+                        ctx.strokeStyle = '#f80'; ctx.lineWidth = 3; ctx.stroke();
+                        ctx.restore();
                     }
+                    // 핵
+                    ctx.fillStyle = '#fa0'; ctx.beginPath(); ctx.arc(0, 0, en.w / 2.5, 0, Math.PI * 2); ctx.fill();
+                    // 점멸
+                    if (Math.floor(Date.now() / 100) % 2 === 0) { ctx.fillStyle = '#510'; ctx.beginPath(); ctx.arc(0, 0, en.w / 5, 0, Math.PI * 2); ctx.fill(); }
 
-                    // 핵 (Core)
-                    ctx.fillStyle = '#fa0';
-                    ctx.beginPath();
-                    ctx.arc(0, 0, en.w / 2.5, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.restore(); return;
+                }
 
-                    // 경고 점멸
-                    if (Math.floor(Date.now() / 100) % 2 === 0) {
-                        ctx.fillStyle = '#510';
-                        ctx.beginPath();
-                        ctx.arc(0, 0, en.w / 5, 0, Math.PI * 2);
-                        ctx.fill();
+                // 4. LASER_ENEMY (오징어) - [오류 수정됨] restore 추가!
+                if (en.type === 'LASER_ENEMY') {
+                    ctx.shadowBlur = 15; ctx.shadowColor = '#a0f'; ctx.fillStyle = '#c4f';
+                    const squidHeadR = en.w / 2; const legLen = en.h * 0.5;
+
+                    // 머리
+                    ctx.beginPath(); ctx.arc(cx, en.y + squidHeadR, squidHeadR, Math.PI, 0); 
+                    ctx.lineTo(en.x + en.w, en.y + en.h - legLen); ctx.lineTo(en.x, en.y + en.h - legLen); ctx.closePath(); ctx.fill();
+
+                    // 다리
+                    ctx.strokeStyle = '#c4f'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+                    const wiggle = Math.sin(Date.now() / 100) * 3;
+                    for (let i = 0; i < 4; i++) {
+                        const legX = en.x + (en.w / 4) * i + (en.w / 8); const legStartY = en.y + en.h - legLen;
+                        ctx.beginPath(); ctx.moveTo(legX, legStartY); 
+                        ctx.bezierCurveTo(legX + wiggle, legStartY + legLen / 2, legX - wiggle, legStartY + legLen, legX, legStartY + legLen); ctx.stroke();
                     }
+                    // 눈
+                    ctx.fillStyle = '#fff'; const eyeY = en.y + squidHeadR + 2;
+                    ctx.beginPath(); ctx.arc(cx - 5, eyeY, 3, 0, Math.PI * 2); ctx.fill(); 
+                    ctx.beginPath(); ctx.arc(cx + 5, eyeY, 3, 0, Math.PI * 2); ctx.fill();
 
-                    // [CDSO 긴급 패치] 누락된 restore 추가! 
-                    // 이 코드가 없어서 스테이지 9가 멈췄던 것입니다.
-                    ctx.restore();
-
+                    // 차징 이펙트
+                    if (en.locked && !en.fired) {
+                        const chargeProgress = Math.min((en.chargeTimer || 0) / 1.0, 1);
+                        ctx.fillStyle = '#f0f'; ctx.fillRect(en.x, en.y + en.h, en.w * chargeProgress, 3);
+                        ctx.fillStyle = '#f00'; ctx.beginPath(); ctx.arc(cx - 5, eyeY, 2, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(cx + 5, eyeY, 2, 0, Math.PI * 2); ctx.fill();
+                    }
+                    
                     ctx.shadowBlur = 0;
-                    return;
+                    ctx.restore(); return; // [필수] 복구 후 종료
                 }
 
+                // 5. NORMAL (데이터 크리스탈)
+                if (en.type === 'NORMAL') {
+                    ctx.shadowBlur = 15; ctx.shadowColor = en.color || '#0ff';
+                    const coreSize = en.w / 4;
+                    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(cx, en.y + en.h / 2 - coreSize); ctx.lineTo(cx + coreSize, en.y + en.h / 2); ctx.lineTo(cx, en.y + en.h / 2 + coreSize); ctx.lineTo(cx - coreSize, en.y + en.h / 2); ctx.fill();
+                    
+                    ctx.strokeStyle = en.color || '#0ff'; ctx.lineWidth = 2; 
+                    const angleOffset = Date.now() / 1000;
+                    for (let i = 0; i < 4; i++) {
+                        const angle = angleOffset + (Math.PI / 2 * i); const dist = en.w / 2.2; 
+                        const px = cx + Math.cos(angle) * dist; const py = cy + Math.sin(angle) * dist;
+                        ctx.beginPath(); ctx.moveTo(px, py - 5); ctx.lineTo(px + 5, py); ctx.lineTo(px, py + 5); ctx.lineTo(px - 5, py); ctx.closePath(); ctx.stroke();
+                    }
+                    ctx.shadowBlur = 0;
+                    ctx.restore(); return;
+                }
 
-                ctx.shadowBlur = 12;
-                ctx.shadowColor = isCold ? '#8ef' : '#f80';
-                ctx.fillStyle = isCold ? '#aef' : '#f64';
-                ctx.strokeStyle = isCold ? '#0ff' : '#f40';
-                ctx.lineWidth = 2;
+                // 6. ZIGZAG (스파크 윙)
+                if (en.type === 'ZIGZAG') {
+                    ctx.shadowBlur = 20; ctx.shadowColor = en.color || '#ff0'; ctx.strokeStyle = en.color || '#ff0'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+                    ctx.beginPath(); ctx.moveTo(en.x, en.y); ctx.lineTo(cx, en.y + en.h); ctx.lineTo(en.x + en.w, en.y); ctx.stroke();
+                    
+                    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, en.y + en.h * 0.3, 4, 0, Math.PI * 2); ctx.fill();
+                    
+                    ctx.lineWidth = 1; ctx.globalAlpha = 0.6; const glitchY = Math.sin(Date.now() / 50) * 3;
+                    ctx.beginPath(); ctx.moveTo(en.x + 5, en.y - 10 + glitchY); ctx.lineTo(cx, en.y + en.h - 10 + glitchY); ctx.lineTo(en.x + en.w - 5, en.y - 10 + glitchY); ctx.stroke();
+                    ctx.globalAlpha = 1.0; ctx.shadowBlur = 0;
+                    ctx.restore(); return;
+                }
 
-                ctx.beginPath();
+                // 7. HOMING (UFO)
+                if (en.type === 'HOMING') {
+                    const spin = Date.now() / 150; const hover = Math.sin(Date.now() / 300) * 3;
+                    ctx.translate(cx, cy + hover);
+                    
+                    // 엔진 글로우
+                    ctx.shadowBlur = 20; ctx.shadowColor = '#00ffcc'; ctx.fillStyle = 'rgba(0, 255, 204, 0.3)'; 
+                    ctx.beginPath(); ctx.ellipse(0, 5, en.w / 2, en.h / 4, 0, 0, Math.PI * 2); ctx.fill();
+                    
+                    // 본체
+                    ctx.shadowBlur = 10; ctx.fillStyle = '#2F4F4F'; 
+                    ctx.beginPath(); ctx.ellipse(0, 0, en.w / 2, en.h / 3.5, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.strokeStyle = '#00ffcc'; ctx.lineWidth = 1.5; ctx.stroke();
+                    
+                    // 콕핏
+                    ctx.fillStyle = '#00ffcc'; ctx.shadowBlur = 15; 
+                    ctx.beginPath(); ctx.arc(0, -3, en.w / 5, Math.PI, 0); ctx.bezierCurveTo(en.w / 5, 0, -en.w / 5, 0, -en.w / 5, -3); ctx.fill();
+                    
+                    // 라이트
+                    const lightCount = 4; const radius = en.w / 2.5;
+                    for (let i = 0; i < lightCount; i++) {
+                        const angle = spin + (i * (Math.PI * 2 / lightCount));
+                        const lx = Math.cos(angle) * radius; const ly = Math.sin(angle) * (radius * 0.4); 
+                        const isBack = Math.sin(angle) < 0;
+                        ctx.fillStyle = isBack ? '#005544' : '#ccffff'; ctx.beginPath(); ctx.arc(lx, ly, isBack ? 1.5 : 2.5, 0, Math.PI * 2); ctx.fill();
+                    }
+                    ctx.restore(); return;
+                }
+
+                // 8. MINION (보스 쫄몹)
                 if (en.type === 'MINION') {
-                    ctx.shadowColor = '#f0f';
-                    ctx.fillStyle = '#f0f';
+                    ctx.shadowBlur = 12; ctx.shadowColor = '#f0f'; ctx.fillStyle = '#f0f';
                     ctx.fillRect(en.x + 4, en.y + 4, en.w - 8, en.h - 8);
-                    return;
-                } else if (isCold) {
-                    if (en.type === 'HOMING') {
-                        const rot = Date.now() / 200;
-                        for (let i = 0; i < 6; i++) {
-                            const a = rot + i * Math.PI / 3;
-                            const px = cx + Math.cos(a) * 14;
-                            const py = cy + Math.sin(a) * 14;
-                            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-                        }
-                    } else if (en.type === 'ZIGZAG') {
-                        for (let i = 0; i < 8; i++) {
-                            const r = i % 2 === 0 ? 15 : 7;
-                            const a = i * Math.PI / 4;
-                            const px = cx + Math.cos(a) * r;
-                            const py = cy + Math.sin(a) * r;
-                            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-                        }
-                    } else {
-                        ctx.moveTo(cx, cy - 14);
-                        ctx.lineTo(cx + 11, cy);
-                        ctx.lineTo(cx, cy + 14);
-                        ctx.lineTo(cx - 11, cy);
-                    }
-                } else {
-                    const pulse = 1 + Math.sin(Date.now() / 100) * 0.12;
-                    if (en.type === 'HOMING') {
-                        const rot = Date.now() / 150;
-                        for (let i = 0; i < 10; i++) {
-                            const r = i % 2 === 0 ? 16 * pulse : 8;
-                            const a = rot + i * Math.PI / 5;
-                            const px = cx + Math.cos(a) * r;
-                            const py = cy + Math.sin(a) * r;
-                            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-                        }
-                    } else if (en.type === 'ZIGZAG') {
-                        for (let i = 0; i < 6; i++) {
-                            const r = i % 2 === 0 ? 15 * pulse : 6;
-                            const a = i * Math.PI / 3 - Math.PI / 2;
-                            const px = cx + Math.cos(a) * r;
-                            const py = cy + Math.sin(a) * r;
-                            i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
-                        }
-                    } else {
-                        ctx.moveTo(cx, cy + 14 * pulse);
-                        ctx.lineTo(cx - 13, cy - 9);
-                        ctx.lineTo(cx, cy - 4);
-                        ctx.lineTo(cx + 13, cy - 9);
-                    }
+                    ctx.restore(); return; // [필수] 복구 후 종료
                 }
-                ctx.closePath(); ctx.fill(); ctx.stroke();
+
+                // [안전 장치] 위에서 처리되지 않은 타입이 있을 경우를 대비한 복구
+                ctx.restore(); 
             }
 
             function drawLunarBoss(boss) {
                 const cx = boss.x + boss.w / 2, cy = boss.y + boss.h / 2;
+
+                // [신규] 오비탈 비트 (위성) 그리기
+                const orbitAngle = boss.orbitAngle || 0;
+                
+                // 궤도 라인 (선택 사항: 궤적이 흐릿하게 보임)
+                ctx.beginPath();
+                ctx.arc(cx, cy, 90, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                for(let i=0; i<2; i++) {
+                    const angle = orbitAngle + (i * Math.PI);
+                    const satX = cx + Math.cos(angle) * 90;
+                    const satY = cy + Math.sin(angle) * 90;
+                    
+                    // 위성 본체 (작고 빛나는 구체)
+                    ctx.shadowBlur = 15; ctx.shadowColor = '#fff';
+                    ctx.fillStyle = '#ccf';
+                    ctx.beginPath(); ctx.arc(satX, satY, 8, 0, Math.PI*2); ctx.fill();
+                    
+                    // 위성과 보스를 이어주는 에너지 라인
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = 'rgba(200, 200, 255, 0.4)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(satX, satY); ctx.stroke();
+                }
+
+
                 ctx.shadowBlur = 40; ctx.shadowColor = '#88f';
                 ctx.fillStyle = '#aaf';
                 ctx.beginPath(); ctx.arc(cx, cy, 45, 0, Math.PI * 2); ctx.fill();
@@ -3757,7 +3797,9 @@
                 if (gameState.survivalMode && !lvl.isBoss) {
                     ctx.fillStyle = '#f55'; ctx.font = 'bold 28px Orbitron'; ctx.textAlign = 'center';
                     ctx.shadowBlur = 15; ctx.shadowColor = '#f55';
-                    ctx.fillText('SURVIVE!', canvas.width / 2, 80); ctx.shadowBlur = 0;
+                    ctx.fillText('SURVIVE!', canvas.width / 2, canvas.height / 2); ctx.shadowBlur = 0;
+                    // 다른 텍스트 그리기 영향을 받지 않도록 베이스라인 초기화
+                    ctx.textBaseline = 'alphabetic';
                 }
 
                 // [삽입 코드]
@@ -4698,7 +4740,7 @@
                 // B. 파일럿 이름 복구
                 const saved = localStorage.getItem('lastPilotName');
                 const inp = document.getElementById('pilot-name-input');
-                if (saved && inp) inp.value = saved;
+                if (saved && inp) {inp.value = saved;}
 
                 // C. [이스터에그] 타이틀 로고 워프 시스템
                 const titleLogo = document.querySelector('#start-screen h1');
@@ -4743,6 +4785,93 @@
                     if (lb) lb.innerHTML = "<li style='color:#666;'>OFFLINE MODE</li>";
                 }
             });
+
+            // [CDSO FIX] HUD 상태 동기화 시스템 (이게 있어야 모드가 반영됩니다)
+            function updateHUD() {
+                const hudMode = document.getElementById('hud-mode');
+                const hudTimer = document.getElementById('hud-timer');
+                const hudProgress = document.getElementById('hud-progress');
+                const hudPanel = document.getElementById('hud-panel-v2');
+                
+                if (!hudMode || !hudPanel) return;
+
+                let modeText = "SYSTEM NORMAL";
+                let timer = 0;
+                let maxTime = 1;
+                let color = "#0ff"; // 기본 청록색
+
+                // 1. 상태 우선순위 체크 (가장 중요한 모드부터 체크)
+                if (gameState.isGlitchActive) {
+                    modeText = "⚠ SYSTEM ERROR ⚠";
+                    timer = gameState.glitchTimer;
+                    maxTime = 5.0;
+                    color = "#f00"; // 빨강
+                } 
+                else if (gameState.isGhostActive) {
+                    modeText = "👻 GHOST PROTOCOL";
+                    timer = gameState.ghostTimer;
+                    maxTime = 10.0;
+                    color = "#0f0"; // 녹색
+                }
+                else if (gameState.isVoidActive) {
+                    modeText = "⚫ VOID HOLE";
+                    timer = gameState.voidTimer;
+                    maxTime = 10.0;
+                    color = "#a0f"; // 보라색
+                }
+                else if (gameState.timeScale < 1.0) {
+                    modeText = "⏳ TIME SLOW";
+                    timer = gameState.slowTimer;
+                    maxTime = 10.0;
+                    color = "#0ff"; // 청록
+                }
+                // ▼▼▼ [추가된 부분] 실드 모드 체크 ▼▼▼
+                else if (gameState.skillMode === 'SHIELD') {
+                    modeText = "🛡 SHIELD";
+                    timer = gameState.skillTimer;
+                    maxTime = 5.0; // 실드 지속시간 (기본 5초)
+                    color = "#0f0"; // 녹색
+                }
+                else if (gameState.isLaserMode) {
+                    modeText = "⚡ LASER CANNON";
+                    timer = gameState.laserTimer;
+                    maxTime = 3.0;
+                    color = "#ff0"; // 노랑
+                }
+                else if (gameState.isHomingMode) {
+                    modeText = "🚀 HOMING MISSILE";
+                    timer = gameState.homingTimer;
+                    maxTime = 7.0;
+                    color = "#c4f"; // 연보라
+                }
+                else if (gameState.isTransformed) {
+                    modeText = "✨ GOLDEN";
+                    timer = 1; maxTime = 1; 
+                    color = "#ffd700";
+                }
+
+
+                // 2. DOM 업데이트 (화면에 반영)
+                hudMode.textContent = modeText;
+                hudMode.style.textShadow = `0 0 5px ${color}`;
+                hudPanel.style.borderLeftColor = color;
+                
+                // 3. 타이머 & 게이지 바 업데이트
+                if (modeText !== "SYSTEM NORMAL") {
+                    // 타이머 텍스트
+                    hudTimer.textContent = timer > 0 ? timer.toFixed(1) + "s" : "";
+                    hudTimer.style.color = color;
+
+                    // 게이지 바 길이 및 색상
+                    const percent = Math.max(0, (timer / maxTime) * 100);
+                    hudProgress.style.width = percent + "%";
+                    hudProgress.style.background = color;
+                    hudProgress.style.boxShadow = `0 0 8px ${color}`;
+                } else {
+                    hudTimer.textContent = "";
+                    hudProgress.style.width = "0%";
+                }
+            }
 
 
         </script>
