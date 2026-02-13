@@ -900,7 +900,7 @@
 
             let gameState = {
                 isRunning: false, score: 0,
-                player: { x: 215, y: 720, w: 20, h: 20, speed: 750 },
+                player: { x: 215, y: 720, w: 20, h: 20, speed: 900 },
                 enemies: [], items: [], bullets: [], keys: {},
                 skillMode: 'NORMAL', skillTimer: 0,
                 lives: 3, maxLives: 3, isInvincible: false, invincibilityTimer: 0,
@@ -1572,6 +1572,8 @@
                 gameState.joystick.stickY = ty;
                 gameState.joystick.vecX = 0;
                 gameState.joystick.vecY = 0;
+                gameState.joystick.rawX = tx;
+                gameState.joystick.rawY = ty;
             }, { passive: false });
 
             canvas.addEventListener('touchmove', e => {
@@ -1587,9 +1589,11 @@
                 const ty = (touch.clientY - rect.top) * scaleY;
 
                 // 조이스틱 헤드 이동 및 거리 제한 (최대 50px)
-                const maxDist = 30;
+                const maxDist = 20;
                 const dx = tx - gameState.joystick.baseX;
                 const dy = ty - gameState.joystick.baseY;
+                gameState.joystick.rawX = tx;
+                gameState.joystick.rawY = ty;
                 const dist = Math.sqrt(dx * dx + dy * dy);
 
                 // 정규화된 벡터 계산 (이동 방향)
@@ -2826,21 +2830,23 @@
                     const dir = gameState.isGlitchActive ? -1 : 1;
 
                     if (gameState.controlMode === 'JOYSTICK') {
-                        // [A] 가상 조이스틱 방식
+                        // [A] 조이스틱 모드 (속도는 3단계에서 별도 상향)
                         gameState.player.x += gameState.joystick.vecX * gameState.player.speed * dt * dir;
                         const nextY = gameState.player.y + gameState.joystick.vecY * gameState.player.speed * dt * dir;
                         if (nextY > topLimit && nextY < bottomLimit) gameState.player.y = nextY;
                     } else {
-                        // [B] 실시간 터치 트래킹 (추격 방식)
-                        // touchmove에서 갱신되는 stickX, stickY 좌표를 목표지점으로 설정
-                        const targetX = gameState.joystick.stickX - (gameState.player.w / 2);
-                        const targetY = gameState.joystick.stickY - (gameState.player.h / 2);
+                        // [B] 트래킹 모드 (절대 좌표 추적 로직)
+                        // rawX, rawY를 사용하여 화면 전체를 제어. Y축은 손가락 위쪽에 기체가 오도록 -50 보정.
+                        const targetX = gameState.joystick.rawX - (gameState.player.w / 2);
+                        const targetY = gameState.joystick.rawY - (gameState.player.h / 2) - 50; 
                         
-                        // 민감도 보정 (Lerp 기법): 기체가 목표 지점으로 부드럽지만 아주 빠르게 따라붙음
-                        const followSpeed = 20; // 이 수치가 높을수록 손가락에 더 딱 붙어 움직임
+                        // 보간 속도(Lerp). 20이면 손가락에 거의 즉각적으로 달라붙음.
+                        const followSpeed = 20; 
+                        
                         gameState.player.x += (targetX - gameState.player.x) * followSpeed * dt * dir;
-                        
                         const nextY = gameState.player.y + (targetY - gameState.player.y) * followSpeed * dt * dir;
+                        
+                        // Y축 경계값 보호
                         if (nextY > topLimit && nextY < bottomLimit) {
                             gameState.player.y = nextY;
                         }
