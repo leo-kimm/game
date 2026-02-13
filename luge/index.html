@@ -1570,17 +1570,27 @@
           </div>
         </div>
 
-        <div class="hud-right">
+        <div class="hud-right" style="flex-direction: column; align-items: flex-end;">
           <button class="hud-btn" id="btnSave" title="Save Setup">💾</button>
+          
           <button class="hud-btn" id="btnLoad" title="Load Setup">📂</button>
           <button class="hud-btn" id="btnHome" title="Home">🏠</button>
+          <button class="hud-btn" id="btnReplay" title="Replay">🎥</button>
         </div>
+      </div>
+      <div id="replayPanel" class="toolbar hidden" style="justify-content: center; align-items: center; gap: 20px; z-index: 20;">
+        <button id="btnReplayPlayPause" class="tool-btn-square" style="font-size: 20px; flex: none;">⏸</button>
+        
+        <div class="eraser-slider-container" style="flex: 1; max-width: 250px;">
+          <span class="eraser-slider-label" style="color: #00ffcc;">SPEED: <span id="replaySpeedLabel">1.0</span>x</span>
+          <input type="range" class="eraser-slider" id="replaySlider" min="0.1" max="2.0" step="0.1" value="1.0">
+        </div>
+        
+        <button id="btnReplayExit" class="tool-btn-square" style="background: linear-gradient(135deg, #742a2a, #5a2020); font-size: 14px; flex: none; width: auto; padding: 0 15px;">⏹ EXIT</button>
       </div>
 
 
-
-
-      <div class="toolbar">
+      <div id="mainToolbar" class="toolbar">
         <button id="btnStart" class="tool-btn play-btn">Start</button>
 
         <div class="tool-container">
@@ -1878,6 +1888,10 @@
         jumpInkUsed: 0,
         eraserSize: 15,
         showEraserPreview: false,
+
+        // ▼▼▼ [신규 추가] 리플레이 시스템 변수 ▼▼▼
+        timeScale: 1.0,      // 시간 배율 (0.1 ~ 2.0)
+        isPaused: false,     // 리플레이 일시정지 상태
 
         // ▼▼▼ [결정론적 시뮬레이션] 상태 변수 ▼▼▼
         seed: 0,             // PRNG 시드 (= stage * 1000 + 7)
@@ -2843,6 +2857,26 @@
             );
           }
 
+          // ==========================================
+          // [데이터 무결성 방어] Terminal Velocity & NaN Guard
+          // ==========================================
+          
+          // 1. 우주적 절대 속도 제한 (화면 밖으로 1프레임만에 사라지는 것 방지)
+          const ABSOLUTE_MAX_SPEED = 1800; // px/s (필요에 따라 조절)
+          const currentSpeed = Math.hypot(player.vx, player.vy);
+          if (currentSpeed > ABSOLUTE_MAX_SPEED) {
+             player.vx = (player.vx / currentSpeed) * ABSOLUTE_MAX_SPEED;
+             player.vy = (player.vy / currentSpeed) * ABSOLUTE_MAX_SPEED;
+          }
+
+          // 2. NaN (Not a Number) 오염 방지 및 즉각적인 시스템 복구
+          if (isNaN(player.x) || isNaN(player.y) || isNaN(player.vx) || isNaN(player.vy)) {
+             console.error("[Data Anomaly] Physics Vector Explosion detected. Coords turned NaN.");
+             fail('Physics Anomaly: Too much pressure!'); 
+             return;
+          }
+
+
           // 6. 별 수집
           for (const s of level.stars) {
             if (!s.taken && Math.hypot(player.x - s.x, player.y - s.y) < 22) {
@@ -3398,6 +3432,12 @@
       // GAME FLOW
       // ============================================
       function win() {
+        // [리플레이 방어] 리플레이 중 골인하면 시뮬레이션만 정지시키고 리턴
+        if (state.mode === 'replay') {
+            state.isPaused = true;
+            return;
+          }
+
         state.mode = 'win';
         state.timerRunning = false;
 
@@ -3469,6 +3509,12 @@
       }
 
       async function fail(reason) {
+        // [리플레이 방어] 리플레이 중 사망하면 시뮬레이션만 정지시키고 리턴
+        if (state.mode === 'replay') {
+            state.isPaused = true;
+            return;
+          }
+
         state.mode = 'fail';
         state.timerRunning = false;
 
@@ -3812,6 +3858,47 @@
       // ============================================
       document.getElementById('btnUndo').onclick = undo;
 
+      if (state.mode === 'run') return; // 실제 게임 진행 중에는 리플레이 진입 불가
+        
+        // 1. UI 스위칭
+        document.getElementById('mainToolbar').style.display = 'none';
+        document.getElementById('replayPanel').style.display = 'flex';
+        
+        // 2. 상태 초기화
+        state.mode = 'replay';
+        state.isPaused = false;
+        document.getElementById('btnReplayPlayPause').innerText = '⏸';
+        state.timeScale = parseFloat(document.getElementById('replaySlider').value);
+        
+        // 3. [데이터 무결성] 결정론적 시뮬레이션을 위한 완벽한 환경 리셋
+        resetPlayer(); // 위치, 타이머 리셋
+        state.rng = mulberry32(state.seed); // ★ 파티클 방향까지 재현하기 위한 난수 시드 리셋
+        state.timerRunning = true;
+        closeAllPopups();
+      };
+
+      document.getElementById('btnReplayExit').onclick = function () {
+        // 1. UI 복구
+        document.getElementById('mainToolbar').style.display = 'flex';
+        document.getElementById('replayPanel').style.display = 'none';
+        
+        // 2. 변수 롤백 및 빌드 모드 복귀
+        state.timeScale = 1.0;
+        state.isPaused = false;
+        softReset(); // 다시 선을 그릴 수 있는 상태로 완벽 복구
+      };
+
+      document.getElementById('btnReplayPlayPause').onclick = function () {
+        state.isPaused = !state.isPaused;
+        this.innerText = state.isPaused ? '▶' : '⏸';
+      };
+
+      document.getElementById('replaySlider').oninput = function () {
+        state.timeScale = parseFloat(this.value);
+        document.getElementById('replaySpeedLabel').innerText = this.value.toFixed(1);
+      };
+
+
       // ============================================
       // HALL OF FAME (명예의 전당)
       // ============================================
@@ -3972,8 +4059,15 @@
         lastTime = now;
 
         if (state.screen === 'game') {
-          if (state.mode === 'run') {
-            accumulator += frameDt;
+          if ((state.mode === 'run' || state.mode === 'replay') && !state.isPaused) {
+            
+            // 리플레이 모드일 경우 현실 시간에 timeScale(예: 0.1배)을 곱함
+            let currentDt = frameDt;
+            if (state.mode === 'replay') {
+               currentDt *= state.timeScale;
+            }
+
+            accumulator += currentDt;
 
             // Safety Valve: 저사양 기기에서 accumulator 폭주 방지
             // MAX_ACCUMULATOR(≈83.3ms = 5 * FIXED_DT)로 상한 설정.
@@ -3988,14 +4082,14 @@
               accumulator -= FIXED_DT;
               steps++;
               // win/fail 발생 시 즉시 중단
-              if (state.mode !== 'run') {
+              if (state.mode !== 'run' && state.mode !== 'replay') {
                 accumulator = 0;
                 break;
               }
             }
 
             if (state.timerRunning) {
-              state.timer += frameDt;
+              state.timer += currentDt; // 타이머도 배속에 맞춰 천천히 올라감
               updateUI();
             }
           }
