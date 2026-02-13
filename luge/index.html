@@ -1572,7 +1572,7 @@
 
         <div class="hud-right" style="flex-direction: column; align-items: flex-end;">
           <button class="hud-btn" id="btnSave" title="Save Setup">💾</button>
-          
+
           <button class="hud-btn" id="btnLoad" title="Load Setup">📂</button>
           <button class="hud-btn" id="btnHome" title="Home">🏠</button>
           <button class="hud-btn" id="btnReplay" title="Replay">🎥</button>
@@ -2258,7 +2258,6 @@
             const serverUid = userSnap.data().uid;
 
             if (serverUid === myUid) {
-              // ▼ UID 일치 → 동일인 → 진행 허용
               currentUserNickname = inputNick;
               localStorage.setItem('luge_nickname', currentUserNickname);
               document.getElementById('displayNick').innerText = currentUserNickname;
@@ -2267,7 +2266,6 @@
               renderLevelGrid();
               updateHofButtonVisibility();
             } else {
-              // ▼ UID 불일치 → 차단 (닉네임 선점 방지)
               errorMsg.innerText = "이미 사용 중인 닉네임입니다 😢";
               errorMsg.style.visibility = 'visible';
               nickInput.style.borderColor = 'var(--olympic-red)';
@@ -2277,14 +2275,12 @@
             return;
           }
 
-          // [통과] 사용 가능한 닉네임 → Firestore에 UID 매핑 저장
           await setDoc(userDocRef, {
             uid: myUid,
             nickname: inputNick,
             createdAt: serverTimestamp()
           });
 
-          // [성공 처리] 로컬 저장 및 화면 전환
           currentUserNickname = inputNick;
           localStorage.setItem('luge_nickname', currentUserNickname);
 
@@ -3858,7 +3854,9 @@
       // ============================================
       document.getElementById('btnUndo').onclick = undo;
 
-      if (state.mode === 'run') return; // 실제 게임 진행 중에는 리플레이 진입 불가
+
+      document.getElementById('btnReplay').onclick = function () {
+        if (state.mode === 'run') return; // 실제 게임 진행 중에는 리플레이 진입 불가
         
         // 1. UI 스위칭
         document.getElementById('mainToolbar').style.display = 'none';
