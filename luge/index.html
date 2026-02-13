@@ -1577,13 +1577,19 @@
           <button class="hud-btn" id="btnReplay" title="Replay">🎥</button>
         </div>
       </div>
-      <div id="replayPanel" class="toolbar" style="display: none; justify-content: center; align-items: center; gap: 15px; z-index: 20; background: rgba(20, 30, 50, 0.85); backdrop-filter: blur(8px); border-radius: 25px; padding: 10px 25px; border: 1px solid rgba(0, 255, 204, 0.15); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);">
+      <div id="replayPanel" class="toolbar" style="display: none; justify-content: center; align-items: center; gap: 8px; z-index: 20; background: rgba(20, 30, 50, 0.85); backdrop-filter: blur(8px); border-radius: 25px; padding: 10px 15px; border: 1px solid rgba(0, 255, 204, 0.15); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); width: 100%; max-width: 400px; margin: 0 auto;">
         
-        <button id="btnReplayPlayPause" style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #00ffcc, #0088ff); border: none; font-size: 22px; color: #121212; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 15px rgba(0, 255, 204, 0.6); cursor: pointer; transition: transform 0.1s ease-in-out;">▶</button>
+        <button id="btnReplayPlayPause" style="width: 44px; height: 44px; flex: none; border-radius: 50%; background: linear-gradient(135deg, #00ffcc, #0088ff); border: none; font-size: 18px; color: #121212; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 15px rgba(0, 255, 204, 0.6); cursor: pointer; transition: transform 0.1s ease-in-out;">▶</button>
         
-        <button id="btnReplaySpeed" style="height: 40px; padding: 0 15px; background: rgba(0,0,0,0.4); border: 2px solid #00ffcc; border-radius: 12px; color: #00ffcc; font-family: 'Courier New', monospace; font-size: 16px; font-weight: bold; box-shadow: inset 0 0 8px rgba(0,255,204,0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; min-width: 80px; transition: all 0.2s;">1.0x</button>
+        <div id="replaySpeedControls" style="display: flex; gap: 4px; background: rgba(0,0,0,0.5); padding: 4px; border-radius: 12px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
+          <button class="speed-btn" data-speed="0.2" style="--ring-color: #0081C8; color: white; border: 2px solid #0081C8; background: transparent; border-radius: 8px; width: 30px; height: 30px; font-weight: bold; font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer; transition: 0.2s;">.2</button>
+          <button class="speed-btn" data-speed="0.4" style="--ring-color: #FCB131; color: white; border: 2px solid #FCB131; background: transparent; border-radius: 8px; width: 30px; height: 30px; font-weight: bold; font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer; transition: 0.2s;">.4</button>
+          <button class="speed-btn" data-speed="0.6" style="--ring-color: #ffffff; color: white; border: 2px solid #ffffff; background: transparent; border-radius: 8px; width: 30px; height: 30px; font-weight: bold; font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer; transition: 0.2s;">.6</button>
+          <button class="speed-btn" data-speed="0.8" style="--ring-color: #00A651; color: white; border: 2px solid #00A651; background: transparent; border-radius: 8px; width: 30px; height: 30px; font-weight: bold; font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer; transition: 0.2s;">.8</button>
+          <button class="speed-btn" data-speed="1.0" style="--ring-color: #EE334E; color: #EE334E; border: 2px solid #EE334E; background: rgba(255,255,255,0.1); box-shadow: 0 0 10px #EE334E, inset 0 0 5px #EE334E; border-radius: 8px; width: 30px; height: 30px; font-weight: bold; font-family: 'Courier New', monospace; font-size: 13px; cursor: pointer; transition: 0.2s;">1x</button>
+        </div>
         
-        <button id="btnReplayExit" style="height: 40px; padding: 0 20px; background: linear-gradient(135deg, #ff5555, #aa0000); border: none; border-radius: 12px; color: white; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255, 50, 50, 0.3); transition: all 0.2s;">⏹ EXIT</button>
+        <button id="btnReplayExit" style="height: 40px; padding: 0 12px; background: linear-gradient(135deg, #ff5555, #aa0000); border: none; border-radius: 12px; color: white; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255, 50, 50, 0.3); transition: all 0.2s;">⏹ EXIT</button>
       </div>
 
       <div id="mainToolbar" class="toolbar">
@@ -3854,29 +3860,43 @@
       // ============================================
       // REPLAY SYSTEM EVENT HANDLERS (수정됨)
       // ============================================
+      // [데이터 시각화 헬퍼] 선택된 배속 버튼만 네온 발광 효과 적용
+      function updateSpeedUI(targetSpeed) {
+        state.timeScale = targetSpeed;
+        const speedBtns = document.querySelectorAll('.speed-btn');
+        speedBtns.forEach(btn => {
+          const ringColor = btn.style.getPropertyValue('--ring-color').trim();
+          if (parseFloat(btn.dataset.speed) === targetSpeed) {
+            btn.style.boxShadow = `0 0 10px ${ringColor}, inset 0 0 5px ${ringColor}`;
+            btn.style.backgroundColor = 'rgba(255,255,255,0.1)';
+            btn.style.color = ringColor;
+          } else {
+            btn.style.boxShadow = 'none';
+            btn.style.backgroundColor = 'transparent';
+            btn.style.color = 'white';
+          }
+        });
+      }
+
       document.getElementById('btnReplay').onclick = function () {
         if (state.mode === 'run') return; // 게임 진행 중 진입 불가
 
-        // 1. [데이터 검증] 그려진 선이 없으면 리플레이 진입 차단
+        // 그려진 선이 없으면 차단 (무결성 확보)
         if (strokes.length === 0) {
           showToast('데이터가 없습니다. 먼저 선을 그리고 플레이하세요.');
           return;
         }
         
-        // 2. UI 스위칭
         document.getElementById('mainToolbar').style.display = 'none';
         document.getElementById('replayPanel').style.display = 'flex';
         
-        // 3. 상태 초기화 (자동재생 방지: isPaused = true)
         state.mode = 'replay';
         state.isPaused = true; 
         document.getElementById('btnReplayPlayPause').innerText = '▶';
         
-        // 4. 배속 초기화 (항상 1.0x로 시작)
-        state.timeScale = 1.0;
-        document.getElementById('btnReplaySpeed').innerText = '1.0x';
+        // 진입 시 항상 1.0배속(빨간색 링)으로 데이터 리셋
+        updateSpeedUI(1.0);
         
-        // 5. 결정론적 시뮬레이션을 위한 환경 리셋
         resetPlayer(); 
         state.rng = mulberry32(state.seed); 
         state.timerRunning = true;
@@ -3884,7 +3904,6 @@
       };
 
       document.getElementById('btnReplayExit').onclick = function () {
-        // UI 복구 및 상태 롤백
         document.getElementById('mainToolbar').style.display = 'flex';
         document.getElementById('replayPanel').style.display = 'none';
         
@@ -3894,20 +3913,17 @@
       };
 
       document.getElementById('btnReplayPlayPause').onclick = function () {
-        // 재생/일시정지 토글
         state.isPaused = !state.isPaused;
         this.innerText = state.isPaused ? '▶' : '⏸';
       };
 
-      // [신규] 배율 조절 토글 로직 (1.0 -> 0.8 -> 0.6 -> 0.4 -> 0.2 -> 1.0 순환)
-      document.getElementById('btnReplaySpeed').onclick = function () {
-        let speed = state.timeScale - 0.2;
-        // 부동소수점 연산 오차 방지를 위해 0.1보다 작아지면 1.0으로 리셋
-        if (speed < 0.1) speed = 1.0; 
-        
-        state.timeScale = parseFloat(speed.toFixed(1));
-        this.innerText = state.timeScale.toFixed(1) + 'x';
-      };
+      // 5개 분리형 배속 버튼에 클릭 이벤트 일괄 바인딩
+      document.querySelectorAll('.speed-btn').forEach(btn => {
+        btn.onclick = function() {
+          const targetSpeed = parseFloat(this.dataset.speed);
+          updateSpeedUI(targetSpeed);
+        };
+      });
 
 
       // ============================================
