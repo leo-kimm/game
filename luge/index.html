@@ -1578,13 +1578,10 @@
           <button class="hud-btn" id="btnReplay" title="Replay">🎥</button>
         </div>
       </div>
-      <div id="replayPanel" class="toolbar hidden" style="justify-content: center; align-items: center; gap: 20px; z-index: 20;">
-        <button id="btnReplayPlayPause" class="tool-btn-square" style="font-size: 20px; flex: none;">⏸</button>
+      <div id="replayPanel" class="toolbar" style="display: none; justify-content: center; align-items: center; gap: 20px; z-index: 20;">
+        <button id="btnReplayPlayPause" class="tool-btn-square" style="font-size: 20px; flex: none;">▶</button>
         
-        <div class="eraser-slider-container" style="flex: 1; max-width: 250px;">
-          <span class="eraser-slider-label" style="color: #00ffcc;">SPEED: <span id="replaySpeedLabel">1.0</span>x</span>
-          <input type="range" class="eraser-slider" id="replaySlider" min="0.1" max="2.0" step="0.1" value="1.0">
-        </div>
+        <button id="btnReplaySpeed" class="tool-btn-square" style="width: 80px; flex: none; font-family: monospace; font-size: 16px; color: #00ffcc;">1.0x</button>
         
         <button id="btnReplayExit" class="tool-btn-square" style="background: linear-gradient(135deg, #742a2a, #5a2020); font-size: 14px; flex: none; width: auto; padding: 0 15px;">⏹ EXIT</button>
       </div>
@@ -3855,45 +3852,62 @@
       document.getElementById('btnUndo').onclick = undo;
 
 
+      // ============================================
+      // REPLAY SYSTEM EVENT HANDLERS (수정됨)
+      // ============================================
       document.getElementById('btnReplay').onclick = function () {
-        if (state.mode === 'run') return; // 실제 게임 진행 중에는 리플레이 진입 불가
+        if (state.mode === 'run') return; // 게임 진행 중 진입 불가
+
+        // 1. [데이터 검증] 그려진 선이 없으면 리플레이 진입 차단
+        if (strokes.length === 0) {
+          showToast('데이터가 없습니다. 먼저 선을 그리고 플레이하세요.');
+          return;
+        }
         
-        // 1. UI 스위칭
+        // 2. UI 스위칭
         document.getElementById('mainToolbar').style.display = 'none';
         document.getElementById('replayPanel').style.display = 'flex';
         
-        // 2. 상태 초기화
+        // 3. 상태 초기화 (자동재생 방지: isPaused = true)
         state.mode = 'replay';
-        state.isPaused = false;
-        document.getElementById('btnReplayPlayPause').innerText = '⏸';
-        state.timeScale = parseFloat(document.getElementById('replaySlider').value);
+        state.isPaused = true; 
+        document.getElementById('btnReplayPlayPause').innerText = '▶';
         
-        // 3. [데이터 무결성] 결정론적 시뮬레이션을 위한 완벽한 환경 리셋
-        resetPlayer(); // 위치, 타이머 리셋
-        state.rng = mulberry32(state.seed); // ★ 파티클 방향까지 재현하기 위한 난수 시드 리셋
+        // 4. 배속 초기화 (항상 1.0x로 시작)
+        state.timeScale = 1.0;
+        document.getElementById('btnReplaySpeed').innerText = '1.0x';
+        
+        // 5. 결정론적 시뮬레이션을 위한 환경 리셋
+        resetPlayer(); 
+        state.rng = mulberry32(state.seed); 
         state.timerRunning = true;
         closeAllPopups();
       };
 
       document.getElementById('btnReplayExit').onclick = function () {
-        // 1. UI 복구
+        // UI 복구 및 상태 롤백
         document.getElementById('mainToolbar').style.display = 'flex';
         document.getElementById('replayPanel').style.display = 'none';
         
-        // 2. 변수 롤백 및 빌드 모드 복귀
         state.timeScale = 1.0;
         state.isPaused = false;
-        softReset(); // 다시 선을 그릴 수 있는 상태로 완벽 복구
+        softReset(); 
       };
 
       document.getElementById('btnReplayPlayPause').onclick = function () {
+        // 재생/일시정지 토글
         state.isPaused = !state.isPaused;
         this.innerText = state.isPaused ? '▶' : '⏸';
       };
 
-      document.getElementById('replaySlider').oninput = function () {
-        state.timeScale = parseFloat(this.value);
-        document.getElementById('replaySpeedLabel').innerText = this.value.toFixed(1);
+      // [신규] 배율 조절 토글 로직 (1.0 -> 0.8 -> 0.6 -> 0.4 -> 0.2 -> 1.0 순환)
+      document.getElementById('btnReplaySpeed').onclick = function () {
+        let speed = state.timeScale - 0.2;
+        // 부동소수점 연산 오차 방지를 위해 0.1보다 작아지면 1.0으로 리셋
+        if (speed < 0.1) speed = 1.0; 
+        
+        state.timeScale = parseFloat(speed.toFixed(1));
+        this.innerText = state.timeScale.toFixed(1) + 'x';
       };
 
 
