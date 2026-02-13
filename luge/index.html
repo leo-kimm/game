@@ -1572,20 +1572,19 @@
 
         <div class="hud-right" style="flex-direction: column; align-items: flex-end;">
           <button class="hud-btn" id="btnSave" title="Save Setup">💾</button>
-
           <button class="hud-btn" id="btnLoad" title="Load Setup">📂</button>
           <button class="hud-btn" id="btnHome" title="Home">🏠</button>
           <button class="hud-btn" id="btnReplay" title="Replay">🎥</button>
         </div>
       </div>
-      <div id="replayPanel" class="toolbar" style="display: none; justify-content: center; align-items: center; gap: 20px; z-index: 20;">
-        <button id="btnReplayPlayPause" class="tool-btn-square" style="font-size: 20px; flex: none;">▶</button>
+      <div id="replayPanel" class="toolbar" style="display: none; justify-content: center; align-items: center; gap: 15px; z-index: 20; background: rgba(20, 30, 50, 0.85); backdrop-filter: blur(8px); border-radius: 25px; padding: 10px 25px; border: 1px solid rgba(0, 255, 204, 0.15); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);">
         
-        <button id="btnReplaySpeed" class="tool-btn-square" style="width: 80px; flex: none; font-family: monospace; font-size: 16px; color: #00ffcc;">1.0x</button>
+        <button id="btnReplayPlayPause" style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #00ffcc, #0088ff); border: none; font-size: 22px; color: #121212; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 15px rgba(0, 255, 204, 0.6); cursor: pointer; transition: transform 0.1s ease-in-out;">▶</button>
         
-        <button id="btnReplayExit" class="tool-btn-square" style="background: linear-gradient(135deg, #742a2a, #5a2020); font-size: 14px; flex: none; width: auto; padding: 0 15px;">⏹ EXIT</button>
+        <button id="btnReplaySpeed" style="height: 40px; padding: 0 15px; background: rgba(0,0,0,0.4); border: 2px solid #00ffcc; border-radius: 12px; color: #00ffcc; font-family: 'Courier New', monospace; font-size: 16px; font-weight: bold; box-shadow: inset 0 0 8px rgba(0,255,204,0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; min-width: 80px; transition: all 0.2s;">1.0x</button>
+        
+        <button id="btnReplayExit" style="height: 40px; padding: 0 20px; background: linear-gradient(135deg, #ff5555, #aa0000); border: none; border-radius: 12px; color: white; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255, 50, 50, 0.3); transition: all 0.2s;">⏹ EXIT</button>
       </div>
-
 
       <div id="mainToolbar" class="toolbar">
         <button id="btnStart" class="tool-btn play-btn">Start</button>
@@ -2812,8 +2811,8 @@
         ).length > 0;
 
         for (let sub = 0; sub < subSteps; sub++) {
-          // 종료 조건 체크 (서브스텝 도중 win/fail 발생 시 중단)
-          if (state.mode !== 'run') return;
+          // [수정됨] 종료 조건에 replay 모드 허용 (결정론적 재현 보장)
+          if (state.mode !== 'run' && state.mode !== 'replay') return;
 
           // 1. 중력 적용
           player.vy += PHYS.gravity * subDt;
