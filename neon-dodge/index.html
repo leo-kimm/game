@@ -2310,6 +2310,25 @@
                     dt *= 5.0; // 시간 가속
                 }
 
+                // ▼▼▼ [CDSO FIX: 이동 로직 수정 시작] ▼▼▼
+                // 기존 문제: 방향만 바꾸면 연산 오차로 벽에 끼임(Stuck) 발생
+                // 해결책: 벽에 닿으면 위치를 강제로 안쪽으로 밀어넣고(Clamping) 방향 전환
+                
+                boss.x += boss.moveDir * 120 * dt;
+
+                // 1. 왼쪽 벽 충돌 처리
+                if (boss.x <= 0) {
+                    boss.x = 0;        // 위치 강제 보정 (핵심)
+                    boss.moveDir = 1;  // 오른쪽으로 이동 강제
+                } 
+                // 2. 오른쪽 벽 충돌 처리
+                else if (boss.x >= canvas.width - boss.w) {
+                    boss.x = canvas.width - boss.w; // 위치 강제 보정 (핵심)
+                    boss.moveDir = -1;              // 왼쪽으로 이동 강제
+                }
+
+
+
 
 
                 boss.x += boss.moveDir * 120 * dt;
