@@ -41,11 +41,14 @@
       left: 50%;
       transform: translate(-50%, -50%);
       width: min(100vw, 56.25vh);
-      height: min(177.78vw, 100vh);
+      
+      /* ▼ 모바일 브라우저 주소창 변화에 실시간 대응하는 동적 높이 데이터 */
+      height: min(177.78vw, 100dvh); 
+      
       max-width: 450px;
       max-height: 800px;
-      /* 눈 덮인 설산 테마 CSS 그라디언트
-         로컬 이미지 사용 시: background-image: url('assets/bg_snow.jpg'); 로 교체 */
+      
+      /* ▼ 사용자님의 원본 시각화 데이터 완전 보존 */
       background:
         linear-gradient(180deg,
           rgba(15, 23, 42, 0.4) 0%,
@@ -65,6 +68,10 @@
       border-radius: 20px;
       overflow: hidden;
       box-shadow: 0 0 60px rgba(0, 129, 200, 0.3), 0 0 120px rgba(252, 177, 49, 0.1);
+
+      /* ▼ 브라우저 고유의 제스처 개입 차단 (터치 데이터 독점권 확보) */
+      touch-action: none; 
+      overscroll-behavior: none; 
     }
 
     canvas {
@@ -312,8 +319,10 @@
       flex-direction: column;
       justify-content: space-between;
       padding: 10px;
-      padding-bottom: 72px;
-      /* ▼ 툴바 겹침 방지: 하단 여백 확보 */
+      
+      /* ▼ 툴바 높이 변동성과 완벽히 동기화된 동적 패딩 산출 (Cascading) */
+      padding-bottom: calc(72px + env(safe-area-inset-bottom));
+      
       z-index: 10;
     }
 
@@ -574,7 +583,12 @@
       gap: 6px;
       pointer-events: auto;
       width: 100%;
-      padding: 8px 10px;
+      
+      /* 1. 베이스 패딩 데이터를 먼저 세팅 (상하 8px, 좌우 10px) */
+      padding: 8px 10px; 
+      /* 2. 하단 패딩만 Safe Area 데이터를 더해서 '오버라이드(덮어쓰기)' */
+      padding-bottom: calc(8px + env(safe-area-inset-bottom));
+
       background: rgba(0, 0, 0, 0.7);
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
@@ -2230,6 +2244,10 @@
 
       // 1. [진입] 닉네임 등록 버튼 (UID 매핑 + 기기 잠금)
       document.getElementById('btnRegister').onclick = async function () {
+        // ▼▼▼ [여기에 2줄 추가] 가상 키보드 충돌 방어 락(Lock) ▼▼▼
+        document.getElementById('userNickname').blur(); // 1. OS 키보드 강제 하강 (포커스 회수)
+        isKeyboardOpen = false; // 2. 디바운스 락 즉각 해제 (스케일 복구 허용)
+
         const nickInput = document.getElementById('userNickname');
         const errorMsg = document.getElementById('nickError');
         const btn = this;
@@ -2493,19 +2511,6 @@
       }
 
       // Mode selector removed - unified arcade mode
-
-      // ============================================
-      // INITIALIZATION
-      // ============================================
-      function resizeCanvas() {
-        const rect = container.getBoundingClientRect();
-        canvas.width = rect.width * window.devicePixelRatio;
-        canvas.height = rect.height * window.devicePixelRatio;
-
-        scale = Math.min(canvas.width / VIRTUAL_W, canvas.height / VIRTUAL_H);
-        offsetX = (canvas.width - VIRTUAL_W * scale) / 2;
-        offsetY = (canvas.height - VIRTUAL_H * scale) / 2;
-      }
 
       function initStage(n, loadSaved = true) {
         state.stage = n;
@@ -3849,7 +3854,74 @@
 
       document.getElementById('btnResultHome').onclick = goToHome;
 
-      window.addEventListener('resize', resizeCanvas);
+      // 1. 디바운스 유틸리티 함수 (데이터 연산 폭주 방지)
+      function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+          clearTimeout(timeout);
+          timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+      }
+
+      // 2. 폴드/태블릿 화면비에 완벽히 대응하는 리사이즈 코어 로직
+      function resizeCanvas() {
+        const container = document.getElementById('gameContainer');
+        const rect = container.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+
+        // 가용 영역 데이터 추출
+        const availableW = rect.width;
+        const availableH = rect.height;
+
+        // 9:16 가상 좌표계(VIRTUAL_W, VIRTUAL_H) 기준 최적 스케일 탐색
+        scale = Math.min(availableW / VIRTUAL_W, availableH / VIRTUAL_H);
+
+        // 물리적 픽셀 정밀도 할당 (흐려짐 방지)
+        canvas.width = availableW * dpr;
+        canvas.height = availableH * dpr;
+
+        // 데이터 시각화 무결성을 위한 중앙 정렬 오프셋 계산
+        offsetX = (canvas.width - VIRTUAL_W * scale * dpr) / 2;
+        offsetY = (canvas.height - VIRTUAL_H * scale * dpr) / 2;
+        
+        // 리사이즈 직후 화면 즉시 갱신 (블랙스크린 방지)
+        render(); 
+      }
+
+      // 3. 이벤트 리스너에 디바운스 적용 (100ms 대기 후 1회만 실행)
+      // [키보드 충돌 방어 로직 & 리사이즈 통합]
+      // ============================================
+      const nickInput = document.getElementById('userNickname');
+      let isKeyboardOpen = false;
+
+      if (nickInput) {
+        // 1. 입력창 포커스 시 상태 잠금 (리사이즈 무시)
+        nickInput.addEventListener('focus', () => {
+          isKeyboardOpen = true;
+        });
+
+        // 2. 포커스 아웃 시 상태 해제 및 즉각적인 화면 복구 연산
+        nickInput.addEventListener('blur', () => {
+          isKeyboardOpen = false;
+          // 키보드가 내려가는 애니메이션 시간 대기 후 캔버스 원상 복구
+          setTimeout(() => {
+            resizeCanvas(); 
+          }, 300);
+        });
+      }
+
+      // 3. 디바운스 이벤트에 예외 조건 주입 (단일 선언 무결성 확보)
+      const debouncedResize = debounce(() => {
+        // 키보드가 열려있지 않을 때만 리사이즈 허용
+        if (!isKeyboardOpen) {
+          resizeCanvas();
+        }
+      }, 100);
+      
+      // 4. 이벤트 리스너 단일 등록
+      window.addEventListener('resize', debouncedResize);
+      window.addEventListener('orientationchange', debouncedResize);
+
 
       // ============================================
       // UNDO BUTTON HANDLER
