@@ -78,11 +78,11 @@
         }
         */
         /* PC 화면(너비 501px 이상)에서는 설정 버튼 숨김 */
-        @media (min-width: 501px) {
+/*        @media (min-width: 501px) {
             #settings-ui {
                 display: none !important;
             }
-        }
+        }*/
 
 
 
@@ -571,7 +571,8 @@
         }
 
         /* [CDSO 추가] 설정 버튼 스타일 (PC에서는 숨김, 모바일에서는 노출) */
-        #setting-btn {
+              
+/*        #setting-btn {
             display: none;
             /* 기본값: PC에서는 안 보임 */
             margin-top: 15px;
@@ -583,18 +584,19 @@
             cursor: pointer;
             transition: all 0.3s;
             text-shadow: 0 0 5px #000;
-        }
+        }*/
 
-        #setting-btn:hover {
+/*        #setting-btn:hover {
             box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
-        }
+        }*/
+        
 
         /* 모바일 화면에서만 버튼 보이기 */
-        @media (max-width: 500px) {
+/*        @media (max-width: 500px) {
             #setting-btn {
                 display: block !important;
             }
-        }
+        }*/
 
         /* [CDSO Patch: 시즌 2 배지 디자인] */
         .season-badge {
@@ -723,62 +725,73 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* [CDSO Design] 8-Way Virtual Pad (Hyper-Transparent) */
+        /* ▼▼▼ [CDSO Patch: Zero-Obstruction 컨트롤러 UI] ▼▼▼ */
         #virtual-pad {
-            display: none;
+            display: none; /* JS에서 flex로 제어됨 */
             position: absolute;
-            bottom: 0; left: 0;
-            width: 100%; height: 33%;
+            bottom: 40px; /* 화면 최하단에서 살짝 위로 띄움 */
+            left: 0;
+            width: 100%;
             
-            /* 1. 배경 거의 완전 투명화 (0.4 -> 0.05) */
-            background: rgba(0, 15, 30, 0.05); 
-            
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 4px; padding: 10px;
-            box-sizing: border-box;
+            /* 1. 완벽한 중앙 정렬을 위한 Flexbox */
+            display: flex;
+            justify-content: center; 
+            align-items: center;
             z-index: 900;
             
-            /* 블러 효과를 약하게 하여 뒤쪽 전투기가 잘 보이게 함 (5px -> 2px) */
-            backdrop-filter: blur(2px);
-            -webkit-backdrop-filter: blur(2px);
+            /* [핵심] 2. 빈 공간의 터치를 무시하고 캔버스로 투과시킴 (하단 먹통 해결) */
+            pointer-events: none; 
         }
 
-        .v-btn {
-            /* 2. 일반 버튼 투명도 극대화 */
-            background: rgba(0, 255, 255, 0.01); /* 거의 안 보임 */
-            border: 1px solid rgba(0, 255, 255, 0.05); /* 테두리 아주 희미하게 */
-            border-radius: 12px;
-            color: rgba(0, 255, 255, 0.15); /* 화살표 글자 희미하게 */
-            
-            font-size: 28px;
-            display: flex; align-items: center; justify-content: center;
-            touch-action: none; user-select: none; -webkit-user-select: none;
-            transition: background 0.1s, color 0.1s;
-        }
-
-        .v-btn:active {
-            /* 터치 시 시각적 피드백도 약하게 조절 */
-            background: rgba(0, 255, 255, 0.08);
-            color: rgba(0, 255, 255, 0.5);
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
-        }
-
-        /* 3. 중앙 필살기(ULT) 버튼 투명화 */
+        /* 일반 버튼(.v-btn) 클래스는 지우고 ULT 버튼 단독 스타일링 */
         .v-btn.ult {
-            background: rgba(255, 0, 255, 0.02);
-            border: 2px solid rgba(255, 0, 255, 0.15); /* ULT 테두리만 살짝 보임 */
+            /* [핵심] 3. 버튼 영역만 터치 이벤트를 정상적으로 흡수함 */
+            pointer-events: auto; 
+            
+            width: 70px; height: 70px; /* 급할 때 대충 눌러도 맞는 넉넉한 픽셀 크기 */
+            background: rgba(255, 0, 255, 0.05);
+            border: 2px solid rgba(255, 0, 255, 0.3);
             border-radius: 50%;
-            color: rgba(255, 0, 255, 0.3);
-            font-size: 16px; font-weight: bold; font-family: 'Orbitron';
-            box-shadow: 0 0 5px rgba(255, 0, 255, 0.1);
+            color: rgba(255, 0, 255, 0.5);
+            font-size: 18px; font-weight: bold; font-family: 'Orbitron';
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.1);
+            
+            display: flex; justify-content: center; align-items: center;
+            user-select: none; -webkit-user-select: none;
+            transition: all 0.1s;
         }
 
         .v-btn.ult:active {
-            background: rgba(255, 0, 255, 0.2);
-            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+            background: rgba(255, 0, 255, 0.3);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.8);
             color: #fff;
+            transform: scale(0.95);
         }
+
+        .v-btn.ult.ready {
+            background: rgba(255, 0, 255, 0.3);
+            border: 2px solid rgba(255, 0, 255, 0.8);
+            color: #fff;
+            
+            /* 정적인(Static) 기본 글로우만 한 번 부여하고 애니메이션에서는 제외합니다. */
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.3);
+            
+            /* GPU 전용 속성만 제어하는 신규 애니메이션 연결 */
+            animation: ultPulseGPU 0.7s infinite alternate ease-in-out;
+        }
+
+        /* 무거운 Paint 연산을 배제한 순수 Composite 애니메이션 */
+        @keyframes ultPulseGPU {
+            0% { 
+                transform: scale(0.95);
+                opacity: 0.6; 
+            }
+            100% { 
+                transform: scale(1.15); 
+                opacity: 1.0; 
+            }
+
+
 
 
 
@@ -835,19 +848,11 @@
         <canvas id="gameCanvas"></canvas>
 
         <div id="virtual-pad">
-            <div class="v-btn" data-key="ArrowUp,ArrowLeft">↖</div>
-            <div class="v-btn" data-key="ArrowUp">⬆</div>
-            <div class="v-btn" data-key="ArrowUp,ArrowRight">↗</div>
-            <div class="v-btn" data-key="ArrowLeft">⬅</div>
             <div class="v-btn ult" id="v-btn-ult">ULT</div>
-            <div class="v-btn" data-key="ArrowRight">➡</div>
-            <div class="v-btn" data-key="ArrowDown,ArrowLeft">↙</div>
-            <div class="v-btn" data-key="ArrowDown">⬇</div>
-            <div class="v-btn" data-key="ArrowDown,ArrowRight">↘</div>
         </div>
 
         <div id="start-screen" class="overlay">
-            <div id="settings-ui" style="position: absolute; top: 20px; right: 20px; z-index: 1001;">
+            <!-- <div id="settings-ui" style="position: absolute; top: 20px; right: 20px; z-index: 1001;">
                 <button id="gear-btn" onclick="toggleSettings()" style="background:none; border:none; box-shadow:none; font-size: 1.5em; cursor:pointer; padding:10px;">⚙️</button>
                 
                 <div id="settings-panel" style="display:none; position: absolute; top: 50px; right: 0; background: rgba(0,20,30,0.95); border: 2px solid #0ff; padding: 15px; border-radius: 8px; width: 180px; box-shadow: 0 0 20px rgba(0,255,255,0.2);">
@@ -864,7 +869,7 @@
                         </label>
                     </div>
                 </div>
-            </div>
+            </div> -->
 
 
             <h1>NEON DODGE</h1>
@@ -970,7 +975,7 @@
 
             let gameState = {
                 isRunning: false, score: 0,
-                player: { x: 215, y: 720, w: 20, h: 20, speed: 900 },
+                player: { x: 215, y: 720, w: 20, h: 20, speed: 500 },
                 enemies: [], items: [], bullets: [], keys: {},
                 skillMode: 'NORMAL', skillTimer: 0,
                 lives: 3, maxLives: 3, isInvincible: false, invincibilityTimer: 0,
@@ -1005,24 +1010,23 @@
 
             let lastTime = performance.now();
             // [찾기] let lastTime = performance.now(); 아래에 삽입
-            gameState.controlMode = localStorage.getItem('prefControlMode') || 'TOUCH';
+            gameState.controlMode = 'BUTTONS';
 
-            function toggleSettings() {
-                const panel = document.getElementById('settings-panel');
-                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-            }
+            // function toggleSettings() {
+            //     const panel = document.getElementById('settings-panel');
+            //     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            // }
 
             function setControlMode(mode) {
                 gameState.controlMode = mode;
-                localStorage.setItem('prefControlMode', mode);
-                // 라디오 버튼 상태 강제 업데이트
-                const radios = document.querySelectorAll('input[name="ctrl-mode"]');
-                radios.forEach(r => r.checked = (r.value === mode));
-
-                // [CDSO 로직] 모드에 따라 버추얼 패드 표시/숨김
+                
                 const vPad = document.getElementById('virtual-pad');
                 if (vPad) {
-                    vPad.style.display = (mode === 'BUTTONS' && isMobileDevice() && gameState.isRunning) ? 'grid' : 'none';
+                    // 'grid' 대신 'flex'를 주입하여 내부 요소를 중앙 정렬할 준비를 합니다.
+                    vPad.style.display = (isMobileDevice() && gameState.isRunning) ? 'flex' : 'none';
+                    vPad.style.justifyContent = 'center'; // 가로 중앙 정렬
+                    vPad.style.alignItems = 'center';     // 세로 중앙 정렬
+                    vPad.style.paddingBottom = '30px';    // 바닥에서 살짝 띄움
                 }
             }
             
@@ -1031,30 +1035,29 @@
             // -----------------------------------------------------------
             window.addEventListener('load', () => {
                 // 1. 초기 패드 렌더링 동기화
-                const savedMode = localStorage.getItem('prefControlMode') || 'TOUCH';
-                setControlMode(savedMode);
+                setControlMode('BUTTONS');
 
-                // 2. 방향키 터치 이벤트 매핑
-                document.querySelectorAll('.v-btn').forEach(btn => {
-                    if (btn.id === 'v-btn-ult') return; // ULT 버튼은 제외
+                // // 2. 방향키 터치 이벤트 매핑
+                // document.querySelectorAll('.v-btn').forEach(btn => {
+                //     if (btn.id === 'v-btn-ult') return; // ULT 버튼은 제외
 
-                    const keys = btn.getAttribute('data-key').split(',');
+                //     const keys = btn.getAttribute('data-key').split(',');
                     
-                    // 누를 때 (키보드 keyDown 효과)
-                    btn.addEventListener('touchstart', (e) => {
-                        e.preventDefault();
-                        keys.forEach(k => gameState.keys[k] = true);
-                        if(navigator.vibrate) navigator.vibrate(10); // 미세 햅틱 피드백
-                    }, {passive: false});
+                //     // 누를 때 (키보드 keyDown 효과)
+                //     btn.addEventListener('touchstart', (e) => {
+                //         e.preventDefault();
+                //         keys.forEach(k => gameState.keys[k] = true);
+                //         if(navigator.vibrate) navigator.vibrate(10); // 미세 햅틱 피드백
+                //     }, {passive: false});
 
-                    // 뗄 때 (키보드 keyUp 효과)
-                    const releaseKeys = (e) => {
-                        e.preventDefault();
-                        keys.forEach(k => gameState.keys[k] = false);
-                    };
-                    btn.addEventListener('touchend', releaseKeys);
-                    btn.addEventListener('touchcancel', releaseKeys);
-                });
+                //     // 뗄 때 (키보드 keyUp 효과)
+                //     const releaseKeys = (e) => {
+                //         e.preventDefault();
+                //         keys.forEach(k => gameState.keys[k] = false);
+                //     };
+                //     btn.addEventListener('touchend', releaseKeys);
+                //     btn.addEventListener('touchcancel', releaseKeys);
+                // });
 
                 // 3. 필살기(ULT) 버튼 독립 매핑
                 const ultBtn = document.getElementById('v-btn-ult');
@@ -1065,7 +1068,7 @@
                             activateRainbowWave();
                             if(navigator.vibrate) navigator.vibrate(50);
                         }
-                    });
+                    }, {passive: false});
                 }
             });
 
@@ -1640,99 +1643,143 @@
 
             window.addEventListener('resize', resizeGame);
 
-            // (getTouchPos 함수는 수정할 필요 없이 그대로 두시면 됩니다.)
 
             // 수정된 터치 좌표 변환 (스케일링 반영)
-            function getTouchPos(e) {
-                const rect = canvas.getBoundingClientRect();
-                const touch = e.touches[0];
+            // function getTouchPos(e) {
+            //     const rect = canvas.getBoundingClientRect();
+            //     const touch = e.touches[0];
 
-                // 역보정 공식
-                return {
-                    x: (touch.clientX - rect.left) * (450 / rect.width),
-                    y: (touch.clientY - rect.top) * (800 / rect.height)
-                };
-            }
+            //     // 역보정 공식
+            //     return {
+            //         x: (touch.clientX - rect.left) * (450 / rect.width),
+            //         y: (touch.clientY - rect.top) * (800 / rect.height)
+            //     };
+            // }
 
 
             // 모바일 터치 이벤트 (제스처 차단 + 부드러운 추적)
             // [CDSO 전략] 플로팅 조이스틱 시스템 (Floating Joystick)
             // 화면 어디든 터치하면 그곳이 조이스틱의 중심이 됩니다.
 
-            canvas.addEventListener('touchstart', e => {
+            // canvas.addEventListener('touchstart', e => {
+            //     e.preventDefault();
+            //     const touch = e.touches[0];
+            //     const rect = canvas.getBoundingClientRect();
+            //     // 캔버스 내부 좌표로 변환 (스케일링 고려)
+            //     const scaleX = canvas.width / rect.width;
+            //     const scaleY = canvas.height / rect.height;
+
+            //     const tx = (touch.clientX - rect.left) * scaleX;
+            //     const ty = (touch.clientY - rect.top) * scaleY;
+
+            //     // [필살기 체크] 화면 하단 15% 터치 시 필살기 (조이스틱 아님)
+            //     if (ty > canvas.height * 0.85) {
+            //         if (gameState.ultGauge >= 1 && !gameState.rainbowWave) {
+            //             activateRainbowWave();
+            //         }
+            //         return;
+            //     }
+
+            //     // [조이스틱 활성화]
+            //     gameState.joystick.active = true;
+            //     gameState.joystick.baseX = tx;
+            //     gameState.joystick.baseY = ty;
+            //     gameState.joystick.stickX = tx;
+            //     gameState.joystick.stickY = ty;
+            //     gameState.joystick.vecX = 0;
+            //     gameState.joystick.vecY = 0;
+            //     gameState.joystick.rawX = tx;
+            //     gameState.joystick.rawY = ty;
+            // }, { passive: false });
+
+            // canvas.addEventListener('touchmove', e => {
+            //     e.preventDefault();
+            //     if (!gameState.joystick.active) return;
+
+            //     const touch = e.touches[0];
+            //     const rect = canvas.getBoundingClientRect();
+            //     const scaleX = canvas.width / rect.width;
+            //     const scaleY = canvas.height / rect.height;
+
+            //     const tx = (touch.clientX - rect.left) * scaleX;
+            //     const ty = (touch.clientY - rect.top) * scaleY;
+
+            //     // 조이스틱 헤드 이동 및 거리 제한 (최대 50px)
+            //     const maxDist = 20;
+            //     const dx = tx - gameState.joystick.baseX;
+            //     const dy = ty - gameState.joystick.baseY;
+            //     gameState.joystick.rawX = tx;
+            //     gameState.joystick.rawY = ty;
+            //     const dist = Math.sqrt(dx * dx + dy * dy);
+
+            //     // 정규화된 벡터 계산 (이동 방향)
+            //     if (dist > 0) {
+            //         gameState.joystick.vecX = dx / dist;
+            //         gameState.joystick.vecY = dy / dist;
+            //     }
+
+            //     // 스틱 시각적 위치 제한
+            //     if (dist > maxDist) {
+            //         gameState.joystick.stickX = gameState.joystick.baseX + (dx / dist) * maxDist;
+            //         gameState.joystick.stickY = gameState.joystick.baseY + (dy / dist) * maxDist;
+            //     } else {
+            //         gameState.joystick.stickX = tx;
+            //         gameState.joystick.stickY = ty;
+            //     }
+            // }, { passive: false });
+
+            // canvas.addEventListener('touchend', e => {
+            //     e.preventDefault();
+            //     // 손을 떼면 조이스틱 비활성화 및 정지
+            //     gameState.joystick.active = false;
+            //     gameState.joystick.vecX = 0;
+            //     gameState.joystick.vecY = 0;
+            // }, { passive: false });
+
+
+            canvas.addEventListener('touchstart', handleTouch, { passive: false });
+            canvas.addEventListener('touchmove', handleTouch, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+            canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+            function handleTouch(e) {
                 e.preventDefault();
-                const touch = e.touches[0];
-                const rect = canvas.getBoundingClientRect();
-                // 캔버스 내부 좌표로 변환 (스케일링 고려)
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
+                if (gameState.controlMode !== 'BUTTONS') return;
 
-                const tx = (touch.clientX - rect.left) * scaleX;
-                const ty = (touch.clientY - rect.top) * scaleY;
+                // 터치 궤적 재계산을 위해 프레임당 입력 강제 초기화
+                gameState.keys['ArrowLeft'] = false;
+                gameState.keys['ArrowRight'] = false;
 
-                // [필살기 체크] 화면 하단 15% 터치 시 필살기 (조이스틱 아님)
-                if (ty > canvas.height * 0.85) {
-                    if (gameState.ultGauge >= 1 && !gameState.rainbowWave) {
-                        activateRainbowWave();
+                // 정확히 화면 정중앙을 기점으로 좌/우 50% 분할
+                const halfWidth = window.innerWidth / 2;
+
+                // 멀티 터치(양손 조작) 완벽 지원 루프
+                for (let i = 0; i < e.touches.length; i++) {
+                    // [핵심] Y축(높이) 제한을 없앴습니다. 화면 맨 아래 구석을 눌러도 정상 이동합니다.
+                    // (ULT 버튼 터치는 e.stopPropagation() 덕분에 이곳으로 들어오지 않음)
+                    if (e.touches[i].clientX < halfWidth) {
+                        gameState.keys['ArrowLeft'] = true;
+                    } else {
+                        gameState.keys['ArrowRight'] = true;
                     }
-                    return;
                 }
+            }
 
-                // [조이스틱 활성화]
-                gameState.joystick.active = true;
-                gameState.joystick.baseX = tx;
-                gameState.joystick.baseY = ty;
-                gameState.joystick.stickX = tx;
-                gameState.joystick.stickY = ty;
-                gameState.joystick.vecX = 0;
-                gameState.joystick.vecY = 0;
-                gameState.joystick.rawX = tx;
-                gameState.joystick.rawY = ty;
-            }, { passive: false });
-
-            canvas.addEventListener('touchmove', e => {
+            function handleTouchEnd(e) {
                 e.preventDefault();
-                if (!gameState.joystick.active) return;
+                if (gameState.controlMode !== 'BUTTONS') return;
 
-                const touch = e.touches[0];
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-
-                const tx = (touch.clientX - rect.left) * scaleX;
-                const ty = (touch.clientY - rect.top) * scaleY;
-
-                // 조이스틱 헤드 이동 및 거리 제한 (최대 50px)
-                const maxDist = 20;
-                const dx = tx - gameState.joystick.baseX;
-                const dy = ty - gameState.joystick.baseY;
-                gameState.joystick.rawX = tx;
-                gameState.joystick.rawY = ty;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                // 정규화된 벡터 계산 (이동 방향)
-                if (dist > 0) {
-                    gameState.joystick.vecX = dx / dist;
-                    gameState.joystick.vecY = dy / dist;
-                }
-
-                // 스틱 시각적 위치 제한
-                if (dist > maxDist) {
-                    gameState.joystick.stickX = gameState.joystick.baseX + (dx / dist) * maxDist;
-                    gameState.joystick.stickY = gameState.joystick.baseY + (dy / dist) * maxDist;
+                // 화면에 닿아있는 손가락이 0개면 이동 정지
+                if (e.touches.length === 0) {
+                    gameState.keys['ArrowLeft'] = false;
+                    gameState.keys['ArrowRight'] = false;
                 } else {
-                    gameState.joystick.stickX = tx;
-                    gameState.joystick.stickY = ty;
+                    // 손가락이 하나라도 남아있으면 남은 손가락 위치 기반으로 재계산
+                    handleTouch(e); 
                 }
-            }, { passive: false });
+            }
 
-            canvas.addEventListener('touchend', e => {
-                e.preventDefault();
-                // 손을 떼면 조이스틱 비활성화 및 정지
-                gameState.joystick.active = false;
-                gameState.joystick.vecX = 0;
-                gameState.joystick.vecY = 0;
-            }, { passive: false });
+
 
 
 
@@ -3008,40 +3055,45 @@
                 // 상하 이동 (스폰킬 방지 제한 적용)
                 const topLimit = canvas.height * 0.2;
                 // ★ 핵심 수정: 하단에 20px 여유 공간을 두어 숨음 방지
-                const bottomLimit = canvas.height - gameState.player.h - 10;
+                const bottomLimit = canvas.height - gameState.player.h - 30;
 
-                if (upKey && gameState.player.y > topLimit)
-                    gameState.player.y -= gameState.player.speed * dt;
-                if (downKey && gameState.player.y < bottomLimit)
-                    gameState.player.y += gameState.player.speed * dt;
+                // if (upKey && gameState.player.y > topLimit)
+                //     gameState.player.y -= gameState.player.speed * dt;
+                // if (downKey && gameState.player.y < bottomLimit)
+                //     gameState.player.y += gameState.player.speed * dt;
+
+                // 2. 플레이어를 항상 화면 최하단 안전 고도(Base Altitude)에 강제 고정
+                gameState.player.y = bottomLimit;
+
+
 
                 // 2. 모바일 조이스틱 이동 (신규 로직)
-                if (gameState.joystick && gameState.joystick.active && gameState.controlMode !== 'BUTTONS') {
-                    const dir = gameState.isGlitchActive ? -1 : 1;
+                // if (gameState.joystick && gameState.joystick.active && gameState.controlMode !== 'BUTTONS') {
+                //     const dir = gameState.isGlitchActive ? -1 : 1;
 
-                    if (gameState.controlMode === 'JOYSTICK') {
-                        // [A] 조이스틱 모드 (속도는 3단계에서 별도 상향)
-                        gameState.player.x += gameState.joystick.vecX * gameState.player.speed * dt * dir;
-                        const nextY = gameState.player.y + gameState.joystick.vecY * gameState.player.speed * dt * dir;
-                        if (nextY > topLimit && nextY < bottomLimit) gameState.player.y = nextY;
-                    } else {
-                        // [B] 트래킹 모드 (절대 좌표 추적 로직)
-                        // rawX, rawY를 사용하여 화면 전체를 제어. Y축은 손가락 위쪽에 기체가 오도록 -50 보정.
-                        const targetX = gameState.joystick.rawX - (gameState.player.w / 2);
-                        const targetY = gameState.joystick.rawY - (gameState.player.h / 2) - 50; 
+                //     if (gameState.controlMode === 'JOYSTICK') {
+                //         // [A] 조이스틱 모드 (속도는 3단계에서 별도 상향)
+                //         gameState.player.x += gameState.joystick.vecX * gameState.player.speed * dt * dir;
+                //         const nextY = gameState.player.y + gameState.joystick.vecY * gameState.player.speed * dt * dir;
+                //         if (nextY > topLimit && nextY < bottomLimit) gameState.player.y = nextY;
+                //     } else {
+                //         // [B] 트래킹 모드 (절대 좌표 추적 로직)
+                //         // rawX, rawY를 사용하여 화면 전체를 제어. Y축은 손가락 위쪽에 기체가 오도록 -50 보정.
+                //         const targetX = gameState.joystick.rawX - (gameState.player.w / 2);
+                //         const targetY = gameState.joystick.rawY - (gameState.player.h / 2) - 50; 
                         
-                        // 보간 속도(Lerp). 20이면 손가락에 거의 즉각적으로 달라붙음.
-                        const followSpeed = 20; 
+                //         // 보간 속도(Lerp). 20이면 손가락에 거의 즉각적으로 달라붙음.
+                //         const followSpeed = 20; 
                         
-                        gameState.player.x += (targetX - gameState.player.x) * followSpeed * dt * dir;
-                        const nextY = gameState.player.y + (targetY - gameState.player.y) * followSpeed * dt * dir;
+                //         gameState.player.x += (targetX - gameState.player.x) * followSpeed * dt * dir;
+                //         const nextY = gameState.player.y + (targetY - gameState.player.y) * followSpeed * dt * dir;
                         
-                        // Y축 경계값 보호
-                        if (nextY > topLimit && nextY < bottomLimit) {
-                            gameState.player.y = nextY;
-                        }
-                    }
-                }
+                //         // Y축 경계값 보호
+                //         if (nextY > topLimit && nextY < bottomLimit) {
+                //             gameState.player.y = nextY;
+                //         }
+                //     }
+                // }
 
 
                 // 3. 캠핑 방지 로직
@@ -3387,10 +3439,28 @@
                             // 다른 아이템 타입 (알 수 없는 타입)
                             gameState.skillMode = it.type; gameState.skillTimer = 5.0;
                         }
+                        if (!gameState.absorbEffects) gameState.absorbEffects = [];
+                        gameState.absorbEffects.push({
+                            x: it.x, y: it.y, w: it.w, h: it.h, type: it.type,
+                            timer: 0, maxTime: 0.35 // 0.35초 동안 기체로 빨려 들어감
+                        });
+
                         gameState.items.splice(i, 1);
                     }
                     if (it.y > canvas.height) gameState.items.splice(i, 1);
                 }
+
+                // ▼▼▼ [CDSO Patch: 2. 흡수(Lerp) 타이머 연산 루프 추가] ▼▼▼
+                if (gameState.absorbEffects) {
+                    for (let i = gameState.absorbEffects.length - 1; i >= 0; i--) {
+                        gameState.absorbEffects[i].timer += dt;
+                        if (gameState.absorbEffects[i].timer >= gameState.absorbEffects[i].maxTime) {
+                            gameState.absorbEffects.splice(i, 1); // 연산 완료 시 메모리 가비지 컬렉션
+                        }
+                    }
+                }
+
+
 
                 if (gameState.isLunarMode) {
                     gameState.lunarAngle += dt * 550;
@@ -3535,10 +3605,13 @@
 
             // [CDSO Logic] 아이템 전용 판정: 기존 판정보다 사방으로 15px 더 넓게 인정
             function checkItemCollision(player, item, margin = 15) {
-                return player.x < item.x + item.w + margin &&
-                    player.x + player.w > item.x - margin &&
-                    player.y < item.y + item.h + margin &&
-                    player.y + player.h > item.y - margin;
+                // PC는 기존의 타이트한 판정(15px) 유지, 모바일은 120px(화면 너비의 약 1/3)로 대폭 확장
+                const activeMargin = typeof isMobileDevice === 'function' && isMobileDevice() ? 120 : margin;
+
+                return player.x < item.x + item.w + activeMargin &&
+                       player.x + player.w > item.x - activeMargin &&
+                       player.y < item.y + item.h + activeMargin &&
+                       player.y + player.h > item.y - activeMargin;
             }
 
 
@@ -4184,6 +4257,53 @@
 
                 gameState.items.forEach(it => drawGiftBox(it));
 
+                // ▼▼▼ [CDSO Patch: 3. Void Hole 흡수 렌더링 아키텍처] ▼▼▼
+                if (gameState.absorbEffects) {
+                    // 특이점(Singularity) 좌표 = 내 전투기의 정중앙
+                    const px = gameState.player.x + gameState.player.w / 2;
+                    const py = gameState.player.y + gameState.player.h / 2;
+
+                    gameState.absorbEffects.forEach(ab => {
+                        const progress = ab.timer / ab.maxTime; // 0.0 ~ 1.0 진행률
+                        const easeIn = progress * progress * progress; // 가속도(Cubic Ease-in) 곡선
+
+                        // 1. 선형 보간(Lerp): 아이템이 특이점을 향해 곡선을 그리며 가속 추적
+                        const currentX = ab.x + (px - ab.x - ab.w / 2) * easeIn;
+                        const currentY = ab.y + (py - ab.y - ab.h / 2) * easeIn;
+
+                        // 2. 물리적 변형: 스핀(회전)하며 0으로 수축(Scale)
+                        const scale = Math.max(0, 1 - easeIn); 
+                        const rotation = progress * Math.PI * 4; // 2바퀴(720도) 쾌속 스핀
+
+                        ctx.save();
+                        ctx.translate(currentX + ab.w / 2, currentY + ab.h / 2);
+                        ctx.rotate(rotation);
+                        ctx.scale(scale, scale);
+                        ctx.translate(-(currentX + ab.w / 2), -(currentY + ab.h / 2));
+                        
+                        // 잔상 아이템 그리기 (기존 렌더러 재활용)
+                        drawGiftBox({ x: currentX, y: currentY, w: ab.w, h: ab.h, type: ab.type });
+                        ctx.restore();
+
+                        // 3. Void Hole (사건의 지평선) 시각 효과
+                        ctx.save();
+                        ctx.translate(px, py);
+                        ctx.rotate(-rotation * 1.5); // 역방향으로 도는 사이버네틱 소용돌이
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 40 * (1 - progress), 0, Math.PI * 2);
+                        ctx.lineWidth = 4 * (1 - progress);
+                        ctx.strokeStyle = `rgba(0, 255, 255, ${1 - progress})`; // 네온 블루
+                        ctx.stroke();
+
+                        // 흡수 중심부 암전(Blackout) 효과
+                        ctx.beginPath();
+                        ctx.arc(0, 0, 15 * easeIn, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(0, 0, 0, ${easeIn})`;
+                        ctx.fill();
+                        ctx.restore();
+                    });
+                }
+
                 ctx.shadowBlur = 5; ctx.shadowColor = '#fff'; ctx.fillStyle = '#fff';
                 gameState.bullets.forEach(b => {
 
@@ -4344,28 +4464,28 @@
                 }
 
                 // [CDSO Patch] 가상 조이스틱 UI 렌더링
-                if (gameState.joystick && gameState.joystick.active && gameState.controlMode === 'JOYSTICK') { // <--- 여기에 조건을 추가합니다.
-                    ctx.save();
+                // if (gameState.joystick && gameState.joystick.active && gameState.controlMode === 'JOYSTICK') { // <--- 여기에 조건을 추가합니다.
+                //     ctx.save();
 
-                    // 1. 베이스 (몸체)
-                    ctx.beginPath();
-                    ctx.arc(gameState.joystick.baseX, gameState.joystick.baseY, 50, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
-                    ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
-                    ctx.lineWidth = 2;
-                    ctx.fill();
-                    ctx.stroke();
+                //     // 1. 베이스 (몸체)
+                //     ctx.beginPath();
+                //     ctx.arc(gameState.joystick.baseX, gameState.joystick.baseY, 50, 0, Math.PI * 2);
+                //     ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
+                //     ctx.strokeStyle = 'rgba(0, 255, 255, 0.3)';
+                //     ctx.lineWidth = 2;
+                //     ctx.fill();
+                //     ctx.stroke();
 
-                    // 2. 스틱 (헤드)
-                    ctx.beginPath();
-                    ctx.arc(gameState.joystick.stickX, gameState.joystick.stickY, 20, 0, Math.PI * 2);
-                    ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = '#0ff';
-                    ctx.fill();
+                //     // 2. 스틱 (헤드)
+                //     ctx.beginPath();
+                //     ctx.arc(gameState.joystick.stickX, gameState.joystick.stickY, 20, 0, Math.PI * 2);
+                //     ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
+                //     ctx.shadowBlur = 10;
+                //     ctx.shadowColor = '#0ff';
+                //     ctx.fill();
 
-                    ctx.restore();
-                }
+                //     ctx.restore();
+                // }
 
                 drawProgressBar();
             }
@@ -5133,6 +5253,16 @@
                 } else {
                     hudTimer.textContent = "";
                     hudProgress.style.width = "0%";
+                }
+                // ▼▼▼ [CDSO Patch: 필살기 버튼 상태 동기화 로직] ▼▼▼
+                const ultBtn = document.getElementById('v-btn-ult');
+                if (ultBtn) {
+                    // 게이지가 1(100%) 이상이고, 현재 무지개 파동(필살기)을 쏘고 있지 않을 때
+                    if (gameState.ultGauge >= 1 && !gameState.rainbowWave) {
+                        ultBtn.classList.add('ready');
+                    } else {
+                        ultBtn.classList.remove('ready'); // 쏘는 즉시 효과 해제
+                    }
                 }
             }
 
