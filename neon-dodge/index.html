@@ -3055,7 +3055,7 @@
                 // 상하 이동 (스폰킬 방지 제한 적용)
                 const topLimit = canvas.height * 0.2;
                 // ★ 핵심 수정: 하단에 20px 여유 공간을 두어 숨음 방지
-                const bottomLimit = canvas.height - gameState.player.h - 30;
+                const bottomLimit = canvas.height - gameState.player.h - 35;
 
                 // if (upKey && gameState.player.y > topLimit)
                 //     gameState.player.y -= gameState.player.speed * dt;
@@ -5271,3 +5271,4 @@
 </body>
 
 </html>
+
