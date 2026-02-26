@@ -642,12 +642,15 @@
       let toastTimer = null;
       let lastToastMsg = "";
       let lastToastTime = 0;
-      function showToast(msg, ms = 2000) {
+      function showToast(msg, ms = 4000) {
         if (msg === lastToastMsg && (Date.now() - lastToastTime) < 3000) return;
         lastToastMsg = msg; lastToastTime = Date.now();
         const toast = document.getElementById('toast');
         if (!toast) return;
-        toast.textContent = msg;
+        
+        // textContent를 innerHTML로 교체하여 <br> 태그 허용
+        toast.innerHTML = msg; 
+        
         toast.style.display = 'block';
         void toast.offsetWidth; // force reflow
         toast.classList.add('show');
@@ -1057,23 +1060,23 @@
 
         // --- Wave Checkpoint Hints ---
         if (G.wave === 6 && !hintFlags.checkpointW6Shown) {
-          showToast("💌꿀팁: 슬로우+캐논 조합을 한 번 써보세요. (파란 박스=빙결)", 2200);
+          showToast("💌꿀팁:<br>슬로우+캐논 조합을 한 번 써보세요. (파란 박스=빙결)", 5000);
           hintFlags.checkpointW6Shown = true; saveHints();
         }
         if (G.wave === 11 && !hintFlags.checkpointW11Shown) {
-          showToast("💌꿀팁: 탱커가 단단하면 머신건으로 취약을 노려보세요.", 2200);
+          showToast("💌꿀팁:<br>탱커가 단단하면 머신건으로 취약을 노려보세요.", 5000);
           hintFlags.checkpointW11Shown = true; saveHints();
         }
         if (G.wave === 19 && !hintFlags.checkpointW19Shown) {
-          showToast("💌꿀팁: 보스는 CC보다 '딜 찬스(취약)' 타이밍이 중요!", 2400);
+          showToast("💌꿀팁:<br>보스는 CC보다 '딜 찬스(취약)' 타이밍이 중요!", 5000);
           hintFlags.checkpointW19Shown = true; saveHints();
         }
         if (G.wave >= 21 && G.wave % 10 !== 0) { // skip on boss waves
           if (!hintFlags.freezeTriggeredOnce && !hintFlags.remindFreezeAfterW20Shown) {
-            showToast("아직 ❄빙결을 못 봤다면: 슬로우(레이다) + 캐논 조합을 테스트해보세요!", 2600);
+            showToast("아직 ❄빙결을 못 봤다면:<br>슬로우(레이다) + 캐논 조합을 테스트해보세요!", 2600);
             hintFlags.remindFreezeAfterW20Shown = true; saveHints();
           } else if (!hintFlags.vulnTriggeredOnce && !hintFlags.remindVulnAfterW20Shown) {
-            showToast("아직 💥취약을 못 봤다면: 머신건을 탱커/보스 쪽에 추가해보세요!", 2600);
+            showToast("아직 💥취약을 못 봤다면:<br>머신건을 탱커/보스 쪽에 추가해보세요!", 2600);
             hintFlags.remindVulnAfterW20Shown = true; saveHints();
           }
         }
