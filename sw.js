@@ -1,4 +1,4 @@
-const CACHE_NAME = 'leo-arcade-v3';
+const CACHE_NAME = 'leo-arcade-v3.1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
