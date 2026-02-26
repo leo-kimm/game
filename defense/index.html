@@ -1005,10 +1005,10 @@
         let baseHpMul = 1;
         if (w <= 40) {
           // W1~W40: 10% 복리 성장 (유저 검증 완료 스윗스팟)
-          baseHpMul = Math.pow(1.12, w - 1);
+          baseHpMul = Math.pow(1.10, w - 1);
         } else {
           // W41 이상: W40 기준점(약 41배)에서 5% 완화된 복리 적용
-          baseHpMul = Math.pow(1.12, 39) * Math.pow(1.09, w - 40);
+          baseHpMul = Math.pow(1.10, 39) * Math.pow(1.09, w - 40);
         }
 
         // 2. 보스 웨이브 밸런스 패치 (역체감 방지)
