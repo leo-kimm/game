@@ -273,57 +273,141 @@
 
     /* --- 신규 결과 화면 모달 디자인 --- */
     @keyframes slideUpFade {
-      0% { opacity: 0; transform: scale(0.9) translateY(30px); }
-      100% { opacity: 1; transform: scale(1) translateY(0); }
+      0% {
+        opacity: 0;
+        transform: scale(0.9) translateY(30px);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
     }
 
     #resultModal {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(10, 12, 20, 0.92); backdrop-filter: blur(12px);
-      z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 12, 20, 0.92);
+      backdrop-filter: blur(12px);
+      z-index: 9999;
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
     }
 
     .result-box {
       background: linear-gradient(145deg, #161c33 0%, #0d1120 100%);
-      border: 2px solid #3a456e; border-radius: 16px; padding: 40px 30px;
-      width: 320px; box-shadow: 0 15px 40px rgba(0,0,0,0.5), inset 0 2px 10px rgba(255,255,255,0.05);
+      border: 2px solid #3a456e;
+      border-radius: 16px;
+      padding: 40px 30px;
+      width: 320px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.05);
       animation: slideUpFade 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-      display: flex; flex-direction: column; align-items: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
-    .result-title { font-size: 28px; font-weight: 800; margin-bottom: 5px; text-align: center; text-shadow: 0 0 15px currentColor; }
-    .result-subtitle { font-size: 14px; color: #8892b0; margin-bottom: 25px; }
-    .rank-badge { font-size: 54px; font-weight: 900; font-style: italic; margin-bottom: 20px; text-shadow: 0 0 20px currentColor; }
+    .result-title {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 5px;
+      text-align: center;
+      text-shadow: 0 0 15px currentColor;
+    }
 
-    .stat-grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px; }
+    .result-subtitle {
+      font-size: 14px;
+      color: #8892b0;
+      margin-bottom: 25px;
+    }
+
+    .rank-badge {
+      font-size: 54px;
+      font-weight: 900;
+      font-style: italic;
+      margin-bottom: 20px;
+      text-shadow: 0 0 20px currentColor;
+    }
+
+    .stat-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 30px;
+    }
+
     .stat-item {
-      background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05);
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
-    .stat-item span { font-size: 11px; color: #aaa; margin-bottom: 4px; }
-    .stat-item b { font-size: 16px; color: #fff; }
 
-    .result-btns { display: flex; gap: 10px; width: 100%; }
-    .result-btns button { flex: 1; padding: 14px 0; font-size: 14px; border-radius: 8px; }
+    .stat-item span {
+      font-size: 11px;
+      color: #aaa;
+      margin-bottom: 4px;
+    }
+
+    .stat-item b {
+      font-size: 16px;
+      color: #fff;
+    }
+
+    .result-btns {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .result-btns button {
+      flex: 1;
+      padding: 14px 0;
+      font-size: 14px;
+      border-radius: 8px;
+    }
 
     /* --- 메인 메뉴 전용 전술 모니터 배경 --- */
     .main-menu-bg {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       background-color: #05070a;
       /* 전술 그리드(격자)와 방사형 그라데이션 */
-      background-image: 
+      background-image:
         radial-gradient(circle at 50% 50%, rgba(30, 45, 90, 0.4) 0%, rgba(5, 7, 10, 1) 90%),
         linear-gradient(rgba(122, 166, 255, 0.08) 1px, transparent 1px),
         linear-gradient(90deg, rgba(122, 166, 255, 0.08) 1px, transparent 1px);
       background-size: 100% 100%, 50px 50px, 50px 50px;
       background-position: center center;
-      z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
       overflow: hidden;
     }
 
     /* 레이저 스캔라인 애니메이션 */
     .main-menu-bg::after {
-      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
       background: linear-gradient(to bottom, transparent, rgba(122, 166, 255, 0.15) 50%, transparent);
       transform: rotate(30deg);
       animation: scanline 7s linear infinite;
@@ -331,22 +415,35 @@
     }
 
     @keyframes scanline {
-      0% { transform: translateY(-100%) rotate(30deg); }
-      100% { transform: translateY(100%) rotate(30deg); }
+      0% {
+        transform: translateY(-100%) rotate(30deg);
+      }
+
+      100% {
+        transform: translateY(100%) rotate(30deg);
+      }
     }
 
     .main-title {
-      color: #fff; font-size: 56px; font-weight: 900; margin-bottom: 5px;
-      text-transform: uppercase; letter-spacing: 6px;
+      color: #fff;
+      font-size: 56px;
+      font-weight: 900;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 6px;
       text-shadow: 0 0 10px #7aa6ff, 0 0 20px #7aa6ff, 0 0 40px #2a3566;
-      z-index: 1; text-align: center;
+      z-index: 1;
+      text-align: center;
     }
+
     .main-subtitle {
-      color: #8892b0; font-size: 14px; margin-bottom: 50px; letter-spacing: 4px;
-      z-index: 1; text-align: center;
+      color: #8892b0;
+      font-size: 14px;
+      margin-bottom: 50px;
+      letter-spacing: 4px;
+      z-index: 1;
+      text-align: center;
     }
-
-
   </style>
 </head>
 
@@ -355,17 +452,37 @@
     <div id="mainMenu" class="main-menu-bg">
       <h1 class="main-title">TOWER<br>DEFENSE</h1>
       <div class="main-subtitle">TACTICAL ENGAGEMENT PROTOCOL</div>
-      
-      <div style="display:flex; gap:20px; z-index: 1;">
+
+      <div style="display:flex; flex-direction:column; align-items:center; gap:20px; z-index: 1;">
+        <button id="btnShowRanking"
+          style="width:200px; padding:16px 30px; font-size:16px; font-weight:bold; border-radius:8px; background:rgba(204,153,0,0.8); color:#fff; border:2px solid #ffcc00; box-shadow: 0 0 20px rgba(255,204,0,0.4); backdrop-filter:blur(5px);">
+          🏆 RANKING
+        </button>
         <button id="btnResume"
-          style="padding:16px 30px; font-size:16px; font-weight:bold; border-radius:8px; background:rgba(42,53,102,0.8); color:#fff; border:2px solid #7aa6ff; box-shadow: 0 0 20px rgba(122,166,255,0.4); display:none; backdrop-filter:blur(5px);">
+          style="width:200px; padding:16px 30px; font-size:16px; font-weight:bold; border-radius:8px; background:rgba(42,53,102,0.8); color:#fff; border:2px solid #7aa6ff; box-shadow: 0 0 20px rgba(122,166,255,0.4); display:none; backdrop-filter:blur(5px);">
           RESUME
         </button>
         <button id="btnNewGame"
-          style="padding:16px 30px; font-size:16px; font-weight:bold; border-radius:8px; background:rgba(74,31,31,0.8); color:#ffcccc; border:2px solid #ff4d4d; box-shadow: 0 0 20px rgba(255,77,77,0.4); backdrop-filter:blur(5px);">
+          style="width:200px; padding:16px 30px; font-size:16px; font-weight:bold; border-radius:8px; background:rgba(74,31,31,0.8); color:#ffcccc; border:2px solid #ff4d4d; box-shadow: 0 0 20px rgba(255,77,77,0.4); backdrop-filter:blur(5px);">
           NEW START
         </button>
       </div>
+    </div>
+
+    <!-- Ranking Modal -->
+    <div id="rankingModal"
+      style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(10,12,20,0.95); backdrop-filter:blur(10px); z-index:9500; display:none; flex-direction:column; justify-content:flex-start; align-items:center; padding-top:40px;">
+      <h2
+        style="color:#ffcc00; font-size:32px; margin-bottom:20px; text-shadow:0 0 15px rgba(255,204,0,0.4); letter-spacing:2px;">
+        🏆 HALL OF FAME</h2>
+      <div id="rankingList"
+        style="width:340px; max-height:60dvh; overflow-y:auto; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:15px; display:flex; flex-direction:column; gap:8px;">
+        <div style="text-align:center; color:#888; padding:20px;">랭킹 데이터를 불러오는 중...</div>
+      </div>
+      <button id="btnCloseRanking"
+        style="margin-top:25px; padding:12px 30px; font-size:16px; font-weight:bold; border-radius:8px; background:rgba(42,47,76,0.8); color:#fff; border:1px solid #7aa6ff;">
+        닫기
+      </button>
     </div>
 
     <!-- Finisher Modal -->
@@ -405,17 +522,21 @@
         <div class="result-title" id="resTitle">W100 FAILURE</div>
         <div class="result-subtitle" id="resSub">System Overloaded...</div>
         <div class="rank-badge" id="resRank">C</div>
-        
+
         <div class="stat-grid">
           <div class="stat-item"><span>🌊 도달 웨이브</span><b id="resWave">100</b></div>
-          <div class="stat-item"><span>💖 남은 생명력</span><b id="resHp">0</b></div>
-          <div class="stat-item"><span>💰 획득 골드</span><b id="resGold" style="color:#ffd700;">0G</b></div>
+          <div class="stat-item"><span>⭐ 최고 강화</span><b id="resMaxLevel">0</b></div>
+          <div class="stat-item"><span>💰 누적 골드</span><b id="resGold" style="color:#ffd700;">0G</b></div>
           <div class="stat-item"><span>🏗️ 건설 타워</span><b id="resTowers">0</b></div>
         </div>
 
+        <input type="text" id="playerName" placeholder="AAA" maxlength="3" autocomplete="off"
+          oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '')"
+          style="width:100%; padding:12px; margin-bottom:20px; background:rgba(0,0,0,0.4); border:1px solid #556; border-radius:8px; color:#fff; font-size:16px; text-align:center; outline:none;" />
+
         <div class="result-btns">
           <button id="btnResNew" style="background:#2a3566; border-color:#7aa6ff;">NEW START</button>
-          <button id="btnResMain" style="background:#2c4a6e; border-color:#7aa6ff; color:#fff;">BLUEPRINT</button>
+          <button id="btnResMain" style="background:#2c4a6e; border-color:#7aa6ff; color:#fff;">랭킹 등록</button>
         </div>
       </div>
     </div>
@@ -647,10 +768,10 @@
         lastToastMsg = msg; lastToastTime = Date.now();
         const toast = document.getElementById('toast');
         if (!toast) return;
-        
+
         // textContent를 innerHTML로 교체하여 <br> 태그 허용
-        toast.innerHTML = msg; 
-        
+        toast.innerHTML = msg;
+
         toast.style.display = 'block';
         void toast.offsetWidth; // force reflow
         toast.classList.add('show');
@@ -661,6 +782,20 @@
         }, ms);
       }
       // -------------------------
+
+      const getDeviceInfo = () => {
+        const ua = navigator.userAgent;
+        const isMobile = /Mobile|Android|iP(hone|ad)/i.test(ua);
+        return {
+          ua_full: ua,
+          browser: /Chrome/i.test(ua) ? 'Chrome' : /Safari/i.test(ua) ? 'Safari' : /Firefox/i.test(ua) ? 'Firefox' : 'Other',
+          engine: /AppleWebKit/i.test(ua) ? 'AppleWebKit' : 'Other',
+          os: /Android/i.test(ua) ? 'Android' : /iPhone|iPad/i.test(ua) ? 'iOS' : /Windows/i.test(ua) ? 'Windows' : 'Mac',
+          platform: isMobile ? 'MOBILE' : 'DESKTOP',
+          screen: `${window.innerWidth}x${window.innerHeight}`,
+          control: ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 'TOUCH' : 'MOUSE'
+        };
+      };
 
       const G = {
         gameState: 'MENU', isTutorialDone: false,
@@ -718,7 +853,12 @@
         hiddenEndingLabel: "",
         statsFreezeCount: 0,
         statsVulnCount: 0,
-        statsFinisherCount: 0
+        statsFinisherCount: 0,
+
+        // --- ANALYTICS ---
+        playStartTime: 0, retryCount: 0,
+        buildCount: 0, sellCount: 0, gachaCount: 0,
+        deathPos: { x: 0, y: 0 }, deathReason: ""
       };
 
       // Economy Guard Helper
@@ -1210,6 +1350,7 @@
           if (!G.isTutorialDone || G.wave === 0) { log('🚫 튜토리얼 훈련 중에는 타워를 판매할 수 없습니다.'); G.previewTower = null; return; }
           const v = getSellValue(t); G.gold += v;
           G.towers = G.towers.filter(x => x !== t);
+          G.sellCount++; // Analytics hook
           log(`💰 판매 완료 (+${v}G)`); addFloatText(`+${v}`, t.x, t.y);
           saveGameState();
           G.previewTower = null;
@@ -1262,6 +1403,7 @@
           cooldown: 0,
           lastAngle: 0 // State Persistence
         });
+        G.buildCount++; // Analytics hook
         log(`🔨 ${def.name} 건설 (-${def.cost}G)`);
         addFloatText(`-${def.cost}`, px, py - 10);
         saveGameState();
@@ -1419,7 +1561,7 @@
       // --- ENDING SYSTEM (HTML UI 연동) ---
       function triggerEnding(type) {
         G.gameState = 'GAMEOVER';
-        
+
         // 타워 갯수 계산
         let tCount = 0;
         G.towers.forEach(t => { if (!t.isHero) tCount++; });
@@ -1430,11 +1572,12 @@
         const title = document.getElementById('resTitle');
         const sub = document.getElementById('resSub');
         const rank = document.getElementById('resRank');
-        
+
         // 데이터 바인딩
+        const maxLevel = G.towers.length > 0 ? Math.max(...G.towers.map(t => t.level)) : 0;
         document.getElementById('resWave').innerText = G.wave;
-        document.getElementById('resHp').innerText = Math.max(0, G.lives);
-        document.getElementById('resGold').innerText = Math.floor(G.gold) + 'G';
+        document.getElementById('resMaxLevel').innerText = maxLevel;
+        document.getElementById('resGold').innerText = Math.floor(G.totalGoldEarned || 0) + 'G';
         document.getElementById('resTowers').innerText = tCount;
 
         // 랭크 계산
@@ -1470,9 +1613,18 @@
         modal.style.display = 'flex';
       }
 
-      // 결과 창 버튼 이벤트 리스너
-      document.getElementById('btnResNew').onclick = () => {
+      // 결과 창 버튼 이벤트 리스너 (Firebase API 연동용 래핑)
+      async function extractAndSaveScore() {
+        if (!window.defenseRankingAPI) return;
+        let nameInput = document.getElementById('playerName').value.trim();
+        if (!nameInput) nameInput = "AAA";
+        const rankB = document.getElementById('resRank').innerText;
+        await window.defenseRankingAPI.saveScore(nameInput, G.wave, G.totalGoldEarned || 0, rankB);
+      }
+
+      document.getElementById('btnResNew').onclick = async () => {
         document.getElementById('resultModal').style.display = 'none';
+        await extractAndSaveScore();
         localStorage.removeItem('defenseSave');
         G.gameState = 'PLAYING';
         resetGame();
@@ -1480,9 +1632,14 @@
         updateUI();
       };
 
-      document.getElementById('btnResMain').onclick = () => {
+      document.getElementById('btnResMain').onclick = async () => {
         document.getElementById('resultModal').style.display = 'none';
-        document.getElementById('mainMenu').style.display = 'flex';
+        document.getElementById('mainMenu').style.display = 'none';
+        document.getElementById('rankingModal').style.display = 'flex';
+        document.getElementById('rankingList').innerHTML = '<div style="text-align:center; color:#888; padding:20px;">기록을 전송하는 중...</div>';
+        await extractAndSaveScore();
+        await new Promise(resolve => setTimeout(resolve, 600));
+        if (window.defenseRankingAPI) window.defenseRankingAPI.loadRankings();
       };
 
 
@@ -1605,7 +1762,7 @@
               } else {
                 e.slowFactor = 0; // 상태 이상 종료 시 감속 비율 초기화
               }
-              
+
               if (e.isBoss) effectiveSlow *= 0.5;
 
               const speed = (e.currentSpeed || e.speed) * (1 - effectiveSlow);
@@ -1665,7 +1822,7 @@
                     G.rock.timer = G.rock.duration; // 5초 타이머 시작
                     log("🌑 최후의 방어선 작동! 10초간 적을 차단합니다!");
                   }
-                  
+
                   // 운석이 활성화되어 있는 10초 동안은 위치를 강제 고정 (통과 절대 불가)
                   if (G.rock.timer > 0) {
                     e.y = 790; // 이 선을 넘지 못함
@@ -1722,14 +1879,17 @@
 
                 updateUI();
                 if (G.lives <= 0 || (e.isBoss && e.bossType === 100)) {
-                  if (G.wave === 100 && !G.endingActive) {
+                  if (G.lives <= 0 || (G.wave === 100 && !G.endingActive)) {
+                    G.lives = 0;
+                    updateUI();
+                    G.deathPos = { x: Math.floor(e.x), y: Math.floor(e.y) };
+                    G.deathReason = e.isBoss ? "Boss Break" : "Monster Break";
                     triggerEnding('FAIL');
                     endingJustTriggered = true;
                     G.inWave = false;
                     G.spawnPlan = null;
                     break;
                   }
-                  else if (G.lives <= 0 && (!G.endingActive)) resetGame();
                 }
               }
 
@@ -2351,16 +2511,16 @@
         if (G.rock && G.rock.available) {
           ctx.save();
           // 적들이 막히는 길목 좌표 (x: 270, y: 790)
-          ctx.translate(270, 790); 
-          
+          ctx.translate(270, 790);
+
           ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          
+
           if (G.rock.active) {
             // 💥 발동 중: 강하게 진동하는 🌑 운석
             ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
             ctx.font = '60px sans-serif';
             ctx.fillText('🌑', 0, 0);
-            
+
             // 붉은색 카운트다운 타이머
             ctx.fillStyle = '#ff4d4d'; ctx.font = 'bold 22px sans-serif';
             ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
@@ -2370,7 +2530,7 @@
             ctx.globalAlpha = 0.4;
             ctx.font = '40px sans-serif';
             ctx.fillText('🌑', 0, 0);
-            
+
             ctx.globalAlpha = 0.8;
             ctx.fillStyle = '#8892b0'; ctx.font = 'bold 11px sans-serif';
             ctx.fillText('LAST STAND', 0, -30);
@@ -2593,9 +2753,9 @@
         // 튜토리얼 텍스트 렌더링
         if (!G.isTutorialDone && G.wave === 0) {
           ctx.fillStyle = '#ffda00'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
-          
-          if (G.towers.length === 0) { 
-            ctx.fillText("👇 하단의 [머신건] 타워를 건설하세요!", LOGICAL_W / 2, LOGICAL_H / 2); 
+
+          if (G.towers.length === 0) {
+            ctx.fillText("👇 하단의 [머신건] 타워를 건설하세요!", LOGICAL_W / 2, LOGICAL_H / 2);
           } else {
             const hasUpgraded = G.towers.some(t => t.level > 1);
             if (!hasUpgraded) {
@@ -2743,20 +2903,20 @@
         if (!G.isTutorialDone && G.wave === 0) {
           // 다른 고급 기능들은 튜토리얼 중 잠금
           G.ui.t2.disabled = true; G.ui.t3.disabled = true;
-          G.ui.sell.disabled = true; 
+          G.ui.sell.disabled = true;
           G.ui.buyUp.disabled = true; G.ui.buyAll.disabled = true; G.ui.buyHero.disabled = true;
-          
-          if (G.towers.length === 0) { 
+
+          if (G.towers.length === 0) {
             // [1단계] 타워가 없을 때: 강화 버튼과 시작 버튼 모두 잠금
-            G.ui.upgrade.disabled = true; 
-            G.ui.startWave.disabled = true; G.ui.startWave.style.opacity = 0.3; 
-          } else { 
+            G.ui.upgrade.disabled = true;
+            G.ui.startWave.disabled = true; G.ui.startWave.style.opacity = 0.3;
+          } else {
             // [2단계] 타워가 지어졌을 때: 강화 버튼 잠금 해제!
-            G.ui.upgrade.disabled = false; 
-            
+            G.ui.upgrade.disabled = false;
+
             // 타워 중 레벨이 2 이상인(강화된) 타워가 있는지 검사
             const hasUpgraded = G.towers.some(t => t.level > 1);
-            
+
             if (!hasUpgraded) {
               // 강화를 아직 안 했다면 시작 버튼은 계속 잠금
               G.ui.startWave.disabled = true; G.ui.startWave.style.opacity = 0.3;
@@ -2787,8 +2947,12 @@
       G.ui.sell.onclick = () => setMode(G.mode === 'sell' ? 'place' : 'sell');
       G.ui.upgrade.onclick = () => setMode(G.mode === 'upgrade' ? 'place' : 'upgrade');
       G.ui.startWave.onclick = () => startWave();
-      G.ui.buyUp.onclick = () => buyUpgradePoint(); // Gacha Button Handler
-      G.ui.buyAll.onclick = () => buyUpgradeAllIn(); // 신규 추가: All-In 버튼 이벤트 연결
+      G.ui.buyUp.onclick = () => { buyUpgradePoint(); G.gachaCount++; }; // Gacha Button Handler
+      G.ui.buyAll.onclick = () => {
+        const prevP = G.upgradePoints;
+        buyUpgradeAllIn();
+        G.gachaCount += (G.upgradePoints - prevP);
+      }; // 신규 추가: All-In 버튼 이벤트 연결
       G.ui.buyHero.onclick = () => buyHeroPoint(); // 영웅 뽑기 이벤트 연결
       G.ui.btnSpeed.onclick = () => toggleSpeed(); // 배속 제어 버튼 이벤트 연결
 
@@ -2940,6 +3104,132 @@
       updateUI(); setMode('place', 1); log('강화 시스템 업데이트 완료.');
       requestAnimationFrame(tick);
     })();
+  </script>
+
+  <!-- FIREBASE RANKING MODULE -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDa3Lf-79xCd6pQO8aeO2FxoxHYPjA-Yag",
+      authDomain: "tower-defense-27f4e.firebaseapp.com",
+      projectId: "tower-defense-27f4e",
+      storageBucket: "tower-defense-27f4e.firebasestorage.app",
+      messagingSenderId: "662211622164",
+      appId: "1:662211622164:web:bf5841c005093873b0be01",
+      measurementId: "G-30M0BB8PSB"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.defenseRankingAPI = {
+      saveScore: async (name, wave, gold, rankBadge) => {
+        try {
+          const finalName = name || '무명 사령관';
+          const device = typeof getDeviceInfo === 'function' ? getDeviceInfo() : {};
+          const playTimeSec = G.playStartTime ? (Date.now() - G.playStartTime) / 1000 : 0;
+
+          await addDoc(collection(db, "rankings"), {
+            // 1. Basic Ranking Data
+            name: finalName,
+            wave: Number(wave),
+            gold: Math.floor(gold),
+            rankBadge: rankBadge,
+            timestamp: serverTimestamp(),
+
+            // 2. Gameplay Analytics
+            stage: Number(wave), // Alias for wave
+            result: (rankBadge === 'S' || rankBadge === 'A' || rankBadge === 'B') && wave >= 100 ? "WIN" : "FAIL",
+            play_time: Number(playTimeSec.toFixed(3)),
+            retry_count: G.retryCount || 1,
+            build_count: G.buildCount || 0,
+            sell_count: G.sellCount || 0,
+            gacha_count: G.gachaCount || 0,
+            death_pos: G.deathPos || { x: 0, y: 0 },
+            reason: G.deathReason || "Unknown",
+
+            // 3. Device & Environment Telemetry
+            browser: device.browser || "Unknown",
+            engine: device.engine || "Unknown",
+            os: device.os || "Unknown",
+            platform: device.platform || "Unknown",
+            screen: device.screen || "Unknown",
+            control: device.control || "Unknown",
+            ua_full: device.ua_full || "Unknown"
+          });
+          console.log("Score & Telemetry Saved Successfully");
+        } catch (e) {
+          console.error("Error saving score: ", e);
+        }
+      },
+      loadRankings: async () => {
+        const listDiv = document.getElementById('rankingList');
+        // Do not overwrite "Uploading..." text if we just triggered it from an active save.
+        if (!listDiv.innerHTML.includes('기록을 전송하는 중...')) {
+          listDiv.innerHTML = '<div style="text-align:center; color:#888; padding:20px;">랭킹 데이터를 불러오는 중...</div>';
+        }
+
+        try {
+          const q = query(collection(db, "rankings"), orderBy("wave", "desc"), limit(30));
+          const querySnapshot = await getDocs(q);
+
+          listDiv.innerHTML = '';
+          if (querySnapshot.empty) {
+            listDiv.innerHTML = '<div style="text-align:center; color:#888; padding:20px;">아직 기록이 없습니다.</div>';
+            return;
+          }
+
+          let docs = [];
+          querySnapshot.forEach(doc => docs.push(doc.data()));
+          // Client-side secondary sort by gold, then take top 10
+          docs.sort((a, b) => {
+            if (b.wave !== a.wave) return b.wave - a.wave;
+            return b.gold - a.gold;
+          });
+          const top10 = docs.slice(0, 10);
+
+          let html = '';
+          let place = 1;
+          top10.forEach((data) => {
+            let rankColor = '#fff';
+            if (place === 1) rankColor = '#ffd700'; // Gold
+            else if (place === 2) rankColor = '#c0c0c0'; // Silver
+            else if (place === 3) rankColor = '#cd7f32'; // Bronze
+
+            html += `
+              <div style="background:rgba(255,255,255,0.05); padding:10px 15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <b style="font-size:20px; color:${rankColor}; width:24px;">${place}</b>
+                  <span style="font-size:16px; color:#fff; font-weight:bold;">${data.name}</span>
+                </div>
+                <div style="text-align:right;">
+                  <div style="color:#7aa6ff; font-weight:bold;">W${data.wave} <span style="font-size:12px; color:${data.rankBadge === 'S' ? '#ffcc00' : (data.rankBadge === 'F' ? '#ff4d4d' : '#aaa')};">[${data.rankBadge}]</span></div>
+                  <div style="color:#ffd700; font-size:12px;">${Math.floor(data.gold)}G</div>
+                </div>
+              </div>
+            `;
+            place++;
+          });
+          listDiv.innerHTML = html;
+        } catch (e) {
+          console.error("Error loading rankings: ", e);
+          listDiv.innerHTML = '<div style="text-align:center; color:#ff4d4d; padding:20px;">데이터를 불러오는 중 오류가 발생했습니다.</div>';
+        }
+      }
+    };
+
+    // Binding the new ranking Modal events directly after load
+    document.getElementById('btnShowRanking').addEventListener('click', () => {
+      document.getElementById('rankingModal').style.display = 'flex';
+      window.defenseRankingAPI.loadRankings();
+    });
+
+    document.getElementById('btnCloseRanking').addEventListener('click', () => {
+      document.getElementById('rankingModal').style.display = 'none';
+    });
+
   </script>
 </body>
 
