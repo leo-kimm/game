@@ -1,0 +1,2943 @@
+<!doctype html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>타워형 디펜스 MVP (강화P 시스템)</title>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100dvh;
+      background: #0f1220;
+      color: #e8ecff;
+      font-family: system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .wrap.layout {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .canvas-container {
+      flex: 8;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      background: #05070a;
+      overflow: hidden;
+    }
+
+    canvas.game {
+      background: #0b0e18;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+      touch-action: none;
+      max-width: 100%;
+      max-height: 100%;
+      display: block;
+    }
+
+    .panel.ui {
+      flex: 2;
+      width: 100%;
+      background: #121733;
+      border-top: 1px solid rgba(255, 255, 255, .12);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      padding: 0 4px;
+      color: #ccc;
+    }
+
+    .top-bar b {
+      color: #fff;
+      margin-left: 4px;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr) 0.8fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 6px;
+      height: 100%;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, .15);
+      background: #171f43;
+      color: #e8ecff;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: all 0.1s;
+    }
+
+    button span.cost {
+      font-size: 10px;
+      opacity: 0.7;
+      margin-top: 2px;
+    }
+
+    /* [신규 주입] 설명 문구용 디자인 스펙 */
+    button span.desc {
+      font-size: 9px;
+      color: #aaa;
+      font-weight: normal;
+      margin-top: 1px;
+    }
+
+    button:active {
+      transform: scale(0.96);
+      background: #222b5e;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      filter: grayscale(1);
+    }
+
+    .btn-on {
+      background: #2a3566;
+      border-color: #7aa6ff;
+      box-shadow: inset 0 0 10px rgba(122, 166, 255, 0.2);
+    }
+
+    #startWave {
+      grid-column: 4;
+      grid-row: 1 / 3;
+      background: #1b3a20;
+      border-color: #2e5c35;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+
+    #sell {
+      grid-column: 1;
+      grid-row: 2;
+      border-color: #ff7a7a;
+      color: #ffd6d6;
+    }
+
+    #sell.btn-on {
+      background: #4d2020;
+    }
+
+    #upgrade {
+      grid-column: 2;
+      grid-row: 2;
+      border-color: #ffd700;
+      color: #fff6d6;
+    }
+
+    #upgrade.btn-on {
+      background: #4d4420;
+    }
+
+    #t1 {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    #t2 {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    #t3 {
+      grid-column: 3;
+      grid-row: 1;
+    }
+
+    #floatLogContainer {
+      position: absolute;
+      bottom: 22%;
+      right: 12px;
+      width: 240px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      pointer-events: none;
+      z-index: 20;
+    }
+
+    .float-log-item {
+      background: rgba(0, 0, 0, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(2px);
+      padding: 6px 10px;
+      border-radius: 6px;
+      margin-top: 4px;
+      font-size: 12px;
+      color: #fff;
+      animation: fadeOut 3.5s forwards;
+      text-align: right;
+    }
+
+    @keyframes fadeOut {
+      0% {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      10% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      80% {
+        opacity: 1;
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+    }
+
+    #waveProgressBar {
+      width: 100%;
+      height: 4px;
+      background: #1a1f35;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 50;
+    }
+
+    #waveProgressFill {
+      height: 100%;
+      width: 0%;
+      background: #7aa6ff;
+      transition: width 0.3s ease-out;
+    }
+
+    #toast {
+      position: absolute;
+      left: 50%;
+      bottom: 28%;
+      transform: translateX(-50%);
+      max-width: 92%;
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+      font-size: 13px;
+      text-align: center;
+      pointer-events: none;
+      z-index: 2000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      display: none;
+    }
+
+    #toast.show {
+      display: block;
+      opacity: 1;
+    }
+
+    /* --- 신규 결과 화면 모달 디자인 --- */
+    @keyframes slideUpFade {
+      0% { opacity: 0; transform: scale(0.9) translateY(30px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    #resultModal {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(10, 12, 20, 0.92); backdrop-filter: blur(12px);
+      z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center;
+    }
+
+    .result-box {
+      background: linear-gradient(145deg, #161c33 0%, #0d1120 100%);
+      border: 2px solid #3a456e; border-radius: 16px; padding: 40px 30px;
+      width: 320px; box-shadow: 0 15px 40px rgba(0,0,0,0.5), inset 0 2px 10px rgba(255,255,255,0.05);
+      animation: slideUpFade 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    .result-title { font-size: 28px; font-weight: 800; margin-bottom: 5px; text-align: center; text-shadow: 0 0 15px currentColor; }
+    .result-subtitle { font-size: 14px; color: #8892b0; margin-bottom: 25px; }
+    .rank-badge { font-size: 54px; font-weight: 900; font-style: italic; margin-bottom: 20px; text-shadow: 0 0 20px currentColor; }
+
+    .stat-grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px; }
+    .stat-item {
+      background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .stat-item span { font-size: 11px; color: #aaa; margin-bottom: 4px; }
+    .stat-item b { font-size: 16px; color: #fff; }
+
+    .result-btns { display: flex; gap: 10px; width: 100%; }
+    .result-btns button { flex: 1; padding: 14px 0; font-size: 14px; border-radius: 8px; }
+
+    /* --- 메인 메뉴 전용 전술 모니터 배경 --- */
+    .main-menu-bg {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background-color: #05070a;
+      /* 전술 그리드(격자)와 방사형 그라데이션 */
+      background-image: 
+        radial-gradient(circle at 50% 50%, rgba(30, 45, 90, 0.4) 0%, rgba(5, 7, 10, 1) 90%),
+        linear-gradient(rgba(122, 166, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(122, 166, 255, 0.08) 1px, transparent 1px);
+      background-size: 100% 100%, 50px 50px, 50px 50px;
+      background-position: center center;
+      z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center;
+      overflow: hidden;
+    }
+
+    /* 레이저 스캔라인 애니메이션 */
+    .main-menu-bg::after {
+      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: linear-gradient(to bottom, transparent, rgba(122, 166, 255, 0.15) 50%, transparent);
+      transform: rotate(30deg);
+      animation: scanline 7s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes scanline {
+      0% { transform: translateY(-100%) rotate(30deg); }
+      100% { transform: translateY(100%) rotate(30deg); }
+    }
+
+    .main-title {
+      color: #fff; font-size: 56px; font-weight: 900; margin-bottom: 5px;
+      text-transform: uppercase; letter-spacing: 6px;
+      text-shadow: 0 0 10px #7aa6ff, 0 0 20px #7aa6ff, 0 0 40px #2a3566;
+      z-index: 1; text-align: center;
+    }
+    .main-subtitle {
+      color: #8892b0; font-size: 14px; margin-bottom: 50px; letter-spacing: 4px;
+      z-index: 1; text-align: center;
+    }
+
+
+  </style>
+</head>
+
+<body>
+  <div class="wrap layout">
+    <div id="mainMenu" class="main-menu-bg">
+      <h1 class="main-title">TOWER<br>DEFENSE</h1>
+      <div class="main-subtitle">TACTICAL ENGAGEMENT PROTOCOL</div>
+      
+      <div style="display:flex; gap:20px; z-index: 1;">
+        <button id="btnResume"
+          style="padding:16px 30px; font-size:16px; font-weight:bold; border-radius:8px; background:rgba(42,53,102,0.8); color:#fff; border:2px solid #7aa6ff; box-shadow: 0 0 20px rgba(122,166,255,0.4); display:none; backdrop-filter:blur(5px);">
+          RESUME
+        </button>
+        <button id="btnNewGame"
+          style="padding:16px 30px; font-size:16px; font-weight:bold; border-radius:8px; background:rgba(74,31,31,0.8); color:#ffcccc; border:2px solid #ff4d4d; box-shadow: 0 0 20px rgba(255,77,77,0.4); backdrop-filter:blur(5px);">
+          NEW START
+        </button>
+      </div>
+    </div>
+
+    <!-- Finisher Modal -->
+    <div id="finisherModal"
+      style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(15,18,32,0.85); backdrop-filter:blur(10px); z-index:900; display:none; flex-direction:column; justify-content:center; align-items:center; opacity:0; transition: opacity 0.3s ease;">
+      <h2 style="color:#ffcc00; font-size:32px; margin-bottom:20px; text-shadow:0 0 15px rgba(255,204,0,0.4);">🔥 필살기 선택
+      </h2>
+      <div id="finisherCards" style="display:flex; gap:20px;">
+        <!-- Card A (HP) -->
+        <button id="cardFinisherHP"
+          style="width:160px; padding:20px; background:#4a1f1f; border:2px solid #ff4d4d; border-radius:12px; color:#ffcccc; display:flex; flex-direction:column; gap:10px; cursor:pointer; align-items:center; transition: transform 0.2s;">
+          <b style="font-size:18px; color:#ff4d4d;">HP 스팀팩</b>
+          <div style="font-size:12px; color:#ff9999; text-align:center;">
+            타워 공속 1.35x<br>사거리 1.06x<br>(보스전 패널티 70%)
+          </div>
+          <div style="font-size:14px; color:#ffcc00;">지속: 6.0초</div>
+          <div style="font-size:14px; color:#ff4d4d; font-weight:bold;">비용: HP -3</div>
+        </button>
+        <!-- Card B (Gold) -->
+        <button id="cardFinisherGold"
+          style="width:160px; padding:20px; background:#4a3f1f; border:2px solid #ffcc00; border-radius:12px; color:#ffeecc; display:flex; flex-direction:column; gap:10px; cursor:pointer; align-items:center; transition: transform 0.2s;">
+          <b style="font-size:18px; color:#ffcc00;">골드 부스트</b>
+          <div style="font-size:12px; color:#ffdd99; text-align:center;">
+            타워 공속 1.20x<br>사거리 보너스 없음
+          </div>
+          <div style="font-size:14px; color:#ffcc00;">지속: 5.0초</div>
+          <div id="textFinisherGoldCost" style="font-size:14px; color:#ffd700; font-weight:bold;">비용: 계산중...</div>
+        </button>
+      </div>
+      <button id="btnCancelFinisher"
+        style="margin-top:30px; padding:10px 20px; border-radius:8px; background:#2a2f4c; color:#fff; border:1px solid #4a5568;">취소
+        (ESC)</button>
+    </div>
+
+    <div id="resultModal">
+      <div class="result-box" id="resultBox">
+        <div class="result-title" id="resTitle">W100 FAILURE</div>
+        <div class="result-subtitle" id="resSub">System Overloaded...</div>
+        <div class="rank-badge" id="resRank">C</div>
+        
+        <div class="stat-grid">
+          <div class="stat-item"><span>🌊 도달 웨이브</span><b id="resWave">100</b></div>
+          <div class="stat-item"><span>💖 남은 생명력</span><b id="resHp">0</b></div>
+          <div class="stat-item"><span>💰 획득 골드</span><b id="resGold" style="color:#ffd700;">0G</b></div>
+          <div class="stat-item"><span>🏗️ 건설 타워</span><b id="resTowers">0</b></div>
+        </div>
+
+        <div class="result-btns">
+          <button id="btnResNew" style="background:#2a3566; border-color:#7aa6ff;">NEW START</button>
+          <button id="btnResMain" style="background:#2c4a6e; border-color:#7aa6ff; color:#fff;">BLUEPRINT</button>
+        </div>
+      </div>
+    </div>
+
+
+    <div id="waveProgressBar">
+      <div id="waveProgressFill"></div>
+    </div>
+    <div class="canvas-container" id="canvasContainer">
+      <canvas id="c" class="game" width="540" height="816"></canvas>
+      <div id="floatLogContainer"></div>
+      <div id="toast"></div>
+    </div>
+
+    <div class="panel ui">
+      <div class="top-bar" id="topStat"><span>준비중...</span></div>
+
+      <!-- 배속 제어 버튼 (절대 위치) -->
+      <div style="position:absolute; top:8px; right:8px; z-index:100; display:flex; align-items:center;">
+        <button id="btnSpeed"
+          style="background:#2a2f4c; border-color:#4a5568; padding:4px 8px; font-size:12px; font-weight:bold; border-radius:4px; margin-right:8px;">
+          ⏩ 1x
+        </button>
+        <button id="btnFinisher"
+          style="background:#4a1f1f; border-color:#ff4d4d; color:#ffcccc; padding:4px 8px; font-size:12px; font-weight:bold; border-radius:4px; opacity:0.5; pointer-events:none;">
+          🔥 필살기
+        </button>
+      </div>
+
+      <div class="controls-grid">
+        <button id="t1">머신건<span class="desc">빠른 연사</span><span class="cost">50G</span></button>
+        <button id="t2">캐논<span class="desc">범위 공격</span><span class="cost">80G</span></button>
+        <button id="t3">슬로우<span class="desc">이동 저하</span><span class="cost">70G</span></button>
+
+        <!-- Col 1 (좌하단): 판매, 강화 -->
+        <div style="grid-column:1; grid-row:2; display:flex; gap:4px;">
+          <button id="sell" style="flex:1;">판매</button>
+          <button id="upgrade" style="flex:1;">강화</button>
+        </div>
+
+        <!-- Col 2 (중앙하단): 뽑기, 올인 -->
+        <div style="grid-column:2; grid-row:2; display:flex; gap:4px;">
+          <button id="buyUp"
+            style="flex:1; background:#2a1f3d; border-color:#9d4edd; color:#e0c3fc; font-size:11px; line-height:1.2; padding:2px;">
+            강화P뽑기<br><span class="cost" style="font-size:9px; opacity:0.8; margin-top:0;">40G</span>
+          </button>
+          <button id="buyAll"
+            style="flex:1; background:#4a1f1f; border-color:#ff4d4d; color:#ffcccc; font-size:11px; line-height:1.2; padding:2px;">
+            강화P All-In<br><span style="font-size:9px; opacity:0.8; margin-top:0;">남은 돈 전부 올인</span>
+          </button>
+        </div>
+
+        <!-- Col 3 (우하단): 신규 영웅 뽑기 -->
+        <button id="buyHero"
+          style="grid-column:3; grid-row:2; background:#361f36; border-color:#ff3366; color:#ffccdd;">
+          영웅 뽑기
+          <span class="desc" style="color: #ff99bb;">보스 전용 킬러</span>
+          <span class="cost" style="color:#ff6699; opacity:1;">100P</span>
+        </button>
+
+        <button id="startWave"><span>▶</span><span>웨이브</span></button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const SCHEMA_VERSION = '1.0.0';
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d');
+      const container = document.getElementById('canvasContainer');
+      const logContainer = document.getElementById('floatLogContainer');
+
+      // ====== 1. 데이터 아키텍처: 해상도 및 그리드 ======
+      const LOGICAL_W = 540;
+      const LOGICAL_H = 816;
+      const ASPECT = LOGICAL_W / LOGICAL_H;
+
+      const gridSize = 48;
+      const gridCols = Math.floor(LOGICAL_W / gridSize);
+      const gridRows = Math.floor(LOGICAL_H / gridSize);
+
+      const offsetX = (LOGICAL_W - gridCols * gridSize) / 2;
+      const offsetY = (LOGICAL_H - gridRows * gridSize) / 2;
+
+      // ====== 2. 반응형 캔버스 리스케일링 (High-DPI) ======
+      function resizeCanvas() {
+        const availW = container.clientWidth;
+        const availH = container.clientHeight;
+
+        let cssW = availW;
+        let cssH = availW / ASPECT;
+
+        if (cssH > availH) {
+          cssH = availH;
+          cssW = cssH * ASPECT;
+        }
+
+        const dpr = window.devicePixelRatio || 1;
+        canvas.style.width = `${Math.floor(cssW)}px`;
+        canvas.style.height = `${Math.floor(cssH)}px`;
+
+        canvas.width = Math.floor(cssW * dpr);
+        canvas.height = Math.floor(cssH * dpr);
+
+        ctx.scale(dpr * (cssW / LOGICAL_W), dpr * (cssH / LOGICAL_H));
+      }
+      window.addEventListener('resize', resizeCanvas);
+      setTimeout(resizeCanvas, 0);
+
+      // ====== 3. 입력 좌표 매핑 파이프라인 ======
+      function getMousePos(evt) {
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return { x: 0, y: 0 };
+
+        let cx = evt.clientX;
+        let cy = evt.clientY;
+
+        if (evt.touches && evt.touches.length > 0) {
+          cx = evt.touches[0].clientX;
+          cy = evt.touches[0].clientY;
+        } else if (evt.changedTouches && evt.changedTouches.length > 0) {
+          cx = evt.changedTouches[0].clientX;
+          cy = evt.changedTouches[0].clientY;
+        }
+
+        const x = (cx - rect.left) / rect.width * LOGICAL_W;
+        const y = (cy - rect.top) / rect.height * LOGICAL_H;
+        return { x, y };
+      }
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.cancelable) e.preventDefault();
+        handleInput(getMousePos(e));
+      }, { passive: false });
+      canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+      canvas.addEventListener('mousedown', (e) => handleInput(getMousePos(e)));
+
+      // ====== 4. 로깅 시스템 ======
+      function log(msg) {
+        const el = document.createElement('div');
+        el.className = 'float-log-item';
+        el.textContent = msg;
+        logContainer.appendChild(el);
+        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 3600);
+      }
+
+      // ====== 5. 비즈니스 로직 및 상태 관리 ======
+      const path = [
+        { x: 270, y: 24 },  // 🕳️ 동굴(중앙)에서 스폰
+        { x: 270, y: 70 },
+        { x: 72, y: 70 },  // 소굴 내부 좌측 횡단
+        { x: 468, y: 70 },  // 소굴 내부 우측 횡단
+        { x: 468, y: 150 },  // 소굴 탈출 및 유저 구역 진입
+        { x: 72, y: 150 },
+        { x: 72, y: 300 },
+        { x: 468, y: 300 },
+        { x: 468, y: 450 },
+        { x: 72, y: 450 },
+        { x: 72, y: 600 },
+        { x: 468, y: 600 },
+        { x: 468, y: 700 },
+        { x: 72, y: 700 },
+        { x: 72, y: 780 },
+        { x: 270, y: 780 },
+        { x: 270, y: LOGICAL_H }
+      ];
+
+      function dist(a, b) { const dx = a.x - b.x, dy = a.y - b.y; return Math.hypot(dx, dy); }
+
+      const OVERCLOCK_WAVES = [1, 5];
+      const OVERCLOCK_TRIGGER_PROGRESS = 0.35;
+      const OVERCLOCK_DURATION = 3.5;
+      const OVERCLOCK_FR_MULT = 1.35;
+      const OVERCLOCK_RANGE_MULT = 1.06;
+      const OVERCLOCK_KILL_GOLD_MULT = 0.92;
+      const OVERCLOCK_INTERNAL_CD = 15.0;
+      const SYNERGY_FREEZE_MIN_WAVE = 6;
+
+      const MG_STACK_WINDOW = 2.0;
+      const MG_VULN_DURATION = 3.0;
+      const MG_VULN_CD = 4.0;
+      const MG_STACKS_NORMAL = 10;
+      const MG_STACKS_TANK = 8;
+      const MG_STACKS_BOSS = 12;
+      const MG_VULN_MULT_NORMAL = 1.15;
+      const MG_VULN_MULT_TANK = 1.20;
+      const MG_VULN_MULT_BOSS = 1.08;
+
+      const FINISHER_HP_COST = 3;
+      const FINISHER_HP_DUR = 6.0;
+      const FINISHER_HP_FR = 1.35;
+      const FINISHER_HP_RANGE = 1.06;
+      const FINISHER_BOSS_DAMP = 0.70;
+      const FINISHER_HP_KILL_GOLD_MULT = 0.90;
+
+      const FINISHER_GOLD_BASE = 120;
+      const FINISHER_GOLD_PER_WAVE = 10;
+      const FINISHER_GOLD_WALLET_PCT = 0.35;
+      const FINISHER_GOLD_DUR = 5.0;
+      const FINISHER_GOLD_FR = 1.20;
+      const FINISHER_GOLD_RANGE = 1.00;
+      const FINISHER_GOLD_KILL_GOLD_MULT = 0.92;
+
+      // --- HERO SCALING ---
+      const HERO_S_ADD = 1;
+      const HERO_SS_ADD = 2;
+      const HERO_S_MAX_OFFSET = 2;
+      const HERO_SS_MAX_OFFSET = 3;
+
+      // --- JIT Synergy Tips ---
+      let hintFlags = {
+        freezeTriggeredOnce: false, vulnTriggeredOnce: false,
+        freezeHintShown: false, vulnHintShown: false,
+        checkpointW6Shown: false, checkpointW11Shown: false, checkpointW19Shown: false,
+        remindFreezeAfterW20Shown: false, remindVulnAfterW20Shown: false
+      };
+      try {
+        const _saved = localStorage.getItem('defenseHintFlags_v1');
+        if (_saved) hintFlags = Object.assign(hintFlags, JSON.parse(_saved));
+      } catch (e) { }
+      function saveHints() { localStorage.setItem('defenseHintFlags_v1', JSON.stringify(hintFlags)); }
+
+      let toastTimer = null;
+      let lastToastMsg = "";
+      let lastToastTime = 0;
+      function showToast(msg, ms = 2000) {
+        if (msg === lastToastMsg && (Date.now() - lastToastTime) < 3000) return;
+        lastToastMsg = msg; lastToastTime = Date.now();
+        const toast = document.getElementById('toast');
+        if (!toast) return;
+        toast.textContent = msg;
+        toast.style.display = 'block';
+        void toast.offsetWidth; // force reflow
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => { if (!toast.classList.contains('show')) toast.style.display = 'none'; }, 300);
+        }, ms);
+      }
+      // -------------------------
+
+      const G = {
+        gameState: 'MENU', isTutorialDone: false,
+        gold: 250, lives: 20, wave: 0, inWave: false, time: 0,
+        gameSpeed: 1, // Time Scaling 1~3x
+        upgradePoints: 1, // Start with 1 Point
+        enemies: [], towers: [], projectiles: [], floatTexts: [],
+        mode: 'place', selectedTowerType: 1, pendingHero: null,
+        previewTower: null,
+        spawnPlan: null, spawnCursor: 0, killedThisWave: 0,
+        totalSpawnCount: 0, currentFinishedCount: 0, // Progress State
+        globalRangeDebuff: false, // W90 Boss Effect
+
+        // Auto Overclock State
+        overclockActive: false,
+        overclockUntil: 0,
+        overclockUsedThisWave: false,
+        overclockCooldownUntil: 0,
+
+        // Finisher State
+        finisherUsedThisWave: false,
+        finisherActive: false,
+        finisherType: null,
+        finisherUntil: 0,
+        finisherFRMult: 1,
+        finisherRangeMult: 1,
+        finisherKillGoldMult: 1,
+        currentFinisherGoldCost: 0,
+        // 👇 여기에 신규 코드 추가!
+        rock: { available: true, active: false, timer: 0, duration: 10.0 },
+
+        ui: {
+          btnSpeed: document.getElementById('btnSpeed'),
+          btnFinisher: document.getElementById('btnFinisher'),
+          finisherModal: document.getElementById('finisherModal'),
+          cardFinisherHP: document.getElementById('cardFinisherHP'),
+          cardFinisherGold: document.getElementById('cardFinisherGold'),
+          textFinisherGoldCost: document.getElementById('textFinisherGoldCost'),
+          btnCancelFinisher: document.getElementById('btnCancelFinisher'),
+          t1: document.getElementById('t1'), t2: document.getElementById('t2'), t3: document.getElementById('t3'),
+          startWave: document.getElementById('startWave'), sell: document.getElementById('sell'),
+          upgrade: document.getElementById('upgrade'), topStat: document.getElementById('topStat'),
+          buyUp: document.getElementById('buyUp'),
+          buyAll: document.getElementById('buyAll'), // All-In 버튼 객체 캐싱 추가
+          buyHero: document.getElementById('buyHero'), // 신규: 영웅 뽑기
+          progressFill: document.getElementById('waveProgressFill'), // Cached DOM
+        },
+
+        // --- ENDING TRACKER ---
+        endingActive: false,
+        endingType: null,
+        endingPhase: 0,
+        endingTimer: 0,
+        endingStats: {},
+        hiddenEndingLabel: "",
+        statsFreezeCount: 0,
+        statsVulnCount: 0,
+        statsFinisherCount: 0
+      };
+
+      // Economy Guard Helper
+      function addRewardGold(e) {
+        let totalMult = 1;
+        if (G.overclockActive) totalMult *= OVERCLOCK_KILL_GOLD_MULT;
+        if (G.finisherActive) totalMult *= G.finisherKillGoldMult;
+        let reward = Math.floor(e.reward * totalMult);
+        G.gold += reward;
+        addFloatText(`+${reward}`, e.x, e.y);
+      }
+
+      // Remove local getGachaCost if it exists (Cleanup)
+
+      // --- 수정 후 TOWER_TYPES 데이터 아키텍처 ---
+      const TOWER_TYPES = {
+        1: {
+          name: '머신건',
+          cost: 50,
+          range: 130,    // 사거리 대폭 상향 (먼저 때림)
+          fireRate: 0.95, // 공격 속도 2배 상향 (따다당!)
+          damage: 8,    // 속도 대신 단발 데미지 미세 조정
+          aoe: 0,
+          slow: 0,
+          color: '#7aa6ff'
+        },
+        2: {
+          name: '캐논',
+          cost: 80,
+          range: 110,    // 사거리 하향 (가까이 와야 쏨)
+          fireRate: 0.35, // 공격 속도 하향 (한 발 한 발이 묵직함)
+          damage: 24,    // 광역 데미지 유지
+          aoe: 85,       // 폭발 범위 미세 상향
+          slow: 0,
+          color: '#ffb86b'
+        },
+        3: {
+          name: '슬로우',
+          cost: 70,
+          range: 120,
+          fireRate: 0.55,
+          damage: 8,
+          aoe: 0,
+          slow: 0.45,
+          color: '#85ffb3'
+        },
+      };
+
+      const ENEMY_TYPES = {
+        normal: { name: '일반', hp: 35, speed: 70, reward: 8, color: '#d7d9ff' },
+        fast: { name: '빠름', hp: 25, speed: 150, reward: 7, color: '#ff7aa6' },
+        tank: { name: '단단', hp: 140, speed: 65, reward: 13, color: '#b6ff7a' },
+        boss: { name: 'BOSS', hp: 500, speed: 50, reward: 80, color: '#ff3333' }
+      };
+
+      // ====== Boss Handler ======
+      // ====== Boss Handler ======
+      const BossHandler = {
+        init: function (e, wave) {
+          e.bossType = wave - (wave % 10); // W12 -> W10 Boss Type
+          // W100 Special Handling
+          if (wave >= 100) e.bossType = 100;
+
+          // Trait Init
+          e.slowEvadeCount = 3; // 상태 이상 확정 회피 횟수 초기화
+          if (e.bossType === 50) { e.isStealth = false; e.stealthTimer = 0; }
+          if (e.bossType === 70) { e.dashTimer = 0; }
+          if (e.bossType === 40) { e.regenTimer = 0; }
+          if (e.bossType === 100) { e.traitTimer = 0; e.activeTrait = null; }
+        },
+
+        applyTick: function (e, dt, G) {
+          if (!e.isBoss) return;
+          e.currentSpeed = e.speed; // Reset temp speed
+
+          const type = (e.bossType === 100 && e.activeTrait) ? e.activeTrait : e.bossType;
+
+          // W20 (Haste)
+          if (type === 20 && e.hp < e.hpMax * 0.5) {
+            e.currentSpeed = e.speed * 2;
+            e.statusText = "HASTE";
+          }
+
+          // W40 (Regen)
+          if (type === 40) {
+            e.regenTimer = (e.regenTimer || 0) + dt;
+            if (e.regenTimer >= 2.5) {
+              e.hp = Math.min(e.hpMax, e.hp + (e.hpMax * 0.01));
+              e.regenTimer = 0;
+              addFloatText("+Regen", e.x, e.y - 10);
+            }
+            e.statusText = "REGEN";
+          }
+
+          // W50 (Stealth): 5s Visible / 2s Stealth
+          if (type === 50) {
+            e.stealthTimer = (e.stealthTimer || 0) + dt;
+            const cycle = e.stealthTimer % 7;
+            e.isStealth = cycle > 5;
+            if (e.isStealth) e.statusText = "STEALTH";
+          } else if (e.bossType === 50) {
+            // If W100 switches off 50, reset stealth
+            e.isStealth = false;
+          }
+
+          // W70 (Dash): 4s Interval, 50px Forward
+          if (type === 70) {
+            e.dashTimer = (e.dashTimer || 0) + dt;
+            if (e.dashTimer >= 4.0) {
+              e.dashReq = true; // Trigger Dash in Tick
+              e.dashTimer = 0;
+              e.statusText = "DASH";
+            }
+          }
+
+          // W100 (Final): Random Trait Every 5s
+          if (e.bossType === 100) {
+            e.traitTimer = (e.traitTimer || 0) + dt;
+            if (e.traitTimer >= 5.0) {
+              const traits = [20, 30, 40, 50, 60, 70, 80, 90];
+              e.activeTrait = traits[Math.floor(Math.random() * traits.length)];
+              e.traitTimer = 0;
+              addFloatText(`Pattern: W${e.activeTrait}`, e.x, e.y - 30);
+
+              // Reset states on switch
+              e.isStealth = false;
+            }
+          }
+        },
+
+        calcDamage: function (e, dmg, t) {
+          if (!e.isBoss) return dmg;
+          let finalDmg = dmg;
+          const type = (e.bossType === 100 && e.activeTrait) ? e.activeTrait : e.bossType;
+
+          // W30 (Phys Resist)
+          if (type === 30 && t.type === 1) {
+            finalDmg *= 0.5;
+            addFloatText("Block", e.x, e.y - 10);
+          }
+          // W60 (Hardness)
+          if (type === 60) {
+            finalDmg = Math.max(1, finalDmg - 10);
+          }
+          // W80 (Absorb)
+          if (type === 80) {
+            e.radius = Math.min((e.radius || 16.5) + 0.5, 30);
+            e.speed = Math.max(e.speed * 0.99, 10);
+            addFloatText("Absorb", e.x, e.y - 10);
+          }
+          return finalDmg;
+        },
+
+        onDeath: function (e, G) {
+          if (!e.isBoss) return;
+          const type = e.bossType;
+
+          // W10 (Split)
+          if (type === 10) {
+            for (let i = 0; i < 3; i++) spawnEnemy({ type: 'normal', hpMul: 1 }, e.x + (Math.random() * 20 - 10), e.y, e.pathIndex);
+            addFloatText("Split!", e.x, e.y);
+          }
+
+          if (e.bossType === 100) {
+            G.inWave = false;
+            log("🎉 100 웨이브 클리어! 축하합니다!");
+            triggerEnding('WIN');
+          }
+        }
+      };
+
+      // Upgrade Cost is now strictly Points based on level
+      function getUpgradeCost(t) { return t.level; }
+
+      // Dynamic Gacha Cost (Global Scope)
+      function getGachaCost() {
+        // Wave 1이면 1G, Wave 10이면 10G. 
+        // 단, Wave 시작 전(0)일 경우 최소 비용 20로 예외 처리
+        return Math.max(20, G.wave);
+      }
+
+      function getSellValue(t) {
+        const base = TOWER_TYPES[t.type].cost;
+        return Math.floor(base * 0.6 + (t.level - 1) * base * 0.2);
+      }
+      function applyUpgrade(t) {
+        t.level++;
+        t.damage *= 1.12;
+        t.range *= 1.01;
+        t.fireRate *= 1.025;
+        t.cooldown = 0;
+      }
+
+      // Gacha Logic
+      function buyUpgradePoint() {
+        const cost = getGachaCost();
+        if (G.gold < cost) { log(`💸 골드가 부족합니다 (${cost}G)`); return; }
+
+        G.gold -= cost;
+        const r = Math.random();
+        let earned = 0;
+        let msg = '';
+
+        if (r < 0.30) {
+          earned = 0;
+          msg = '강화P 뽑기 실패... (0P)';
+        } else if (r < 0.80) {
+          earned = 1;
+          msg = '강화P 1 획득!';
+        } else if (r < 0.92) {
+          earned = 2;
+          msg = '대성공! 강화P 2 획득!';
+        } else {
+          // Jackpot 3~10
+          earned = Math.floor(Math.random() * 8) + 3;
+          msg = `미쳤다!! 강화P ${earned} 획득!!`;
+        }
+
+        if (earned > 0) {
+          G.upgradePoints += earned;
+          // Visual Feedback for Gacha
+          addFloatText(`+${earned}P`, LOGICAL_W / 2, LOGICAL_H / 2);
+        } else {
+          addFloatText(`꽝...`, LOGICAL_W / 2, LOGICAL_H / 2);
+        }
+        log(msg);
+        saveGameState(); log('💾 확률 변동으로 인해 강제 저장됨.');
+        updateUI();
+      }
+
+      // 신규 추가: All-in 트랜잭션 함수
+      function buyUpgradeAllIn() {
+        const cost = getGachaCost();
+        if (G.gold < cost) {
+          log(`💸 골드가 부족합니다 (${cost}G)`);
+          return;
+        }
+
+        const count = Math.floor(G.gold / cost);
+        let totalEarned = 0;
+        let usedGold = count * cost;
+        let failStreak = 0; // [신규] 연속 실패 카운터 파이프라인
+
+        G.gold -= usedGold;
+
+        // 구매 횟수만큼 확률 연산 일괄 처리
+        for (let i = 0; i < count; i++) {
+          const r = Math.random();
+          if (r < 0.30) {
+            failStreak++;
+            // [신규] 3연속 꽝 발생 시, 시스템 강제 개입 (천장 시스템)
+            if (failStreak >= 3) {
+              totalEarned += 1;
+              failStreak = 0; // 카운터 초기화
+            }
+          } else {
+            failStreak = 0; // 성공 시 카운터 초기화
+            if (r < 0.80) {
+              totalEarned += 1;
+            } else if (r < 0.92) {
+              totalEarned += 2;
+            } else {
+              totalEarned += Math.floor(Math.random() * 8) + 3;
+            }
+          }
+        }
+
+        if (totalEarned > 0) {
+          G.upgradePoints += totalEarned;
+          addFloatText(`Total +${totalEarned}P`, LOGICAL_W / 2, LOGICAL_H / 2);
+          log(`🔥 올인! ${count}회 뽑기: 총 ${totalEarned}P 획득!`);
+        } else {
+          addFloatText(`전부 꽝...`, LOGICAL_W / 2, LOGICAL_H / 2);
+          log(`😭 올인! ${count}회 뽑기: 전부 꽝입니다...`);
+        }
+        saveGameState(); log('💾 확률 변동으로 인해 강제 저장됨.');
+        updateUI();
+      }
+
+
+
+      function makeWavePlan(w) {
+        // 1. 유저 체감 데이터를 반영한 10% 스케일링 파이프라인
+        let baseHpMul = 1;
+        if (w <= 40) {
+          // W1~W40: 10% 복리 성장 (유저 검증 완료 스윗스팟)
+          baseHpMul = Math.pow(1.12, w - 1);
+        } else {
+          // W41 이상: W40 기준점(약 41배)에서 5% 완화된 복리 적용
+          baseHpMul = Math.pow(1.12, 39) * Math.pow(1.09, w - 40);
+        }
+
+        // 2. 보스 웨이브 밸런스 패치 (역체감 방지)
+        if (w % 10 === 0 && w <= 100) {
+          // [수정 포인트] 곱연산(bossTierMult)을 제거하고 선형 상수를 더하는 구조로 변경
+          const hybridBossMul = (baseHpMul * 1.2) + (w * 0.1);
+          return [{ at: 1.0, type: 'boss', isBoss: true, bossType: w, hpMul: hybridBossMul }];
+        }
+
+        const plan = [];
+        const base = 8 + Math.floor(w * 1.5);
+        const fast = Math.max(0, Math.floor((w - 2) * 1.0));
+        const tank = Math.max(0, Math.floor((w - 3) * 0.6));
+        let t = 0;
+        const add = (type, c, gap) => { for (let i = 0; i < c; i++) { plan.push({ at: t, type }); t += gap; } };
+
+        add('normal', base, 0.7);
+        if (fast > 0) { t += 1.0; add('fast', fast, 0.9); }
+        if (tank > 0) { t += 2.0; add('tank', tank, 1.8); }
+
+        if (w % 5 === 0 && w % 10 !== 0) {
+          // [수정 포인트] 정예 몬스터용 하이브리드 스케일링 적용
+          const hybridMiniBossMul = (baseHpMul * 1.1) + (w * 0.05);
+          const eliteSquad = [];
+          for (let i = 0; i < 10; i++) {
+            eliteSquad.push({
+              at: 1.0 + (i * 2.0),
+              type: 'tank',
+              isMiniBoss: true,
+              hpMul: hybridMiniBossMul,
+              rewardMul: 4
+            });
+          }
+          return eliteSquad;
+        }
+
+        const rewardMul = 1 + Math.floor((w - 1) / 10) * 0.5;
+        return plan.map(p => ({ ...p, hpMul: baseHpMul, rewardMul }));
+      }
+
+      function startWave() {
+        if (G.inWave) return;
+
+        // [수정 완료]: 튜토리얼을 아직 깨지 않았을 때만 허수아비 소환
+        if (G.wave === 0 && !G.isTutorialDone) { G.inWave = true; G.killedThisWave = 0; waveStartTime = G.time; G.spawnPlan = [{ at: 0.5, type: 'normal', hpMul: 0.5, speed: 25, isTutorial: true }]; G.spawnCursor = 0; G.totalSpawnCount = 1; G.currentFinishedCount = 0; G.previewTower = null; updateUI(); return; }
+
+        G.wave++; G.inWave = true; G.killedThisWave = 0;
+        G.spawnPlan = makeWavePlan(G.wave); G.spawnCursor = 0;
+
+        // --- Wave Checkpoint Hints ---
+        if (G.wave === 6 && !hintFlags.checkpointW6Shown) {
+          showToast("💌꿀팁: 슬로우+캐논 조합을 한 번 써보세요. (파란 박스=빙결)", 2200);
+          hintFlags.checkpointW6Shown = true; saveHints();
+        }
+        if (G.wave === 11 && !hintFlags.checkpointW11Shown) {
+          showToast("💌꿀팁: 탱커가 단단하면 머신건으로 취약을 노려보세요.", 2200);
+          hintFlags.checkpointW11Shown = true; saveHints();
+        }
+        if (G.wave === 19 && !hintFlags.checkpointW19Shown) {
+          showToast("💌꿀팁: 보스는 CC보다 '딜 찬스(취약)' 타이밍이 중요!", 2400);
+          hintFlags.checkpointW19Shown = true; saveHints();
+        }
+        if (G.wave >= 21 && G.wave % 10 !== 0) { // skip on boss waves
+          if (!hintFlags.freezeTriggeredOnce && !hintFlags.remindFreezeAfterW20Shown) {
+            showToast("아직 ❄빙결을 못 봤다면: 슬로우(레이다) + 캐논 조합을 테스트해보세요!", 2600);
+            hintFlags.remindFreezeAfterW20Shown = true; saveHints();
+          } else if (!hintFlags.vulnTriggeredOnce && !hintFlags.remindVulnAfterW20Shown) {
+            showToast("아직 💥취약을 못 봤다면: 머신건을 탱커/보스 쪽에 추가해보세요!", 2600);
+            hintFlags.remindVulnAfterW20Shown = true; saveHints();
+          }
+        }
+
+        // Progress Init
+        G.totalSpawnCount = G.spawnPlan.length;
+        G.currentFinishedCount = 0;
+
+        // Auto Overclock Wave Reset
+        G.overclockUsedThisWave = false;
+        G.overclockActive = false;
+        G.overclockUntil = 0;
+        G.overclockCooldownUntil = 0; // Guarantee once-per-wave trigger
+
+        // Finisher Wave Reset
+        G.finisherUsedThisWave = false;
+        G.finisherActive = false;
+        G.finisherUntil = 0;
+        G.finisherType = null;
+        G.finisherFRMult = 1;
+        G.finisherRangeMult = 1;
+        G.finisherKillGoldMult = 1;
+
+        waveStartTime = G.time;
+
+        if (G.wave % 10 === 0) log(`⚠️ BOSS WAVE ${G.wave}! 준비하세요!`);
+        else if (G.wave % 5 === 0) log(`🛡️ 정예 몬스터가 등장했습니다!`);
+        else log(`⚠️ 웨이브 ${G.wave} 시작!`);
+
+        G.previewTower = null; updateUI();
+      }
+
+      // Supports override for W10 Split
+      function spawnEnemy(entry, ovX, ovY, ovIdx, ovTier) {
+        const base = ENEMY_TYPES[entry.type];
+
+        // Tier Calculation (Max 3)
+        // If override Tier exists (e.g. split minion), use it. Else calc from Wave.
+        const tier = ovTier ?? (entry.isBoss ? 1 : Math.min(3, Math.floor((G.wave - 1) / 30) + 1));
+
+        const reward = Math.floor(base.reward * (entry.rewardMul || 1));
+
+        const e = {
+          type: entry.type,
+          x: ovX ?? path[0].x,
+          y: ovY ?? path[0].y,
+          pathIndex: ovIdx ?? 0,
+          hpMax: base.hp * entry.hpMul,
+          hp: base.hp * entry.hpMul,
+          speed: base.speed,
+          reward: reward * (entry.isBoss ? 7 : 1),
+          slowUntil: 0, slowFactor: 0,
+          color: base.color, alive: true,
+          isBoss: entry.isBoss || false,
+          isTutorial: entry.isTutorial || false,
+          isMiniBoss: entry.isMiniBoss || false,
+          bossType: entry.bossType || 0,
+          radius: entry.isBoss ? 16.5 : (entry.isMiniBoss ? 13 : 11),
+          tier: tier,
+          canSplit: true, // For T3 Normal Split check
+          prevX: ovX ?? path[0].x, // For Flipping
+          hitTime: -1, // For Hit Flash
+          slowResistance: 0, // Boss Slow Resistance
+
+          // Synergy State
+          frozenUntil: 0,
+          synergyFreezeCdUntil: 0,
+          lastSlowedByType: 0,
+          lastSlowedAt: 0,
+
+          // T1 Stacking State
+          mgStacks: 0,
+          mgStackUntil: 0,
+          vulnUntil: 0,
+          vulnCdUntil: 0
+        };
+
+        if (e.isBoss) BossHandler.init(e, G.wave);
+
+        if (e.isMiniBoss) e.speed *= 1.10;
+
+        // Monster Evolution System
+        if (G.wave > 10 && G.wave <= 50) {
+          // W11-50: Color Evolution
+          const hue = (240 + (G.wave - 11) * 5) % 360;
+          e.evolutionColor = `hsla(${hue}, 100%, 70%, 0.6)`;
+        } else if (G.wave > 50) {
+          // W51+: Mutation (Spiked Shapes)
+          e.isMutant = true;
+          e.mutantColor = `hsla(${(G.wave * 10) % 360}, 100%, 50%, 1)`;
+          // Randomize shape sides: 3 (Tri) to 8 (Oct)
+          e.mutantSides = 3 + (G.wave % 6);
+        }
+
+        G.enemies.push(e);
+      }
+
+      function handleInput(pos) {
+        if (G.endingActive) {
+          handleEndingClick(pos);
+          return;
+        }
+        if (G.gameState !== 'PLAYING') return;
+        const gx = Math.floor((pos.x - offsetX) / gridSize);
+        const gy = Math.floor((pos.y - offsetY) / gridSize);
+
+        if (gx < 0 || gx >= gridCols || gy < 0 || gy >= gridRows) {
+          G.previewTower = null; return;
+        }
+
+        const t = G.towers.find(t => t.gx === gx && t.gy === gy);
+
+        if (G.mode === 'place' || G.mode === 'placeHero') {
+          if (t) { log('🚫 이미 타워가 있습니다.'); G.previewTower = null; return; }
+
+          const targetType = G.mode === 'placeHero' ? 1 : G.selectedTowerType;
+
+          if (G.previewTower && G.previewTower.gx === gx && G.previewTower.gy === gy && G.previewTower.type === targetType && Boolean(G.previewTower.isHero) === (G.mode === 'placeHero')) {
+            if (G.mode === 'placeHero') {
+              placeHeroTower(gx, gy);
+              G.previewTower = null;
+              setMode('place', 1);
+            } else {
+              placeTower(gx, gy, G.selectedTowerType);
+              G.previewTower = null;
+            }
+          } else {
+            G.previewTower = { gx, gy, type: targetType, isHero: G.mode === 'placeHero', pendingHero: G.pendingHero };
+          }
+        } else if (G.mode === 'sell' && t) {
+          if (!G.isTutorialDone || G.wave === 0) { log('🚫 튜토리얼 훈련 중에는 타워를 판매할 수 없습니다.'); G.previewTower = null; return; }
+          const v = getSellValue(t); G.gold += v;
+          G.towers = G.towers.filter(x => x !== t);
+          log(`💰 판매 완료 (+${v}G)`); addFloatText(`+${v}`, t.x, t.y);
+          saveGameState();
+          G.previewTower = null;
+        } else if (G.mode === 'upgrade' && t) {
+          // Level Cap Check
+          if (t.level >= G.wave + 2) {
+            log(`🚫 현재 웨이브 한계 도달! (Max Lv.${G.wave + 2})`);
+            G.previewTower = null;
+            return;
+          }
+
+          const c = getUpgradeCost(t); // returns t.level
+          if (G.upgradePoints >= c) {
+            G.upgradePoints -= c;
+            applyUpgrade(t);
+            log(`⚡ 강화 성공 (Lv.${t.level})`); addFloatText('UP!', t.x, t.y - 10);
+            saveGameState();
+          } else { log(`💎 강화 포인트 부족 (${c}P 필요)`); }
+          G.previewTower = null;
+        } else {
+          G.previewTower = null;
+        }
+        updateUI();
+      }
+
+      function placeTower(gx, gy, type) {
+
+        // 데이터 제약 조건: 상단 2칸(소굴)은 건설 불가 판정
+        if (gy < 2) {
+          log("🚫 적의 소굴에는 타워를 건설할 수 없습니다!");
+          addFloatText("Access Denied", offsetX + gx * gridSize + 24, offsetY + gy * gridSize + 24);
+          return;
+        }
+
+        const def = TOWER_TYPES[type];
+        if (G.gold < def.cost) { log(`💸 골드가 부족합니다 (${def.cost}G)`); return; }
+
+        const px = gx * gridSize + gridSize / 2 + offsetX;
+        const py = gy * gridSize + gridSize / 2 + offsetY;
+
+        if (isNearPath(px, py, 28)) { log('🚫 이동 경로 근처입니다.'); return; }
+
+        G.gold -= def.cost;
+        updateUI();
+        G.towers.push({
+          gx, gy, type, level: 1,
+          x: px, y: py,
+          range: def.range, damage: def.damage,
+          fireRate: def.fireRate, aoe: def.aoe, slow: def.slow,
+          cooldown: 0,
+          lastAngle: 0 // State Persistence
+        });
+        log(`🔨 ${def.name} 건설 (-${def.cost}G)`);
+        addFloatText(`-${def.cost}`, px, py - 10);
+        saveGameState();
+        updateUI();
+      }
+
+      function placeHeroTower(gx, gy) {
+        const def = TOWER_TYPES[1]; // T1 베이스
+        const px = gx * gridSize + gridSize / 2 + offsetX;
+        const py = gy * gridSize + gridSize / 2 + offsetY;
+
+        if (isNearPath(px, py, 28)) { log('🚫 이동 경로 근처입니다.'); return; }
+
+        const h = G.pendingHero;
+        G.isTutorialDone = true;
+        updateUI();
+
+        // --- [신규 주입] 영웅 등급별 동적 스케일링(Dynamic Scaling) 아키텍처 ---
+        const baseLevels = G.towers.filter(t => !t.isHero).map(t => t.level).sort((a, b) => b - a);
+        const top1 = baseLevels[0] || 1;
+
+        // 1) Compute coreAvg (Top 50% truncated mean, clamped 3..6)
+        const n = baseLevels.length;
+        const coreCount = Math.min(6, Math.max(3, Math.ceil(n * 0.5)));
+        const core = baseLevels.slice(0, coreCount);
+        const coreAvg = core.length ? Math.floor(core.reduce((s, v) => s + v, 0) / core.length) : 1;
+
+        // 2) Top 3 Avg
+        const top3avg = baseLevels.length >= 3
+          ? Math.floor((baseLevels[0] + baseLevels[1] + baseLevels[2]) / 3)
+          : (baseLevels.length > 0 ? Math.floor(baseLevels.reduce((s, v) => s + v, 0) / baseLevels.length) : 1);
+
+        let targetLevel = 1;
+
+        if (h.grade === 'A') {
+          // A급: 현재 맵에 존재하는 비-영웅 타워 중 상위 5개의 평균 레벨 (이동평균 추종)
+          const top5 = baseLevels.slice(0, 5);
+          if (top5.length > 0) {
+            const sum = top5.reduce((val, acc) => val + acc, 0);
+            targetLevel = Math.max(1, Math.floor(sum / top5.length));
+          }
+        } else if (h.grade === 'S') {
+          if (baseLevels.length > 0) {
+            const baseS = Math.max(top3avg + HERO_S_ADD, coreAvg + 1);
+            targetLevel = Math.min(baseS, Math.max(1, G.wave + HERO_S_MAX_OFFSET));
+          }
+        } else if (h.grade === 'SS') {
+          if (baseLevels.length > 0) {
+            const baseSS = Math.max(top1 + HERO_SS_ADD, coreAvg + 2);
+            targetLevel = Math.min(baseSS, Math.max(1, G.wave + HERO_SS_MAX_OFFSET));
+          }
+        }
+
+        // --- 레벨 기반 복리(Compound) 스탯 재연산 ---
+        // 일반 타워의 레벨업 로직(applyUpgrade)과 동일한 성장률을 적용하여 베이스 스탯 뻥튀기
+        const levelMod = targetLevel - 1;
+        const scaledDamage = (def.damage * 5) * Math.pow(1.15, levelMod);
+        let scaledRange = def.range * Math.pow(1.03, levelMod);
+        const scaledFireRate = def.fireRate * Math.pow(1.03, levelMod);
+
+        let aAuraRadius = 250;
+        if (h.grade === 'SS') {
+          scaledRange *= 1.15;
+        } else if (h.grade === 'S') {
+          scaledRange *= 1.05;
+        } else if (h.grade === 'A') {
+          aAuraRadius = Math.min(Math.max(250 + levelMod * 1.2, 250), 320);
+        }
+
+        scaledRange = Math.min(scaledRange, 220);
+
+        G.towers.push({
+          gx, gy, type: 1, level: targetLevel,
+          x: px, y: py,
+          range: scaledRange,
+          damage: scaledDamage,
+          fireRate: scaledFireRate,
+          aoe: def.aoe,
+          slow: def.slow,
+          cooldown: 0,
+          lastAngle: 0,
+          isHero: true,
+          heroGrade: h.grade,
+          remainWaves: h.remainWaves,
+          globalBurnTimer: 0, // S등급 전용
+          ssTrueDmgCdUntil: 0, // SS등급 전용
+          aAuraRadius // A등급 전용
+        });
+
+        // [수정 완료] 등급별 메시지 및 특성 분기 파이프라인
+        let heroName = "";
+        let heroAbility = "";
+
+        if (h.grade === 'SS') {
+          heroName = "🔴 [SS급: 보스 슬레이어]";
+          heroAbility = "보스 타격 시 주기적으로 '고정 피해(상한)'를 추가합니다.";
+        } else if (h.grade === 'S') {
+          heroName = "🟡 [S급: 이그니스 엠버]";
+          heroAbility = "0.5초마다 전역 화염 데미지. (보스는 약화 적용)";
+        } else {
+          heroName = "🟢 [A급: 프로스트 가디언]";
+          heroAbility = `반경 ${Math.floor(aAuraRadius)}px 내의 모든 적을 50% 감속시킵니다.`;
+        }
+
+        // 통합 로그 출력 및 UI 업데이트
+        log(`${heroName} 강림! (Lv.${targetLevel} / 수명: ${h.remainWaves}W)`);
+        log(`ㄴ 특성: ${heroAbility}`);
+
+        addFloatText(`🚀 ${h.grade} GRADE HERO!`, px, py - 10);
+
+        G.pendingHero = null;
+        saveGameState();
+        updateUI();
+      }
+
+      function buyHeroPoint() {
+        const cost = 100;
+        if (G.upgradePoints < cost) { log(`💎 강화P가 부족합니다 (${cost}P)`); return; }
+
+        G.upgradePoints -= cost;
+        // [수정 완료] 모든 영웅의 수명을 1라운드로 통제
+        const remainWaves = 1;
+        const r = Math.random();
+        let heroGrade = 'A';
+        if (r < 0.2) heroGrade = 'SS';
+        else if (r < 0.5) heroGrade = 'S';
+
+        G.mode = 'placeHero';
+        G.pendingHero = { grade: heroGrade, remainWaves: remainWaves };
+        log(`✨ [${heroGrade}등급] 영웅 대기 중! 원하는 곳에 건설하세요.`);
+        updateUI();
+      }
+
+      function isNearPath(x, y, r) {
+        for (let i = 0; i < path.length - 1; i++) {
+          if (pointToSegmentDistance({ x, y }, path[i], path[i + 1]) <= r) return true;
+        }
+        return false;
+      }
+      function pointToSegmentDistance(p, a, b) {
+        const vx = b.x - a.x, vy = b.y - a.y, wx = p.x - a.x, wy = p.y - a.y;
+        const c1 = vx * wx + vy * wy; if (c1 <= 0) return Math.hypot(p.x - a.x, p.y - a.y);
+        const c2 = vx * vx + vy * vy; if (c2 <= c1) return Math.hypot(p.x - b.x, p.y - b.y);
+        const t = c1 / c2; return Math.hypot(p.x - (a.x + t * vx), p.y - (a.y + t * vy));
+      }
+
+      function addFloatText(text, x, y) { G.floatTexts.push({ text, x, y, life: 1.0 }); }
+
+
+      // ====== 5. 비즈니스 로직 및 상태 관리 상단에 추가 ======
+      let last = performance.now(); // [교정] last 초기값 선언
+      let waveStartTime = 0;        // [교정] waveStartTime 선언
+
+
+      // --- ENDING SYSTEM (HTML UI 연동) ---
+      function triggerEnding(type) {
+        G.gameState = 'GAMEOVER';
+        
+        // 타워 갯수 계산
+        let tCount = 0;
+        G.towers.forEach(t => { if (!t.isHero) tCount++; });
+
+        // 모달 UI 엘리먼트 가져오기
+        const modal = document.getElementById('resultModal');
+        const box = document.getElementById('resultBox');
+        const title = document.getElementById('resTitle');
+        const sub = document.getElementById('resSub');
+        const rank = document.getElementById('resRank');
+        
+        // 데이터 바인딩
+        document.getElementById('resWave').innerText = G.wave;
+        document.getElementById('resHp').innerText = Math.max(0, G.lives);
+        document.getElementById('resGold').innerText = Math.floor(G.gold) + 'G';
+        document.getElementById('resTowers').innerText = tCount;
+
+        // 랭크 계산
+        let grade = 'F';
+        let gradeColor = '#555';
+        if (type === 'WIN') {
+          grade = G.lives >= 20 ? 'S' : (G.lives >= 10 ? 'A' : 'B');
+          gradeColor = grade === 'S' ? '#ffcc00' : '#7aa6ff';
+        } else {
+          if (G.wave >= 80) grade = 'A';
+          else if (G.wave >= 50) grade = 'B';
+          else if (G.wave >= 20) grade = 'C';
+          gradeColor = '#ff4d4d';
+        }
+
+        rank.innerText = grade;
+        rank.style.color = gradeColor;
+
+        if (type === 'WIN') {
+          title.innerText = "MISSION CLEAR!";
+          title.style.color = "#7aa6ff";
+          sub.innerText = "완벽한 방어선입니다, 사령관님.";
+          box.style.borderColor = "#7aa6ff";
+          box.style.boxShadow = "0 15px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(122,166,255,0.2)";
+        } else {
+          title.innerText = `W${G.wave} FAILURE`;
+          title.style.color = "#ff4d4d";
+          sub.innerText = "방어선이 돌파당했습니다...";
+          box.style.borderColor = "#ff4d4d";
+          box.style.boxShadow = "0 15px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,77,77,0.2)";
+        }
+
+        modal.style.display = 'flex';
+      }
+
+      // 결과 창 버튼 이벤트 리스너
+      document.getElementById('btnResNew').onclick = () => {
+        document.getElementById('resultModal').style.display = 'none';
+        localStorage.removeItem('defenseSave');
+        G.gameState = 'PLAYING';
+        resetGame();
+        G.isTutorialDone = false;
+        updateUI();
+      };
+
+      document.getElementById('btnResMain').onclick = () => {
+        document.getElementById('resultModal').style.display = 'none';
+        document.getElementById('mainMenu').style.display = 'flex';
+      };
+
+
+      function tick(now) {
+        const realDt = Math.min(0.05, (now - last) / 1000);
+        last = now;
+
+        // [신규 주입] G.gameSpeed만큼 서브-스테핑 루프 실행
+        if (G.gameState === 'PLAYING') {
+          // Ending Phase 1 Timer logic (runs even if gameplay is frozen)
+          if (G.endingActive) {
+            G.endingTimer += realDt;
+            if (G.endingPhase === 1 && G.endingTimer >= 1.2) {
+              G.endingPhase = 2;
+              G.endingTimer = 0;
+            }
+          }
+
+          if (G.endingActive) {
+            // Freeze gameplay entirely, skip tracking loop mechanics
+            render();
+            requestAnimationFrame(tick);
+            return;
+          }
+
+          for (let step = 0; step < G.gameSpeed; step++) {
+            let endingJustTriggered = false;
+            const dt = realDt; // 서브 스텝별 동일한 dt 적용
+            G.time += dt;
+
+            // Reset Global Debuff Every Frame (Sub-step)
+            G.globalRangeDebuff = false;
+
+            if (G.inWave && G.spawnPlan) {
+              const elapsed = G.time - waveStartTime;
+              while (G.spawnCursor < G.spawnPlan.length && G.spawnPlan[G.spawnCursor].at <= elapsed) {
+                spawnEnemy(G.spawnPlan[G.spawnCursor]); G.spawnCursor++;
+              }
+              if (G.spawnCursor >= G.spawnPlan.length && G.enemies.every(e => !e.alive)) {
+                G.inWave = false;
+
+                // Prevent buff leakage outside combat
+                G.overclockActive = false;
+                G.overclockUntil = 0;
+
+                // Finisher Wave Clear Reset
+                G.finisherActive = false;
+                G.finisherUntil = 0;
+                G.finisherType = null;
+                G.finisherFRMult = 1;
+                G.finisherRangeMult = 1;
+                G.finisherKillGoldMult = 1;
+
+                const bonus = 40 + G.wave * 10; G.gold += bonus;
+                log(`🎉 웨이브 클리어! (+${bonus}G)`);
+
+                // --- Rental Hero Lifecycle ---
+                G.towers = G.towers.filter(t => {
+                  if (t.isHero) {
+                    t.remainWaves--;
+                    if (t.remainWaves <= 0) {
+                      log(`👋 ${t.heroGrade}등급 영웅 타워가 떠납니다...`);
+                      return false;
+                    }
+                  }
+                  return true;
+                });
+
+                saveGameState();
+                updateUI();
+              }
+            }
+
+            // Auto Overclock Logic Check
+            if (G.inWave && G.wave >= OVERCLOCK_WAVES[0] && G.wave <= OVERCLOCK_WAVES[1] && !(G.wave === 0 && !G.isTutorialDone)) {
+              if (!G.overclockUsedThisWave && G.time >= G.overclockCooldownUntil && G.totalSpawnCount > 0) {
+                const progress = G.currentFinishedCount / G.totalSpawnCount;
+                if (progress >= OVERCLOCK_TRIGGER_PROGRESS) {
+                  G.overclockActive = true;
+                  G.overclockUntil = G.time + OVERCLOCK_DURATION;
+                  G.overclockUsedThisWave = true;
+                  G.overclockCooldownUntil = G.time + OVERCLOCK_INTERNAL_CD;
+                  log("⚡ OVERCLOCK!");
+                  addFloatText("⚡ OVERCLOCK!", LOGICAL_W / 2, LOGICAL_H / 2 - 50);
+                }
+              }
+            }
+
+            // Auto Overclock Expiration Check
+            if (G.overclockActive && G.time >= G.overclockUntil) {
+              G.overclockActive = false;
+            }
+
+            // Finisher Expiration Check
+            if (G.finisherActive && G.time >= G.finisherUntil) {
+              G.finisherActive = false;
+              G.finisherType = null;
+              G.finisherFRMult = 1;
+              G.finisherRangeMult = 1;
+              G.finisherKillGoldMult = 1;
+              updateUI();
+            }
+
+            // 1. 루프 시작 직전에 '이번 프레임에 운석이 공격받았는가?'를 체크하는 변수 선언
+            let isRockPushed = false;
+
+
+            for (const e of G.enemies) {
+              if (!e.alive) continue;
+              e.prevX = e.x;
+
+              if (e.dashCooldown > 0) e.dashCooldown -= dt;
+
+              BossHandler.applyTick(e, dt, G);
+
+              // 👇 [수정된 감속 로직] 슬로우가 풀리면 계수도 확실하게 리셋!
+              let effectiveSlow = 0;
+              if (e.slowUntil > G.time) {
+                effectiveSlow = e.slowFactor;
+              } else {
+                e.slowFactor = 0; // 상태 이상 종료 시 감속 비율 초기화
+              }
+              
+              if (e.isBoss) effectiveSlow *= 0.5;
+
+              const speed = (e.currentSpeed || e.speed) * (1 - effectiveSlow);
+              const finalSpeed = e.isBoss ? Math.max(speed, (e.currentSpeed || e.speed) * 0.4) : speed;
+
+              // Synergy: Freeze Block (Do not advance movement if frozen)
+              if (e.frozenUntil > G.time) {
+                continue; // Skip movement processing this sub-step
+              }
+
+              if (e.dashReq || e.evadeDashReq) {
+                const nextIdx = Math.min(e.pathIndex + 1, path.length - 1);
+                const nextParam = path[nextIdx];
+                const angle = Math.atan2(nextParam.y - e.y, nextParam.x - e.x);
+
+                const distToNext = dist({ x: e.x, y: e.y }, nextParam);
+                const dashDist = Math.min(50, distToNext);
+
+                e.x += Math.cos(angle) * dashDist;
+                e.y += Math.sin(angle) * dashDist;
+
+                if (e.evadeDashReq) {
+                  e.evadeDashReq = false;
+                } else {
+                  e.dashReq = false;
+                  addFloatText("Dash!", e.x, e.y);
+                }
+              }
+
+              let move = finalSpeed * dt;
+              if (finalSpeed > 0 && move < 0.2) move = 0.2;
+
+              while (move > 0 && e.pathIndex < path.length - 1) {
+                const next = path[e.pathIndex + 1];
+                const distToNext = dist({ x: e.x, y: e.y }, next);
+
+                if (distToNext <= move + 0.5) {
+                  e.x = next.x;
+                  e.y = next.y;
+                  e.pathIndex++;
+                  move -= distToNext;
+                } else {
+                  const dx = (next.x - e.x) / distToNext;
+                  const dy = (next.y - e.y) / distToNext;
+                  e.x += dx * move;
+                  e.y += dy * move;
+                  move = 0;
+                }
+              }
+
+              // 👇 [신규 추가] 🌑 운석(바위) 물리 충돌 및 강제 정체 로직
+              if (G.rock && G.rock.available && !e.isTutorial) {
+                // 적이 운석 방어선(y: 790)을 넘으려 하면 발동!
+                if (e.y >= 790 && e.pathIndex >= path.length - 2) {
+                  if (!G.rock.active) {
+                    G.rock.active = true;
+                    G.rock.timer = G.rock.duration; // 5초 타이머 시작
+                    log("🌑 최후의 방어선 작동! 10초간 적을 차단합니다!");
+                  }
+                  
+                  // 운석이 활성화되어 있는 10초 동안은 위치를 강제 고정 (통과 절대 불가)
+                  if (G.rock.timer > 0) {
+                    e.y = 790; // 이 선을 넘지 못함
+                    e.x = 270; // 중앙 길목으로 모임
+                    e.pathIndex = path.length - 2; // 다음 인덱스로 넘어가는 것을 차단
+
+                    // 핵심: 적이 운석을 들이받고 있다면 푸시 상태를 true로 변경!
+                    isRockPushed = true;
+                  }
+                }
+              }
+
+
+              if (e.pathIndex >= path.length - 1) {
+                // [신규 주입] 허수아비를 놓쳐도 페널티 없이 튜토리얼 강제 졸업
+                if (e.isTutorial) {
+                  G.isTutorialDone = true;
+                  G.gold += 200;
+                  G.wave = 0;
+                  e.alive = false;
+                  log('🎉 튜토리얼 완료! [▶ 웨이브]를 눌러 본격적인 방어를 시작하세요.');
+                  updateUI();
+                  if (typeof saveGameState === 'function') saveGameState();
+                  continue;
+                }
+
+                // 👇 [신규 추가] 5초 방어 바위 로직
+                if (G.rock && G.rock.available) {
+                  if (!G.rock.active) {
+                    G.rock.active = true;
+                    G.rock.timer = G.rock.duration; // 5초 타이머 시작
+                    log("🪨 최후의 방어선! 바위가 적을 5초간 막아냅니다!");
+                    addFloatText("🪨 BLOCK!", e.x, e.y - 30);
+                  }
+                }
+
+                // 바위가 발동 중이면 데미지를 입지 않고 길 끝에서 대기(정체)함
+                if (G.rock && G.rock.active && G.rock.timer > 0) {
+                  e.x = path[path.length - 1].x;
+                  e.y = path[path.length - 1].y;
+                  continue; // 아래에 있는 라이프 감소 로직을 무시하고 넘김!
+                }
+
+                e.alive = false;
+                const damageToLife = e.isBoss ? 5 : 1;
+                G.lives -= damageToLife;
+
+                if (e.isBoss) {
+                  log(`🚨 경고: 보스가 돌파했습니다! HP -${damageToLife}`);
+                  addFloatText(`HP -${damageToLife}`, e.x, e.y);
+                } else {
+                  log(`💥 몬스터 통과!`);
+                }
+
+                updateUI();
+                if (G.lives <= 0 || (e.isBoss && e.bossType === 100)) {
+                  if (G.wave === 100 && !G.endingActive) {
+                    triggerEnding('FAIL');
+                    endingJustTriggered = true;
+                    G.inWave = false;
+                    G.spawnPlan = null;
+                    break;
+                  }
+                  else if (G.lives <= 0 && (!G.endingActive)) resetGame();
+                }
+              }
+
+              // 3. 루프 종료 직후, 푸시 상태일 때만 내구도(타이머) 감소!
+              if (G.rock && G.rock.active && isRockPushed) {
+                G.rock.timer -= dt; // 적이 밀고 있을 때만 시간이 깎임
+                if (G.rock.timer <= 0) {
+                  G.rock.available = false;
+                  G.rock.active = false;
+                  log("💥 최후의 방어선이 산산조각 났습니다!");
+                }
+              }
+
+            }
+
+            if (endingJustTriggered) break;
+
+            for (const t of G.towers) {
+              t.cooldown -= dt;
+              t.targetCheckTimer = (t.targetCheckTimer || 0) - dt; // 타겟칭 쿨타임 처리
+
+              if (t.isHero) {
+                if (t.heroGrade === 'A') {
+                  const auraRad = t.aAuraRadius || 250;
+                  for (const e of G.enemies) {
+                    if (e.alive && dist(t, e) <= auraRad) {
+                      e.slowUntil = Math.max(e.slowUntil, G.time + 0.1);
+                      e.slowFactor = Math.max(e.slowFactor, 0.5);
+                    }
+                  }
+                } else if (t.heroGrade === 'S') {
+                  t.globalBurnTimer += dt;
+                  if (t.globalBurnTimer >= 0.5) {
+                    t.globalBurnTimer -= 0.5;
+                    const burnDmg = t.damage * 0.2;
+                    for (const e of G.enemies) {
+                      if (e.alive) {
+                        const actualDmg = e.isBoss ? burnDmg * 0.25 : burnDmg;
+                        e.hp -= actualDmg;
+                        if (e.hp <= 0 && e.alive) {
+                          e.alive = false;
+                          if (e.isBoss) { G.lives += 1; log(`💖 보스 처치! 시스템 복구 (HP +1)`); updateUI(); }
+                          if (!e.isBoss || e.bossType !== 10) G.currentFinishedCount++;
+                          BossHandler.onDeath(e, G);
+                          if (e.isMiniBoss && Math.random() < 0.2) { G.upgradePoints++; addFloatText(`Lucky! +1P`, e.x, e.y - 15); }
+                          addRewardGold(e);
+                          updateUI();
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+
+              // [신규 주입] 타겟 최적화 (Target Caching & Invalidation 규칙)
+              let needsNewTarget = false;
+
+              // W90 Global Range Debuff Check (Active Bosstype 90 or W100 with trait 90)
+              const hasW90 = G.enemies.some(e => e.alive && e.isBoss && ((e.bossType === 90) || (e.bossType === 100 && e.activeTrait === 90)));
+
+              // Apply Overclock Range Buff first (Excluding Heroes), then W90 Debuff
+              const oc = (G.overclockActive && !t.isHero);
+              const finR = (G.finisherActive && !t.isHero) ? G.finisherRangeMult : 1;
+              let effectiveRange = t.range * (oc ? OVERCLOCK_RANGE_MULT : 1) * finR;
+              if (hasW90) effectiveRange *= 0.8;
+
+              if (!t.target) {
+                needsNewTarget = true;
+              } else if (!t.target.alive) {
+                needsNewTarget = true;
+              } else if (dist(t, t.target) > effectiveRange) {
+                needsNewTarget = true;
+              } else if (t.targetCheckTimer <= 0) {
+                needsNewTarget = true;
+              }
+
+              if (needsNewTarget) {
+                t.target = findTarget(t, effectiveRange);
+                t.targetCheckTimer = 0.2; // 0.2초 쿨타임 부여
+              }
+
+              // 타겟이 존재하고 발사 가능할 때
+              if (t.cooldown <= 0 && t.target) {
+                // Update Aim Angle
+                t.lastAngle = Math.atan2(t.target.y - t.y, t.target.x - t.x);
+                fire(t, t.target);
+
+                // Apply Overclock Fire Rate Buff (Excluding Heroes)
+                const oc = (G.overclockActive && !t.isHero);
+                const finFR = (G.finisherActive && !t.isHero) ? G.finisherFRMult : 1;
+                const effectiveFireRate = t.fireRate * (oc ? OVERCLOCK_FR_MULT : 1) * finFR;
+                t.cooldown = 1 / effectiveFireRate;
+              } else if (t.cooldown <= 0 && !t.target) {
+                t.cooldown = 0.1; // Idle 상태 재탐색 주기 0.1초 
+              }
+
+              // Recoil Decay
+              t.recoil = Math.max(0, (t.recoil || 0) - dt * 20);
+            }
+
+            // if (G.time % 2 < dt) {
+            //   G.enemies = G.enemies.filter(e => e.alive);
+            //   G.projectiles = G.projectiles.filter(p => p.life > 0);
+            //   G.floatTexts = G.floatTexts.filter(f => f.life > 0);
+            // }
+
+            // [수정된 아키텍처 적용: 루프 내부 하단]
+            // 상태가 종료된 객체는 지연 없이 즉각적으로 메모리에서 해제 (GC 강제화)
+            G.enemies = G.enemies.filter(e => e.alive);
+            G.projectiles = G.projectiles.filter(p => p.life > 0);
+            G.floatTexts = G.floatTexts.filter(f => f.life > 0);
+
+            G.projectiles.forEach(p => p.life -= dt);
+            // 플로팅 텍스트의 수명 차감은 게임 속도와 별개로 일정한 현실 시간을 거치게 하도록 G.gameSpeed로 나누어줌
+            G.floatTexts.forEach(f => { f.life -= dt / G.gameSpeed; f.y -= 25 * dt; });
+          } // Sub-stepping loop End
+        }
+
+        render(); // Rendering pipeline은 루프 밖에서 프레임당 1번만 실행
+        requestAnimationFrame(tick);
+      }
+
+      function findTarget(t, range) {
+        let best = null, bestScore = -Infinity;
+
+        for (const e of G.enemies) {
+          if (!e.alive || dist(t, e) > range) continue;
+          if (e.isStealth) continue; // W50 Stealth Ignored
+
+          const score = e.pathIndex * 10000 - dist(e, path[Math.min(e.pathIndex + 1, path.length - 1)]);
+          if (score > bestScore) { bestScore = score; best = e; }
+        }
+        return best;
+      }
+
+      function fire(t, target) {
+        const dmg = t.damage;
+        t.recoil = 5; // Set Recoil
+
+        if (t.type === 2) {
+          // T2 Multi-Missile Volley (5 shots)
+          for (let i = 0; i < 5; i++) {
+            const spreadX = (Math.random() - 0.5) * 30;
+            const spreadY = (Math.random() - 0.5) * 30;
+            G.projectiles.push({
+              x1: t.x, y1: t.y, x2: target.x + spreadX, y2: target.y + spreadY,
+              life: 0.15 + i * 0.05, // Staggered impact
+              type: 2, aoe: t.aoe,
+              isFinal: i === 4 // Mark final shot for AOE ring
+            });
+          }
+          // AOE Logic is handled per projectile impact or we just apply damage once?
+          // Current logic: AOE damage is applied immediately for simplicity, visuals are delayed.
+          // To be precise: damage should sync with visuals. But for now, keeping immediate damage for responsiveness.
+          G.enemies.forEach(e => {
+            if (e.alive && dist(target, e) <= t.aoe) {
+              // Synergy Check: "냉각 폭발" 
+              // If slowed by T3 and within last 1.6s
+              if (G.wave >= SYNERGY_FREEZE_MIN_WAVE && !e.isBoss && e.lastSlowedByType === 3 && (G.time - e.lastSlowedAt <= 1.6)) {
+                if (G.time >= e.synergyFreezeCdUntil) {
+                  e.frozenUntil = Math.max(e.frozenUntil, G.time + 0.35);
+                  e.synergyFreezeCdUntil = G.time + 2.0;
+                  G.statsFreezeCount++; // Ending stat tracker
+
+                  // ✨ [신규 추가] 시너지 발동을 알리는 강력한 플로팅 텍스트!
+                  addFloatText("❄️", e.x, e.y - 30);
+
+                  // Synergy Tips: Freeze
+                  hintFlags.freezeTriggeredOnce = true;
+                  if (!hintFlags.freezeHintShown) {
+                    showToast("꿀팁: 슬로우(레이다) 적이 캐논 폭발을 맞으면 ❄ 잠깐 빙결!", 2000);
+                    hintFlags.freezeHintShown = true; saveHints();
+                  }
+                }
+              }
+              dealDamage(e, dmg, t);
+            }
+          });
+        } else {
+          // Standard Shot 내부 로직
+          if (t.slow > 0) {
+            // 1. [공통 로직] 몬스터 종류에 상관없이 슬로우 디버프는 무조건 인가합니다.
+            // (보스가 아예 멈추지 않고 50% 속도로 천천히 가는 로직은 tick 함수의 effectiveSlow *= 0.5 에서 이미 처리됨)
+            target.slowUntil = Math.max(target.slowUntil, G.time + 1.5);
+            target.slowFactor = Math.max(target.slowFactor, t.slow);
+
+            // 2. [보스 반응 로직] 대상이 보스이고 잔여 돌진 횟수가 남아있다면, 돌진을 트리거합니다.
+            if (target.isBoss && target.slowEvadeCount > 0) {
+
+              // [수정] dashCooldown이 0 이하일 때만 새로운 돌진 허용
+              if (!target.dashReq && !target.evadeDashReq && (target.dashCooldown || 0) <= 0) {
+                target.slowEvadeCount--;
+                target.evadeDashReq = true;
+                target.dashCooldown = 2.0; // [신규 주입] 2초간 연쇄 돌진 차단
+                addFloatText("돌진!", target.x, target.y - 20);
+              }
+            }
+          }
+          // Simple AOE check (if any T1 has AOE? currently 0) or T3?
+          if (t.aoe > 0 && t.type !== 2) {
+            G.enemies.forEach(e => { if (e.alive && dist(target, e) <= t.aoe) dealDamage(e, dmg, t); });
+          } else {
+            dealDamage(target, dmg, t);
+          }
+
+          // Synergy Tagging: Track slow source
+          if (t.slow > 0) {
+            target.lastSlowedByType = t.type;
+            target.lastSlowedAt = G.time;
+          }
+
+          G.projectiles.push({
+            x1: t.x, y1: t.y, x2: target.x, y2: target.y,
+            life: 0.15, type: t.type, aoe: t.aoe || 0
+          });
+        }
+      }
+
+      function dealDamage(e, dmg, t) {
+        if (!e.alive) return;
+
+        // [신규 교체 코드] 3 다중 무적 구역 (Safe Zones) 아키텍처
+        const safeZones = [
+          { x: LOGICAL_W / 2, y: (gridSize / 2) + offsetY }, // 중앙 동굴
+          { x: 100, y: gridSize + offsetY },                 // 좌측 화산
+          { x: 440, y: gridSize + offsetY }                  // 우측 화산
+        ];
+
+        // 몬스터와 가장 가까운 안전 구역까지의 거리 산출
+        const minDist = Math.min(...safeZones.map(z => Math.hypot(e.x - z.x, e.y - z.y)));
+
+        // 어느 한 구역이라도 반경 45px 이내에 있다면 데미지 및 슬로우 원천 차단
+        if (minDist < 45) {
+          return;
+        }
+
+        let finalDmg = dmg;
+
+        // --- Machinegun (T1) Armor Break Stacking ---
+        if (t && t.type === 1 && !t.isHero) {
+          if (G.time > e.mgStackUntil) e.mgStacks = 0;
+          e.mgStacks += 1;
+          e.mgStackUntil = G.time + MG_STACK_WINDOW;
+
+          let threshold = MG_STACKS_NORMAL;
+          if (e.isBoss) threshold = MG_STACKS_BOSS;
+          else if (e.type === 'tank') threshold = MG_STACKS_TANK;
+
+          if (e.mgStacks >= threshold && G.time >= e.vulnCdUntil) {
+            e.vulnUntil = Math.max(e.vulnUntil, G.time + MG_VULN_DURATION);
+            e.vulnCdUntil = G.time + MG_VULN_CD;
+            e.mgStacks = 0;
+            G.statsVulnCount++; // Ending stat tracker
+            addFloatText("💥", e.x, e.y - 20);
+
+            // Synergy Tips: Vuln
+            hintFlags.vulnTriggeredOnce = true;
+            if (!hintFlags.vulnHintShown) {
+              showToast("꿀팁: 머신건이 계속 맞히면 🔴 '취약'! 탱커/보스가 더 빨리 녹아요.", 2000);
+              hintFlags.vulnHintShown = true; saveHints();
+            }
+          }
+        }
+
+        // Apply Boss Defense Logic
+        finalDmg = BossHandler.calcDamage(e, finalDmg, t);
+
+        // T3 Tank (Hardness)
+        if (!e.isBoss && e.tier >= 3 && e.type === 'tank') {
+          finalDmg = Math.max(1, finalDmg - 10);
+        }
+
+        // Boss Vulnerability (Slowed -> +20% Dmg)
+        if (e.isBoss && e.slowUntil > G.time) {
+          finalDmg *= 1.2;
+          addFloatText("Weak!", e.x, e.y - 20);
+        }
+
+        // --- Rental Hero SS Grade True Damage ---
+        if (t && t.isHero && t.heroGrade === 'SS' && e.isBoss) {
+          if (G.time >= t.ssTrueDmgCdUntil) {
+            const trueDmg = Math.min(e.hp * 0.008, e.hpMax * 0.01);
+            t.ssTrueDmgCdUntil = G.time + 0.8;
+            finalDmg += trueDmg;
+            addFloatText("TrueDmg!", e.x, e.y - 20);
+          }
+        }
+
+        if (e.vulnUntil > G.time) {
+          let mult = MG_VULN_MULT_NORMAL;
+          if (e.isBoss) mult = MG_VULN_MULT_BOSS;
+          else if (e.type === 'tank') mult = MG_VULN_MULT_TANK;
+          finalDmg *= mult;
+        }
+
+        e.hp -= finalDmg;
+        e.hitTime = G.time; // Trigger Hit Flash
+
+        if (e.hp <= 0 && e.alive) {
+          // [신규 주입] 허수아비 처치 시 튜토리얼 강제 졸업 및 보상 지급
+          if (e.isTutorial) {
+            G.isTutorialDone = true;
+            G.gold += 200;
+            G.wave = 0;
+            e.alive = false;
+            log('🎉 튜토리얼 완료! [▶ 웨이브]를 눌러 본격적인 방어를 시작하세요.');
+            updateUI();
+            if (typeof saveGameState === 'function') saveGameState();
+            return;
+          }
+
+          e.alive = false;
+
+          // [수정] 보스 처치 시 라이프 고정 +5 회복 (공평한 리스크/리턴)
+          if (e.isBoss) {
+            const healAmount = 5;
+
+            // 제한 없이 무조건 추가
+            G.lives += healAmount;
+
+            log(`💖 보스 처치! 시스템 확장 (HP +${healAmount})`);
+            addFloatText(`HP +${healAmount}`, e.x, e.y - 30);
+            updateUI();
+          }
+
+
+          if (!e.isBoss || e.bossType !== 10) G.currentFinishedCount++; // Kill count
+
+          BossHandler.onDeath(e, G); // Check Boss Death Logic
+
+          // Mini-Boss Drop (20% Chance for 1 Point)
+          if (e.isMiniBoss && Math.random() < 0.2) {
+            G.upgradePoints++;
+            addFloatText(`Lucky! +1P`, e.x, e.y - 15);
+          }
+
+          addRewardGold(e);
+          updateUI();
+        } else if (e.isBoss) {
+          updateUI(); // Update UI on Boss Hit for HP Bar
+        }
+      }
+
+
+      function resetGame() {
+        G.gold = 250; G.lives = 20; G.wave = 0; G.inWave = false;
+        G.upgradePoints = 1; // Reset to 1
+        G.enemies = []; G.towers = []; G.projectiles = []; G.floatTexts = []; G.previewTower = null; G.pendingHero = null;
+
+        // Reset Overclock
+        G.overclockActive = false;
+        G.overclockUntil = 0;
+        G.overclockUsedThisWave = false;
+        G.overclockCooldownUntil = 0;
+
+        // Reset Finisher
+        G.finisherUsedThisWave = false;
+        G.finisherActive = false;
+        G.finisherUntil = 0;
+        G.finisherType = null;
+        G.finisherFRMult = 1;
+        G.finisherRangeMult = 1;
+        G.finisherKillGoldMult = 1;
+        G.rock = { available: true, active: false, timer: 0, duration: 10.0 };
+
+        // Reset Ending State
+        G.endingActive = false;
+        G.endingType = null;
+        G.endingPhase = 0;
+        G.endingTimer = 0;
+        G.endingStats = {};
+        G.hiddenEndingLabel = "";
+        G.statsFreezeCount = 0;
+        G.statsVulnCount = 0;
+        G.statsFinisherCount = 0;
+
+        log('🔄 초기화됨.'); updateUI();
+      }
+
+      function saveGameState() {
+        const data = {
+          wave: G.wave,
+          gold: G.gold,
+          lives: G.lives,
+          upgradePoints: G.upgradePoints,
+          towers: G.towers,
+          isTutorialDone: G.isTutorialDone,
+          schemaVersion: SCHEMA_VERSION
+        };
+        localStorage.setItem('defenseSave', JSON.stringify(data));
+      }
+
+      function loadGameState() {
+        const saved = localStorage.getItem('defenseSave');
+        if (!saved) return false;
+        try {
+          const data = JSON.parse(saved);
+          if (data.schemaVersion !== SCHEMA_VERSION) {
+            alert("Save data version mismatch.");
+            return false;
+          }
+          G.wave = data.wave;
+          G.gold = data.gold;
+          G.lives = data.lives;
+          G.upgradePoints = data.upgradePoints;
+          G.towers = data.towers;
+          if (G.towers && G.towers.length > 0) {
+            G.isTutorialDone = true;
+          } else {
+            G.isTutorialDone = data.isTutorialDone || false;
+          }
+          return true;
+        } catch (e) {
+          alert("Load failed.");
+          return false;
+        }
+      }
+
+      // initGameSession logic replaced inline.
+
+      function render() {
+        ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
+
+        // [Line 1265 부근 삽입]
+        // 1. 소굴 배경: 딥 레드 용암 지대
+        ctx.fillStyle = '#1a0505';
+        ctx.fillRect(0, 0, LOGICAL_W, gridSize * 2 + offsetY);
+
+        // 2. 용암 흐름 시각 효과 (맥동 로직)
+        ctx.strokeStyle = '#ff4500'; ctx.lineWidth = 4;
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath();
+          ctx.moveTo(Math.random() * LOGICAL_W, 0);
+          ctx.lineTo(Math.cos(G.time + i) * 50 + (i * 100), gridSize * 2 + offsetY);
+          ctx.globalAlpha = 0.2 + Math.sin(G.time * 2) * 0.1;
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1.0;
+
+        // 3. 지형지물 오브젝트 (화산 및 스폰 동굴)
+        ctx.font = '50px serif'; ctx.textAlign = 'center';
+        ctx.fillText('🌋', 100, gridSize + offsetY);
+        ctx.fillText('🕳️', LOGICAL_W / 2, gridSize + 15 + offsetY);
+        ctx.fillText('🌋', 440, gridSize + offsetY);
+
+        // 4. 물리적 경계선 레이저
+        ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 3;
+        ctx.setLineDash([10, 5]);
+        ctx.beginPath();
+        ctx.moveTo(0, gridSize * 2 + offsetY);
+        ctx.lineTo(LOGICAL_W, gridSize * 2 + offsetY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.beginPath(); ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+        for (let i = 0; i <= gridCols; i++) { const x = i * gridSize + offsetX; ctx.moveTo(x, 0); ctx.lineTo(x, LOGICAL_H); }
+        for (let i = 0; i <= gridRows; i++) { const y = i * gridSize + offsetY; ctx.moveTo(0, y); ctx.lineTo(LOGICAL_W, y); }
+        ctx.stroke();
+
+        ctx.beginPath(); ctx.lineWidth = 40; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.moveTo(path[0].x, path[0].y);
+        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+        ctx.stroke();
+
+        // Projectiles (Layering: Below Towers/Enemies)
+        G.projectiles.forEach(p => {
+          ctx.globalAlpha = Math.max(0, p.life / 0.15); // Alpha Sync
+
+          switch (p.type) {
+            case 1: // Laser (Single)
+              ctx.beginPath();
+              ctx.lineWidth = 4; ctx.strokeStyle = '#7aa6ff';
+              ctx.shadowColor = '#fff'; ctx.shadowBlur = 10;
+              ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2);
+              ctx.stroke();
+              break;
+            case 2: // Explosion (AOE) - Missile Volley
+              // Trajectory (Smoke Trail)
+              ctx.beginPath(); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(100,100,100,0.5)';
+              ctx.moveTo(p.x1, p.y1); ctx.lineTo(p.x2, p.y2); ctx.stroke();
+              // Missile
+              const progress = 1 - p.life / 0.25; // Approx
+              if (progress < 1) {
+                ctx.beginPath(); ctx.fillStyle = '#ffda00';
+                const mx = p.x1 + (p.x2 - p.x1) * progress;
+                const my = p.y1 + (p.y2 - p.y1) * progress;
+                ctx.arc(mx, my, 2, 0, Math.PI * 2); ctx.fill();
+              }
+
+              // Impact Explosion
+              ctx.beginPath();
+              ctx.fillStyle = `rgba(255, 100, 50, ${p.life * 5})`;
+              ctx.arc(p.x2, p.y2, 12, 0, Math.PI * 2); ctx.fill(); // Small explosion per missile
+
+              // Final AOE Ring
+              if (p.isFinal) {
+                ctx.beginPath(); ctx.strokeStyle = `rgba(255, 50, 0, ${p.life * 3})`;
+                ctx.lineWidth = 1;
+                ctx.arc(p.x2, p.y2, p.aoe, 0, Math.PI * 2); ctx.stroke();
+              }
+              break;
+            case 3: // Cold Wave (Slow)
+              // Expanding Ring
+              const r = Math.max(0, 30 - (p.life * 200));
+              ctx.beginPath();
+              ctx.strokeStyle = `rgba(100, 200, 255, ${p.life * 6})`;
+              ctx.lineWidth = 3;
+              ctx.arc(p.x2, p.y2, r, 0, Math.PI * 2); ctx.stroke();
+              break;
+          }
+        });
+        ctx.globalAlpha = 1; ctx.shadowBlur = 0; // Reset Effects
+
+        G.towers.forEach(t => {
+          ctx.save();
+          ctx.translate(t.x, t.y);
+
+          // Apply Recoil (Kickback)
+          if (t.recoil > 0) {
+            ctx.translate(-Math.cos(t.lastAngle) * t.recoil, -Math.sin(t.lastAngle) * t.recoil);
+          }
+
+          // Render Logic
+          if (t.type === 3 && !t.isHero) {
+            // Type 3 (Slow - Radar): Scan Effect
+            ctx.rotate(-(t.lastAngle || 0) + G.time * 2);
+
+            // Base Ring
+            ctx.beginPath(); ctx.strokeStyle = '#0ff'; ctx.lineWidth = 2;
+            ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke();
+
+            // Core
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
+
+            // Radar Sweep
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.5)';
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 12, 0, 0.5); ctx.fill();
+          } else {
+            // Type 1 & 2 (Turrets) & Heroes: Aim at Target
+            ctx.rotate(t.lastAngle || 0);
+
+            if (t.isHero) {
+              ctx.shadowBlur = 15 + Math.sin(G.time * 5) * 5;
+              if (t.heroGrade === 'A') { ctx.shadowColor = '#50C878'; ctx.fillStyle = '#50C878'; }
+              else if (t.heroGrade === 'S') { ctx.shadowColor = '#FFD700'; ctx.fillStyle = '#FFD700'; }
+              else if (t.heroGrade === 'SS') { ctx.shadowColor = '#FF0033'; ctx.fillStyle = '#FF0033'; }
+
+              ctx.fillRect(-12, -12, 24, 24);
+              ctx.fillStyle = '#fff';
+              ctx.fillRect(12, -4, 14, 8);
+              ctx.shadowBlur = 0;
+            } else if (t.type === 1) {
+              // Type 1 (Single)
+              ctx.fillStyle = '#666'; ctx.fillRect(-10, -10, 20, 20); // Body
+              ctx.fillStyle = '#333'; ctx.fillRect(10, -4, 12, 8);   // Barrel
+            } else if (t.type === 2) {
+              // Type 2 (AOE - 다련장 미사일 시스템 / MLRS)
+
+              // 1. 하부 회전 마운트 (Base Mount)
+              ctx.fillStyle = '#2b303b';
+              ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+
+              // 2. 발사대 본체 (Launcher Pod) - 장갑판 느낌의 육중한 직사각형
+              ctx.fillStyle = '#4a5568';
+              ctx.fillRect(-14, -12, 26, 24);
+
+              // 3. 측면 장갑 패널 라인 (Armor Detailing)
+              ctx.strokeStyle = '#1a202c';
+              ctx.lineWidth = 2;
+              ctx.strokeRect(-14, -12, 26, 24);
+
+              // 4. 전면부 다련장 포트 하우징
+              ctx.fillStyle = '#2d3748';
+              ctx.fillRect(12, -11, 6, 22);
+
+              // 5. 탄두(Warheads) 장전 상태 동기화 로직 (The "How" & "Why")
+              // 타워의 쿨타임 데이터(t.cooldown)를 시각화하여 유저가 발사 타이밍을 예측 가능하게 함
+              const isLoaded = t.cooldown <= 0.2;
+
+              // 3행 2열(3x2)의 미사일 포트 배열 렌더링
+              for (let row = -7; row <= 7; row += 7) {
+                for (let col = 13; col <= 16; col += 3) {
+                  ctx.beginPath();
+                  ctx.arc(col, row, 1.8, 0, Math.PI * 2);
+
+                  if (isLoaded) {
+                    // 장전 완료: 붉은색 탄두 노출 및 미세한 광원(Glow) 이펙트
+                    ctx.shadowBlur = 4;
+                    ctx.shadowColor = '#ff4d4d';
+                    ctx.fillStyle = '#ff4d4d';
+                  } else {
+                    // 재장전 중: 빈 포트(검은 구멍)로 표시
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = '#111';
+                  }
+
+                  ctx.fill();
+                  ctx.shadowBlur = 0; // 광원 효과 초기화
+                }
+              }
+            }
+          }
+
+          ctx.restore();
+
+          // Text Overlay (UI Rollback: Simple Number)
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 12px sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          if (t.isHero) {
+            ctx.fillText(`⏳${t.remainWaves}`, t.x, t.y - 25);
+          } else {
+            ctx.fillText(t.level, t.x, t.y + 1);
+          }
+        });
+
+        // 👇 [신규 교체] 🌑 이모지 운석 렌더링
+        if (G.rock && G.rock.available) {
+          ctx.save();
+          // 적들이 막히는 길목 좌표 (x: 270, y: 790)
+          ctx.translate(270, 790); 
+          
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          
+          if (G.rock.active) {
+            // 💥 발동 중: 강하게 진동하는 🌑 운석
+            ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
+            ctx.font = '60px sans-serif';
+            ctx.fillText('🌑', 0, 0);
+            
+            // 붉은색 카운트다운 타이머
+            ctx.fillStyle = '#ff4d4d'; ctx.font = 'bold 22px sans-serif';
+            ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
+            ctx.fillText(G.rock.timer.toFixed(1) + 's', 0, -40);
+          } else {
+            // 💤 대기 중: 반투명하게 대기하는 🌑 운석
+            ctx.globalAlpha = 0.4;
+            ctx.font = '40px sans-serif';
+            ctx.fillText('🌑', 0, 0);
+            
+            ctx.globalAlpha = 0.8;
+            ctx.fillStyle = '#8892b0'; ctx.font = 'bold 11px sans-serif';
+            ctx.fillText('LAST STAND', 0, -30);
+          }
+          ctx.restore();
+        }
+
+
+        G.enemies.forEach(e => {
+          if (!e.alive) return;
+
+          // [수정 포인트 1] 스코프(Scope) 에러 해결: emojiMap을 최상단으로 끌어올림
+          const emojiMap = { normal: '🧟', fast: '🦇', tank: '🚍', boss: '👹' };
+
+          // 1. 이모지 매핑 (수미상관 구조 유지)
+          let emoji = '👾';
+          if (e.isBoss) {
+            const bossEmojis = { 10: '👹', 20: '🐱‍🐉', 30: '🐱‍🚀', 40: '🐱‍👤', 50: '👻', 60: '🤡', 70: '👺', 80: '☠', 90: '🤖', 100: '👹' };
+            const typeId = (e.bossType === 100) ? 100 : e.bossType;
+            emoji = bossEmojis[typeId] || '👹';
+          } else {
+            emoji = e.isMiniBoss ? '🦹‍♂️' : (emojiMap[e.type] || '👾');
+          }
+
+          // 2. Data Scale-Up: W100 최종 보스 전용 스탯 뻥튀기
+          const isFinalBoss = (e.bossType === 100 && e.isBoss);
+
+          // 일반 보스는 24, W100 최종 보스는 48로 텍스트 렌더링 면적 4배(2배수 제곱) 확대
+          const fontSize = isFinalBoss ? 48 : (e.isBoss ? 24 : (e.isMiniBoss ? 19 : 16));
+
+          // 빙결 바닥 이펙트 (얼음 고리) - 적 아래에 깔리게 Draw Enemy 직전 렌더링
+          if (e.frozenUntil > G.time && e.alive) {
+            ctx.save();
+            // 적의 위치로 이동
+            ctx.translate(e.x, e.y);
+
+            // 1. 반투명한 얼음 큐브 생성
+            ctx.fillStyle = 'rgba(150, 230, 255, 0.65)'; // 쨍한 얼음색
+            ctx.strokeStyle = '#ffffff'; // 하얀색 테두리
+            ctx.lineWidth = 2;
+            ctx.shadowColor = '#00ffff';
+            ctx.shadowBlur = 15; // 시선을 끄는 네온 효과
+
+            // 보스 여부에 따라 큐브 크기 조정
+            const boxSize = e.isBoss ? 50 : 34;
+
+            // 큐브 그리기 (모서리가 약간 각진 형태)
+            ctx.fillRect(-boxSize / 2, -boxSize / 2 + 5, boxSize, boxSize);
+            ctx.strokeRect(-boxSize / 2, -boxSize / 2 + 5, boxSize, boxSize);
+
+            // 2. 중앙에 눈송이 마크 쾅!
+            ctx.font = `${e.isBoss ? 24 : 16}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.fillText('❄️', 0, 5);
+
+            ctx.restore();
+          }
+
+          // 방어구 파괴(Armor Break) 바닥 이펙트
+          if (e.vulnUntil > G.time && e.alive) {
+            ctx.save();
+            ctx.translate(e.x, e.y);
+            ctx.fillStyle = 'rgba(255, 100, 100, 0.65)';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.shadowColor = '#ff0000';
+            ctx.shadowBlur = 15;
+            const boxSize = e.isBoss ? 50 : 34;
+            ctx.fillRect(-boxSize / 2, -boxSize / 2 + 5, boxSize, boxSize);
+            ctx.strokeRect(-boxSize / 2, -boxSize / 2 + 5, boxSize, boxSize);
+            ctx.font = `${e.isBoss ? 24 : 16}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.fillText('💥', 0, 5);
+            ctx.restore();
+          }
+
+          ctx.save();
+
+          // 3. Position & 미세 진동(Vibration) 이펙트 주입
+          let renderX = e.x;
+          let renderY = e.y;
+
+          if (isFinalBoss) {
+            // 불안정한 에너지를 표현하기 위해 매 프레임마다 -1.5 ~ 1.5px의 난수(Noise) 좌표를 더해 진동 연출
+            renderX += (Math.random() - 0.5) * 3;
+            renderY += (Math.random() - 0.5) * 3;
+          }
+
+          ctx.translate(renderX, renderY);
+          if (e.x < e.prevX) ctx.scale(-1, 1);
+
+          // [신규 교체 코드] 렌더링 파이프라인 무적 구역 시각화
+          const renderSafeZones = [
+            { x: LOGICAL_W / 2, y: gridSize + 15 + offsetY }, // 동굴 렌더 좌표
+            { x: 100, y: gridSize + offsetY },                // 좌측 화산
+            { x: 440, y: gridSize + offsetY }                 // 우측 화산
+          ];
+
+          const minRenderDist = Math.min(...renderSafeZones.map(z => Math.hypot(e.x - z.x, e.y - z.y)));
+
+          if (minRenderDist < 45) {
+            e.slowUntil = 0; // 슬로우 지속 시간을 0으로 강제 초기화
+            ctx.globalAlpha = 0.3; // 무적 상태임을 암시하는 은신 효과
+          } else {
+            ctx.globalAlpha = 1.0; // 구역을 벗어나는 즉시 실체화
+          }
+
+
+
+          // 4. Tier Aura & Boss Glow (맥동하는 아우라)
+          if (e.tier >= 2) {
+            ctx.shadowBlur = e.tier === 3 ? 20 : 15;
+            ctx.shadowColor = e.tier === 3 ? '#ff4d4d' : '#ffd700';
+          }
+          if (e.isBoss) {
+            if (isFinalBoss) {
+              // G.time 기반의 사인파(Sine Wave) 곡선을 곱해 그림자가 호흡하듯(Pulsing) 커졌다 작아지게 설계
+              ctx.shadowBlur = 35 + Math.sin(G.time * 8) * 15;
+              ctx.shadowColor = '#cc0000'; // 한층 더 어둡고 묵직한 적색
+            } else {
+              ctx.shadowBlur = 20;
+              ctx.shadowColor = '#ff0000';
+            }
+          }
+
+          // 5. Draw Enemy
+          if (e.isMutant && !e.isBoss) {
+            ctx.fillStyle = e.mutantColor;
+            ctx.beginPath();
+            const sides = e.mutantSides;
+            const r = e.radius || 11;
+            for (let i = 0; i < sides; i++) {
+              const theta = (i / sides) * Math.PI * 2;
+              const spikeFac = 1.0 + Math.abs(Math.sin(i * 1324 + e.pathIndex)) * 0.8;
+              const rMod = r * spikeFac;
+              const x = Math.cos(theta) * rMod;
+              const y = Math.sin(theta) * rMod;
+              if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.closePath(); ctx.fill();
+
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, -3, 3, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, -3, 1, 0, Math.PI * 2); ctx.fill();
+          } else {
+            if (e.evolutionColor && !e.isBoss) {
+              ctx.globalCompositeOperation = 'source-over';
+              ctx.shadowBlur = 10;
+              ctx.shadowColor = e.evolutionColor;
+              ctx.fillStyle = e.evolutionColor;
+              ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+            }
+
+            ctx.font = `${fontSize}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+
+            // W100 전용: 잔상(Ghosting) 레이어를 덧그려 퀄리티업
+            if (isFinalBoss) {
+              ctx.globalAlpha = 0.5;
+              ctx.fillText(emoji, -2, 2);
+              ctx.globalAlpha = 1.0;
+            }
+
+            ctx.fillText(emoji, 0, 0);
+          }
+
+          ctx.restore();
+
+          // Status Text Overlay
+          if (e.statusText && e.isBoss) {
+            const bossR = (e.radius || 16.5) * 1.5;
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(e.statusText, e.x, e.y - bossR);
+          }
+
+          // 5. Minimal Horizontal HP Bar 
+          const barW = e.isBoss ? 40 : 24;
+          const barH = e.isBoss ? 4 : 3;
+          const hpPct = Math.max(0, e.hp / e.hpMax);
+          ctx.fillStyle = 'rgba(0,0,0,0.6)';
+          ctx.fillRect(e.x - barW / 2, e.y + (e.isBoss ? 18 : 12), barW, barH);
+          ctx.fillStyle = hpPct > 0.5 ? '#00ff00' : '#ff0000';
+          ctx.fillRect(e.x - barW / 2, e.y + (e.isBoss ? 18 : 12), barW * hpPct, barH);
+
+
+          // 6. Boss Text
+          if (e.isBoss) {
+            const bossR = (e.radius || 16.5) * 1.2;
+            ctx.fillStyle = '#ff3333';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(`[BOSS W${e.bossType}]`, e.x, e.y - (bossR + 15));
+          }
+
+          // 7. Status (Slow) Visual (원형 선 제거 후 이모지 색조 변화로 대체)
+          if (e.slowUntil > G.time) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-atop';
+            ctx.fillStyle = 'rgba(0, 191, 255, 0.3)'; // 슬로우 시 푸른 색조
+            ctx.translate(e.x, e.y);
+            ctx.font = `${fontSize}px serif`; // [수정 포인트 2] 폰트 사이즈 변수 통일
+            // [수정 포인트 3] 슬로우에 걸렸을 때 보스 디자인이 👾로 변하는 버그 방지 (emoji 변수 직접 사용)
+            ctx.fillText(emoji, 0, 0);
+            ctx.restore();
+          }
+        });
+
+        // Removed Old Projectile Loop from here
+
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+        G.floatTexts.forEach(f => { ctx.globalAlpha = f.life; ctx.fillText(f.text, f.x, f.y); });
+        ctx.globalAlpha = 1;
+
+        // 튜토리얼 텍스트 렌더링
+        if (!G.isTutorialDone && G.wave === 0) {
+          ctx.fillStyle = '#ffda00'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
+          
+          if (G.towers.length === 0) { 
+            ctx.fillText("👇 하단의 [머신건] 타워를 건설하세요!", LOGICAL_W / 2, LOGICAL_H / 2); 
+          } else {
+            const hasUpgraded = G.towers.some(t => t.level > 1);
+            if (!hasUpgraded) {
+              ctx.fillText("👇 [강화]를 누르고 타워를 선택해 레벨업하세요!", LOGICAL_W / 2, LOGICAL_H / 2);
+              ctx.font = 'bold 18px sans-serif';
+              ctx.fillText("(비용: 1P 필요 / 현재 1P 보유)", LOGICAL_W / 2, LOGICAL_H / 2 + 30);
+            } else {
+              ctx.fillText("하단의 [▶ 웨이브]를 눌러 훈련을 시작하세요!", LOGICAL_W / 2, LOGICAL_H / 2);
+            }
+          }
+        }
+
+        if ((G.mode === 'place' || G.mode === 'placeHero') && G.previewTower) {
+          const { gx, gy, type, isHero, pendingHero } = G.previewTower; const def = TOWER_TYPES[type];
+          const cx = gx * gridSize + gridSize / 2 + offsetX; const cy = gy * gridSize + gridSize / 2 + offsetY;
+
+          let color = def.color;
+          if (isHero && pendingHero) {
+            if (pendingHero.grade === 'A') color = '#50C878';
+            else if (pendingHero.grade === 'S') color = '#FFD700';
+            else if (pendingHero.grade === 'SS') color = '#FF0033';
+          }
+
+          ctx.beginPath(); ctx.arc(cx, cy, def.range, 0, 6.28);
+          ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]);
+          ctx.fillStyle = color; ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc(cx, cy, 12, 0, 6.28); ctx.fill();
+          ctx.fillStyle = color; ctx.globalAlpha = 0.2; ctx.fillRect(gx * gridSize + offsetX, gy * gridSize + offsetY, gridSize, gridSize);
+          ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.font = '12px sans-serif'; ctx.fillText("한번 더 터치!", cx, cy - 20);
+        }
+
+        // Auto Overclock Visual Overlay
+        if (G.overclockActive) {
+          ctx.save();
+          // Draw a very subtle yellow/white screen tint overlay
+          ctx.fillStyle = 'rgba(255, 250, 200, 0.08)';
+          ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
+
+          // Draw Timer
+          const remaining = Math.max(0, G.overclockUntil - G.time);
+          ctx.font = 'bold 20px sans-serif';
+          ctx.fillStyle = '#ffda00';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.shadowColor = '#000';
+          ctx.shadowBlur = 4;
+          ctx.fillText(`⚡ ${remaining.toFixed(1)}s`, LOGICAL_W / 2, offsetY + 15);
+          ctx.restore();
+        }
+
+        // Finisher Visual Overlay
+        if (G.finisherActive) {
+          ctx.save();
+          // Draw a subtle orange screen tint overlay
+          ctx.fillStyle = 'rgba(255, 150, 0, 0.06)';
+          ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
+
+          // Draw Timer
+          const remaining = Math.max(0, G.finisherUntil - G.time);
+          ctx.font = 'bold 20px sans-serif';
+          ctx.fillStyle = '#ff5500';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.shadowColor = '#000';
+          ctx.shadowBlur = 4;
+
+          // Prevent overlap with Overclock timer if both are active
+          const textY = G.overclockActive ? offsetY + 45 : offsetY + 15;
+          ctx.fillText(`🔥 ${remaining.toFixed(1)}s`, LOGICAL_W / 2, textY);
+          ctx.restore();
+        }
+      }
+
+
+      function updateUI() {
+        const ui = G.ui;
+        const fill = ui.progressFill;
+
+        // Visual Progress Bar Logic
+        if (!G.inWave) {
+          fill.style.width = '0%';
+        } else if (G.wave % 10 === 0) {
+          // Boss Wave: Total HP Ratio (Red)
+          const bosses = G.enemies.filter(e => e.isBoss && e.alive);
+          if (bosses.length > 0) {
+            const totalHP = bosses.reduce((sum, b) => sum + b.hp, 0);
+            const totalMaxHP = bosses.reduce((sum, b) => sum + b.hpMax, 0);
+            fill.style.width = (totalHP / totalMaxHP * 100) + '%';
+            fill.style.backgroundColor = '#ff4d4d';
+          } else {
+            fill.style.width = '0%'; // Clear if no boss alive (e.g. split phase or dead)
+          }
+        } else {
+          // Normal Wave: Progress Ratio (Blue)
+          const progress = G.totalSpawnCount > 0 ? (G.currentFinishedCount / G.totalSpawnCount) * 100 : 0;
+          fill.style.width = Math.min(100, progress) + '%';
+          fill.style.backgroundColor = '#7aa6ff';
+        }
+
+        // 상단 바 업데이트: Gold(황금색), Points(보라색), HP(빨간색), Wave(하늘색)
+        ui.topStat.innerHTML = `
+          <span>G: <b style="color:#ffd700">${Math.floor(G.gold)}</b></span>
+          <span>P: <b style="color:#a07aff">${G.upgradePoints}</b></span>
+          <span>HP: <b style="color:#ff4d4d">${G.lives}</b></span>
+          <span>W: <b style="color:#7aa6ff">${G.wave}</b></span>
+        `;
+
+        const btns = [ui.t1, ui.t2, ui.t3, ui.sell, ui.upgrade, ui.buyHero];
+        btns.forEach(b => b.classList.remove('btn-on'));
+
+        if (G.mode === 'place') {
+          if (G.selectedTowerType === 1) ui.t1.classList.add('btn-on');
+          if (G.selectedTowerType === 2) ui.t2.classList.add('btn-on');
+          if (G.selectedTowerType === 3) ui.t3.classList.add('btn-on');
+        } else if (G.mode === 'placeHero') {
+          ui.buyHero.classList.add('btn-on');
+        } else if (G.mode === 'sell') {
+          ui.sell.classList.add('btn-on');
+        } else if (G.mode === 'upgrade') {
+          ui.upgrade.classList.add('btn-on');
+        }
+
+        // Update Gacha Cost Text
+        const costStr = getGachaCost() + 'G';
+        const costSpan = ui.buyUp.querySelector('.cost');
+        if (costSpan && costSpan.innerText !== costStr) costSpan.innerText = costStr;
+
+        const buyUpBtnCost = document.querySelector('#buyUp span.cost');
+        if (buyUpBtnCost) {
+          buyUpBtnCost.innerText = getGachaCost() + 'G';
+        }
+
+
+        ui.startWave.disabled = G.inWave;
+        ui.startWave.style.opacity = G.inWave ? 0.5 : 1;
+
+        // Finisher Button State
+        if (G.inWave && !G.finisherUsedThisWave) {
+          G.ui.btnFinisher.style.opacity = 1;
+          G.ui.btnFinisher.style.pointerEvents = 'auto';
+        } else {
+          G.ui.btnFinisher.style.opacity = 0.5;
+          G.ui.btnFinisher.style.pointerEvents = 'none';
+        }
+
+        if (!G.isTutorialDone && G.wave === 0) {
+          // 다른 고급 기능들은 튜토리얼 중 잠금
+          G.ui.t2.disabled = true; G.ui.t3.disabled = true;
+          G.ui.sell.disabled = true; 
+          G.ui.buyUp.disabled = true; G.ui.buyAll.disabled = true; G.ui.buyHero.disabled = true;
+          
+          if (G.towers.length === 0) { 
+            // [1단계] 타워가 없을 때: 강화 버튼과 시작 버튼 모두 잠금
+            G.ui.upgrade.disabled = true; 
+            G.ui.startWave.disabled = true; G.ui.startWave.style.opacity = 0.3; 
+          } else { 
+            // [2단계] 타워가 지어졌을 때: 강화 버튼 잠금 해제!
+            G.ui.upgrade.disabled = false; 
+            
+            // 타워 중 레벨이 2 이상인(강화된) 타워가 있는지 검사
+            const hasUpgraded = G.towers.some(t => t.level > 1);
+            
+            if (!hasUpgraded) {
+              // 강화를 아직 안 했다면 시작 버튼은 계속 잠금
+              G.ui.startWave.disabled = true; G.ui.startWave.style.opacity = 0.3;
+            } else {
+              // [3단계] 강화까지 마쳤을 때: 드디어 웨이브 시작 버튼 잠금 해제!
+              G.ui.startWave.disabled = false; G.ui.startWave.style.opacity = 1;
+            }
+          }
+        } else {
+          // 튜토리얼 완료 후 모든 버튼 잠금 해제
+          G.ui.t2.disabled = false; G.ui.t3.disabled = false;
+          G.ui.sell.disabled = false; G.ui.upgrade.disabled = false;
+          G.ui.buyUp.disabled = false; G.ui.buyAll.disabled = false; G.ui.buyHero.disabled = false;
+        }
+      }
+
+      function setMode(m, t = 1) { G.mode = m; G.selectedTowerType = t; G.previewTower = null; updateUI(); }
+
+      function toggleSpeed() {
+        G.gameSpeed = G.gameSpeed === 3 ? 1 : G.gameSpeed + 1;
+        G.ui.btnSpeed.innerText = `⏩ ${G.gameSpeed}x`;
+        log(`배속이 ${G.gameSpeed}x로 변경되었습니다.`);
+      }
+
+      G.ui.t1.onclick = () => setMode('place', 1);
+      G.ui.t2.onclick = () => setMode('place', 2);
+      G.ui.t3.onclick = () => setMode('place', 3);
+      G.ui.sell.onclick = () => setMode(G.mode === 'sell' ? 'place' : 'sell');
+      G.ui.upgrade.onclick = () => setMode(G.mode === 'upgrade' ? 'place' : 'upgrade');
+      G.ui.startWave.onclick = () => startWave();
+      G.ui.buyUp.onclick = () => buyUpgradePoint(); // Gacha Button Handler
+      G.ui.buyAll.onclick = () => buyUpgradeAllIn(); // 신규 추가: All-In 버튼 이벤트 연결
+      G.ui.buyHero.onclick = () => buyHeroPoint(); // 영웅 뽑기 이벤트 연결
+      G.ui.btnSpeed.onclick = () => toggleSpeed(); // 배속 제어 버튼 이벤트 연결
+
+      // Finisher Logic
+      function closeFinisherModal() {
+        G.ui.finisherModal.style.opacity = 0;
+        setTimeout(() => { G.ui.finisherModal.style.display = 'none'; }, 300);
+      }
+
+      G.ui.btnFinisher.onclick = () => {
+        if (!G.inWave || G.finisherUsedThisWave) return;
+
+        const isBossWave = (G.wave > 0 && G.wave % 10 === 0);
+
+        // Show/Hide Gold Card
+        if (isBossWave) {
+          G.ui.cardFinisherGold.style.display = 'none';
+        } else {
+          G.ui.cardFinisherGold.style.display = 'flex';
+          const baseCost = FINISHER_GOLD_BASE + G.wave * FINISHER_GOLD_PER_WAVE;
+          const pctCost = Math.floor(G.gold * FINISHER_GOLD_WALLET_PCT);
+          const goldCost = Math.max(baseCost, pctCost);
+          G.currentFinisherGoldCost = goldCost; // Store for purchase
+
+          const costText = G.ui.textFinisherGoldCost;
+          if (G.gold < goldCost) {
+            costText.innerText = `비용: ${goldCost}G (비용부족)`;
+            costText.style.color = '#ff4d4d';
+            G.ui.cardFinisherGold.style.opacity = 0.5;
+            G.ui.cardFinisherGold.disabled = true;
+          } else {
+            costText.innerText = `비용: ${goldCost}G`;
+            costText.style.color = '#ffd700';
+            G.ui.cardFinisherGold.style.opacity = 1;
+            G.ui.cardFinisherGold.disabled = false;
+          }
+        }
+
+        // HP Card Check
+        if (G.lives <= FINISHER_HP_COST) {
+          G.ui.cardFinisherHP.style.opacity = 0.5;
+          G.ui.cardFinisherHP.disabled = true;
+        } else {
+          G.ui.cardFinisherHP.style.opacity = 1;
+          G.ui.cardFinisherHP.disabled = false;
+        }
+
+        G.ui.finisherModal.style.display = 'flex';
+        // force reflow
+        void G.ui.finisherModal.offsetWidth;
+        G.ui.finisherModal.style.opacity = 1;
+      };
+
+      G.ui.btnCancelFinisher.onclick = () => closeFinisherModal();
+
+      G.ui.cardFinisherHP.onclick = () => {
+        if (G.lives <= FINISHER_HP_COST || !G.inWave || G.finisherUsedThisWave) return;
+
+        G.lives -= FINISHER_HP_COST;
+        const isBossWave = (G.wave > 0 && G.wave % 10 === 0);
+
+        G.finisherActive = true;
+        G.finisherUsedThisWave = true;
+        G.finisherType = 'HP';
+        G.finisherUntil = G.time + FINISHER_HP_DUR;
+        G.statsFinisherCount++; // Ending stat tracker
+
+        if (isBossWave) {
+          G.finisherFRMult = 1 + (FINISHER_HP_FR - 1) * FINISHER_BOSS_DAMP;
+          G.finisherRangeMult = 1 + (FINISHER_HP_RANGE - 1) * FINISHER_BOSS_DAMP;
+        } else {
+          G.finisherFRMult = FINISHER_HP_FR;
+          G.finisherRangeMult = FINISHER_HP_RANGE;
+        }
+        G.finisherKillGoldMult = FINISHER_HP_KILL_GOLD_MULT;
+
+        log("🔥 필살기 [HP 오버드라이브] 가동!");
+        addFloatText("🔥 필살기!", LOGICAL_W / 2, LOGICAL_H / 2 - 80);
+        closeFinisherModal();
+        updateUI();
+      };
+
+      G.ui.cardFinisherGold.onclick = () => {
+        const isBossWave = (G.wave > 0 && G.wave % 10 === 0);
+        if (isBossWave || !G.inWave || G.finisherUsedThisWave || G.gold < G.currentFinisherGoldCost) return;
+
+        G.gold -= G.currentFinisherGoldCost;
+
+        G.finisherActive = true;
+        G.finisherUsedThisWave = true;
+        G.finisherType = 'GOLD';
+        G.finisherUntil = G.time + FINISHER_GOLD_DUR;
+        G.statsFinisherCount++; // Ending stat tracker
+        G.finisherFRMult = FINISHER_GOLD_FR;
+        G.finisherRangeMult = FINISHER_GOLD_RANGE;
+        G.finisherKillGoldMult = FINISHER_GOLD_KILL_GOLD_MULT;
+
+        log("🔥 필살기 [골드 템포 부스트] 가동!");
+        addFloatText("🔥 필살기!", LOGICAL_W / 2, LOGICAL_H / 2 - 80);
+        closeFinisherModal();
+        updateUI();
+      };
+
+      if (localStorage.getItem('defenseSave')) {
+        document.getElementById('btnResume').style.display = 'block';
+      }
+      document.getElementById('btnResume').onclick = () => {
+        document.getElementById('mainMenu').style.display = 'none';
+        G.gameState = 'PLAYING';
+        resetGame();
+        loadGameState();
+        updateUI();
+      };
+      document.getElementById('btnNewGame').onclick = () => {
+        localStorage.removeItem('defenseSave');
+        document.getElementById('mainMenu').style.display = 'none';
+        G.gameState = 'PLAYING';
+        resetGame();
+        G.isTutorialDone = false;
+        G.gold = 50;
+        updateUI();
+      };
+
+
+      // [ADMIN] 디버그 모드: Shift + W 입력 시 웨이브 강제 점프
+      // ==========================================
+      window.addEventListener('keydown', (e) => {
+        if (e.shiftKey && (e.code === 'KeyW' || e.key === 'W' || e.key === 'w')) {
+          e.preventDefault(); e.stopPropagation();
+          setTimeout(() => {
+            const target = parseInt(prompt("🛠️ [관리자 모드] 이동할 웨이브 숫자를 입력하세요 (예: 10):", G.wave + 1));
+            if (!isNaN(target) && target > 0) {
+              if (G.gameState !== 'PLAYING') {
+                document.getElementById('mainMenu').style.display = 'none';
+                G.gameState = 'PLAYING';
+              }
+              G.enemies = []; G.projectiles = []; G.inWave = false;
+              G.wave = target - 1; G.gold += 5000; G.upgradePoints += 50; G.isTutorialDone = true;
+              log(`🛠️ [ADMIN] 시스템 강제 포워딩 완료.`);
+              updateUI(); startWave();
+            }
+          }, 10);
+        }
+      }, true);
+      // ==========================================
+
+      window.addEventListener('beforeunload', () => saveGameState());
+
+      updateUI(); setMode('place', 1); log('강화 시스템 업데이트 완료.');
+      requestAnimationFrame(tick);
+    })();
+  </script>
+</body>
+
+</html>
