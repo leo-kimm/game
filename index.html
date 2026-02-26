@@ -29,14 +29,17 @@
             background: linear-gradient(to right, #00d2ff, #928DAB);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            text-align: center;
         }
 
         .game-grid {
             display: grid;
+            /* 3개가 예쁘게 들어가도록 minmax 유지 */
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 30px;
             width: 90%;
-            max-width: 800px;
+            /* 3개의 카드가 한 줄에 들어갈 수 있도록 최대 너비 확장 */
+            max-width: 1000px; 
             padding: 20px;
         }
 
@@ -53,6 +56,9 @@
             position: relative;
             overflow: hidden;
             backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .card:hover {
@@ -62,7 +68,7 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
-        /* 게임별 테마 효과 */
+        /* 🎮 게임별 테마 호버 효과 */
         .card.neon:hover {
             box-shadow: 0 0 30px rgba(0, 255, 255, 0.4);
             border-color: #0ff;
@@ -70,6 +76,11 @@
         .card.luge:hover {
             box-shadow: 0 0 30px rgba(255, 215, 0, 0.4);
             border-color: #ffd700;
+        }
+        /* [신규 추가] 디펜스 게임 전용 테마 */
+        .card.defense:hover {
+            box-shadow: 0 0 30px rgba(122, 166, 255, 0.4);
+            border-color: #7aa6ff;
         }
 
         .icon { 
@@ -82,37 +93,35 @@
 
         .title { 
             font-size: 1.5rem; 
-            font-weight: 800; 
+            font-weight: 900; 
             display: block; 
             margin-bottom: 10px; 
             text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .desc { 
             font-size: 0.9rem; 
             color: #aaa; 
             display: block; 
-            line-height: 1.5;
+            line-height: 1.6;
         }
 
+        /* 뱃지 디자인 */
         .badge {
             position: absolute;
             top: 15px;
             right: 15px;
             font-size: 0.7rem;
-            padding: 4px 8px;
-            border-radius: 10px;
-            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-weight: 900;
+            letter-spacing: 1px;
         }
         .badge.new { background: #ff4757; color: white; }
-        .badge.hit { background: #2ed573; color: black; }
-        
-        /* [추가] 시즌2 뱃지 스타일 */
-        .badge.season2 { 
-            background: #ff00de; 
-            color: white; 
-            box-shadow: 0 0 10px #ff00de;
-        }
+        .badge.season2 { background: #ff00de; color: white; box-shadow: 0 0 10px #ff00de; }
+        /* [신규 추가] 디펜스 게임 뱃지 */
+        .badge.beta { background: rgba(42,53,102,0.9); color: #7aa6ff; border: 1px solid #7aa6ff; box-shadow: 0 0 10px rgba(122,166,255,0.4); }
 
         footer {
             margin-top: 50px;
@@ -134,10 +143,17 @@
         </a>
 
         <a href="./luge/" class="card luge">
-            <span class="badge new">NEW</span>
+            <span class="badge new">HOT</span>
             <span class="icon">🛷</span>
             <span class="title" style="color: #ffd700;">Luge Olympic</span>
             <span class="desc">물리 기반 드로잉 퍼즐.<br>나만의 트랙을 그려 금메달을 노려라!</span>
+        </a>
+
+        <a href="./defense.html" class="card defense">
+            <span class="badge beta">BETA</span>
+            <span class="icon">🛡️</span>
+            <span class="title" style="color: #7aa6ff;">Tactical Defense</span>
+            <span class="desc">사령관님, 방어선을 구축하세요.<br>전술적 타워 배치와 한계 돌파!</span>
         </a>
     </div>
 
@@ -167,17 +183,14 @@
                 navigator.serviceWorker.register('./sw.js').then((reg) => {
                     console.log('Service Worker Registered');
 
-                    // 1. 이미 업데이트가 대기 중인 경우 (이전에 받았다가 탭을 안 닫았을 때)
                     if (reg.waiting) {
                         showUpdateToast(reg.waiting);
                         return;
                     }
 
-                    // 2. 새로운 업데이트가 발견되었을 때
                     reg.onupdatefound = () => {
                         const newWorker = reg.installing;
                         newWorker.onstatechange = () => {
-                            // 다운로드가 다 끝나고 'installed' 상태가 되면 알림 띄움
                             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                 showUpdateToast(newWorker);
                             }
@@ -191,14 +204,10 @@
             const toast = document.getElementById('update-toast');
             const btn = document.getElementById('reload-btn');
             
-            // 팝업 표시
             toast.style.display = 'flex';
             
-            // 버튼 클릭 시 강제 새로고침
             btn.onclick = () => {
-                // 서비스 워커에게 "대기하지 말고 즉시 교체해!" 라고 신호 보냄 (선택 사항이지만 권장)
                 worker.postMessage({ action: 'skipWaiting' });
-                // 페이지 새로고침
                 window.location.reload();
             };
         }
