@@ -532,8 +532,9 @@
         </div>
 
         <input type="text" id="playerName" placeholder="AAA" maxlength="3" autocomplete="off"
+          inputmode="url" spellcheck="false"
           oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '')"
-          style="width:100%; padding:12px; margin-bottom:20px; background:rgba(0,0,0,0.4); border:1px solid #556; border-radius:8px; color:#fff; font-size:16px; text-align:center; outline:none;" />
+          style="ime-mode: disabled; width:100%; padding:12px; margin-bottom:20px; background:rgba(0,0,0,0.4); border:1px solid #556; border-radius:8px; color:#fff; font-size:16px; text-align:center; outline:none;" />
 
         <div class="result-btns">
           <button id="btnResNew" style="background:#2a3566; border-color:#7aa6ff;">NEW START</button>
@@ -3467,7 +3468,8 @@
   <!-- FIREBASE RANKING MODULE -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+    // 👇 NEW: where, updateDoc, doc 모듈이 추가되었습니다.
+    import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp, where, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDa3Lf-79xCd6pQO8aeO2FxoxHYPjA-Yag",
@@ -3489,17 +3491,14 @@
           const device = typeof getDeviceInfo === 'function' ? getDeviceInfo() : {};
           const playTimeSec = G.playStartTime ? (Date.now() - G.playStartTime) / 1000 : 0;
 
-          await addDoc(collection(db, "rankings"), {
-            // 1. Basic Ranking Data
+          // 1. 저장할 새 데이터 객체
+          const newData = {
             name: finalName,
             wave: Number(wave),
             gold: Math.floor(gold),
             rankBadge: rankBadge,
             timestamp: serverTimestamp(),
-            version: "1.0.0", // 보안용 버전 꼬리표 유지
-
-            // 2. Gameplay Analytics
-            // stage: Number(wave), <--- 중복 제거
+            version: "1.0.0", 
             result: (rankBadge === 'S' || rankBadge === 'A' || rankBadge === 'B') && wave >= 100 ? "WIN" : "FAIL",
             play_time: Number(playTimeSec.toFixed(3)),
             build_count: G.buildCount || 0,
@@ -3507,24 +3506,50 @@
             gacha_count: G.gachaCount || 0,
             death_pos: G.deathPos || { x: 0, y: 0 },
             reason: G.deathReason || "Unknown",
-
-            // 3. Device Telemetry (핵심 정보만 남김)
             browser: device.browser || "Unknown",
             os: device.os || "Unknown",
             platform: device.platform || "Unknown",
             screen: device.screen || "Unknown",
-            control: device.control || "Unknown",
-            ua_full: device.ua_full || "Unknown"
-          });
-          console.log("Score & Telemetry Saved Successfully");
+            control: device.control || "Unknown"
+          };
+
+          // 2. DB에서 같은 닉네임의 기록이 있는지 검색
+          const rankingsRef = collection(db, "rankings");
+          const q = query(rankingsRef, where("name", "==", finalName));
+          const snapshot = await getDocs(q);
+
+          if (!snapshot.empty) {
+            // 3-A. 기존 기록이 있는 경우: 점수 비교
+            const existingDoc = snapshot.docs[0];
+            const existingData = existingDoc.data();
+            
+            let isBetter = false;
+            if (newData.wave > existingData.wave) {
+              isBetter = true; // 웨이브가 더 높음
+            } else if (newData.wave === existingData.wave && newData.gold > existingData.gold) {
+              isBetter = true; // 웨이브는 같은데 골드가 더 많음
+            }
+
+            if (isBetter) {
+              // 더 높은 점수일 경우에만 덮어쓰기 (Update)
+              await updateDoc(doc(db, "rankings", existingDoc.id), newData);
+              console.log("최고 기록 갱신 성공!");
+            } else {
+              console.log("기존 기록이 더 높아 저장하지 않습니다.");
+            }
+          } else {
+            // 3-B. 기존 기록이 없는 경우: 새로 생성 (Add)
+            await addDoc(rankingsRef, newData);
+            console.log("새로운 랭커 등록 완료!");
+          }
         } catch (e) {
           console.error("Error saving score: ", e);
         }
       },
+      
       loadRankings: async () => {
         const listDiv = document.getElementById('rankingList');
-        // Do not overwrite "Uploading..." text if we just triggered it from an active save.
-        if (!listDiv.innerHTML.includes('기록을 전송하는 중...')) {
+        if (!listDiv.innerHTML.includes('기록을 갱신하는 중...')) {
           listDiv.innerHTML = '<div style="text-align:center; color:#888; padding:20px;">랭킹 데이터를 불러오는 중...</div>';
         }
 
@@ -3539,8 +3564,13 @@
           }
 
           let docs = [];
-          querySnapshot.forEach(doc => docs.push(doc.data()));
-          // Client-side secondary sort by gold, then take top 10
+          querySnapshot.forEach(doc => {
+            const d = doc.data();
+            if (d.wave > 0) {
+              docs.push(d);
+            }
+          });
+          
           docs.sort((a, b) => {
             if (b.wave !== a.wave) return b.wave - a.wave;
             return b.gold - a.gold;
@@ -3551,9 +3581,9 @@
           let place = 1;
           top10.forEach((data) => {
             let rankColor = '#fff';
-            if (place === 1) rankColor = '#ffd700'; // Gold
-            else if (place === 2) rankColor = '#c0c0c0'; // Silver
-            else if (place === 3) rankColor = '#cd7f32'; // Bronze
+            if (place === 1) rankColor = '#ffd700'; 
+            else if (place === 2) rankColor = '#c0c0c0'; 
+            else if (place === 3) rankColor = '#cd7f32'; 
 
             html += `
               <div style="background:rgba(255,255,255,0.05); padding:10px 15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
@@ -3562,7 +3592,7 @@
                   <span style="font-size:16px; color:#fff; font-weight:bold;">${data.name}</span>
                 </div>
                 <div style="text-align:right;">
-                  <div style="color:#7aa6ff; font-weight:bold;">W${data.wave} <span style="font-size:12px; color:${data.rankBadge === 'S' ? '#ffcc00' : (data.rankBadge === 'F' ? '#ff4d4d' : '#aaa')};">[${data.rankBadge}]</span></div>
+                  <div style="color:#7aa6ff; font-weight:bold;">W${data.wave} <span style=\"font-size:12px; color:${data.rankBadge === 'S' ? '#ffcc00' : (data.rankBadge === 'F' ? '#ff4d4d' : '#aaa')};\">[${data.rankBadge}]</span></div>
                   <div style="color:#ffd700; font-size:12px;">${Math.floor(data.gold)}G</div>
                 </div>
               </div>
@@ -3577,7 +3607,6 @@
       }
     };
 
-    // Binding the new ranking Modal events directly after load
     document.getElementById('btnShowRanking').addEventListener('click', () => {
       document.getElementById('rankingModal').style.display = 'flex';
       window.defenseRankingAPI.loadRankings();
@@ -3586,7 +3615,6 @@
     document.getElementById('btnCloseRanking').addEventListener('click', () => {
       document.getElementById('rankingModal').style.display = 'none';
     });
-
   </script>
 </body>
 
