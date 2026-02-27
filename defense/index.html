@@ -1773,24 +1773,42 @@
         updateUI();
       };
 
-      document.getElementById('btnResMain').onclick = async () => {
+      // PC/모바일 터치 씹힘 방지 및 완벽한 순서 보장
+      const handleRankingSubmit = async (e) => {
+        if (e) e.preventDefault(); 
+        document.getElementById('playerName').blur(); // 모바일 키보드 내리기 강제화
+
+        const btn = document.getElementById('btnResMain');
+        if (btn.disabled) return;
+        btn.disabled = true;
+        btn.innerText = "전송 중...";
+
+        // 1. 🚨핵심🚨: 게임이 초기화되기 "전"에 현재 상태의 웨이브와 골드를 서버로 쏜다!
+        await extractAndSaveScore(); 
+
+        // 2. 서버 전송이 완전히 끝난 "후"에 비로소 게임 데이터를 초기화한다!
         document.getElementById('resultModal').style.display = 'none';
-        
-        // --- NEW: 게임 상태를 메인 메뉴로 완전 초기화 ---
         localStorage.removeItem('defenseSave');
+        
         G.gameState = 'MENU';
-        resetGame();
+        resetGame(); 
         G.isTutorialDone = false;
         updateUI();
         document.getElementById('mainMenu').style.display = 'flex';
         
         document.getElementById('rankingModal').style.display = 'flex';
-        document.getElementById('rankingList').innerHTML = '<div style="text-align:center; color:#888; padding:20px;">기록을 전송하는 중...</div>';
+        document.getElementById('rankingList').innerHTML = '<div style="text-align:center; color:#888; padding:20px;">기록을 갱신하는 중...</div>';
         
-        await extractAndSaveScore();
-        await new Promise(resolve => setTimeout(resolve, 600));
+        btn.disabled = false;
+        btn.innerText = "랭킹 등록";
+
+        await new Promise(resolve => setTimeout(resolve, 800));
         if (window.defenseRankingAPI) window.defenseRankingAPI.loadRankings();
       };
+
+      const btnResMain = document.getElementById('btnResMain');
+      btnResMain.onclick = handleRankingSubmit;
+      btnResMain.ontouchend = handleRankingSubmit;
 
       function triggerChapterReset() {
         let refundGold = 0;
@@ -3478,21 +3496,20 @@
             gold: Math.floor(gold),
             rankBadge: rankBadge,
             timestamp: serverTimestamp(),
+            version: "1.0.0", // 보안용 버전 꼬리표 유지
 
             // 2. Gameplay Analytics
-            stage: Number(wave), // Alias for wave
+            // stage: Number(wave), <--- 중복 제거
             result: (rankBadge === 'S' || rankBadge === 'A' || rankBadge === 'B') && wave >= 100 ? "WIN" : "FAIL",
             play_time: Number(playTimeSec.toFixed(3)),
-            retry_count: G.retryCount || 1,
             build_count: G.buildCount || 0,
             sell_count: G.sellCount || 0,
             gacha_count: G.gachaCount || 0,
             death_pos: G.deathPos || { x: 0, y: 0 },
             reason: G.deathReason || "Unknown",
 
-            // 3. Device & Environment Telemetry
+            // 3. Device Telemetry (핵심 정보만 남김)
             browser: device.browser || "Unknown",
-            engine: device.engine || "Unknown",
             os: device.os || "Unknown",
             platform: device.platform || "Unknown",
             screen: device.screen || "Unknown",
