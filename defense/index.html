@@ -1757,10 +1757,15 @@
 
       // 결과 창 버튼 이벤트 리스너 (Firebase API 연동용 래핑)
       async function extractAndSaveScore() {
-        if (!window.defenseRankingAPI) return;
+        if (!window.defenseRankingAPI) {
+          alert("📡 서버 통신 모듈을 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+          throw new Error("Firebase API Not Loaded"); // 에러를 던져서 세이브 삭제 방지
+        }
         let nameInput = document.getElementById('playerName').value.trim();
         if (!nameInput) nameInput = "AAA";
         const rankB = document.getElementById('resRank').innerText;
+        
+        // saveScore 내부에서 발생하는 에러도 캐치할 수 있도록 await 유지
         await window.defenseRankingAPI.saveScore(nameInput, G.wave, G.totalGoldEarned || 0, rankB);
       }
 
@@ -1776,35 +1781,45 @@
 
       // PC/모바일 터치 씹힘 방지 및 완벽한 순서 보장
       const handleRankingSubmit = async (e) => {
-        if (e) e.preventDefault(); 
-        document.getElementById('playerName').blur(); // 모바일 키보드 내리기 강제화
+        if (e && e.cancelable) e.preventDefault(); 
+        
+        // 키보드 내리기 딜레이 최소화를 위해 비동기 처리 직전에 배치하되, 
+        // UI 스레드 차단을 막기 위해 setTimeout 활용
+        setTimeout(() => document.getElementById('playerName').blur(), 0);
 
         const btn = document.getElementById('btnResMain');
         if (btn.disabled) return;
         btn.disabled = true;
         btn.innerText = "전송 중...";
 
-        // 1. 🚨핵심🚨: 게임이 초기화되기 "전"에 현재 상태의 웨이브와 골드를 서버로 쏜다!
-        await extractAndSaveScore(); 
+        try {
+          // 1. 서버 전송 시도
+          await extractAndSaveScore(); 
 
-        // 2. 서버 전송이 완전히 끝난 "후"에 비로소 게임 데이터를 초기화한다!
-        document.getElementById('resultModal').style.display = 'none';
-        localStorage.removeItem('defenseSave');
-        
-        G.gameState = 'MENU';
-        resetGame(); 
-        G.isTutorialDone = false;
-        updateUI();
-        document.getElementById('mainMenu').style.display = 'flex';
-        
-        document.getElementById('rankingModal').style.display = 'flex';
-        document.getElementById('rankingList').innerHTML = '<div style="text-align:center; color:#888; padding:20px;">기록을 갱신하는 중...</div>';
-        
-        btn.disabled = false;
-        btn.innerText = "랭킹 등록";
+          // 2. 서버 전송이 '완벽히 성공'했을 때만 데이터 초기화 (원자성 보장)
+          document.getElementById('resultModal').style.display = 'none';
+          localStorage.removeItem('defenseSave');
+          
+          G.gameState = 'MENU';
+          resetGame(); 
+          G.isTutorialDone = false;
+          updateUI();
+          document.getElementById('mainMenu').style.display = 'flex';
+          
+          document.getElementById('rankingModal').style.display = 'flex';
+          document.getElementById('rankingList').innerHTML = '<div style="text-align:center; color:#888; padding:20px;">기록을 갱신하는 중...</div>';
+          
+          await new Promise(resolve => setTimeout(resolve, 800));
+          if (window.defenseRankingAPI) window.defenseRankingAPI.loadRankings();
 
-        await new Promise(resolve => setTimeout(resolve, 800));
-        if (window.defenseRankingAPI) window.defenseRankingAPI.loadRankings();
+        } catch (error) {
+          // 전송 실패 시 로컬 세이브를 지우지 않고 유저가 다시 시도할 수 있도록 롤백
+          console.error("랭킹 등록 트랜잭션 실패:", error);
+          // 버튼 상태만 원상복구
+        } finally {
+          btn.disabled = false;
+          btn.innerText = "랭킹 등록";
+        }
       };
 
       const btnResMain = document.getElementById('btnResMain');
@@ -3467,6 +3482,20 @@
 
   <!-- FIREBASE RANKING MODULE -->
   <script type="module">
+    // [신규 주입] 기기 고유 식별자 발급 및 캐싱
+    function getDeviceUUID() {
+      let uuid = localStorage.getItem('defenseDeviceUUID');
+      if (!uuid) {
+        // 암호화 수준의 난수 생성 (지원하지 않는 구형 브라우저 대비 폴백 포함)
+        uuid = window.crypto && crypto.randomUUID 
+          ? crypto.randomUUID() 
+          : 'uuid-' + new Date().getTime() + '-' + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('defenseDeviceUUID', uuid);
+      }
+      return uuid;
+    }
+
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     // 👇 NEW: where, updateDoc, doc 모듈이 추가되었습니다.
     import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp, where, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
@@ -3490,9 +3519,11 @@
           const finalName = name || '무명 사령관';
           const device = typeof getDeviceInfo === 'function' ? getDeviceInfo() : {};
           const playTimeSec = G.playStartTime ? (Date.now() - G.playStartTime) / 1000 : 0;
+          const localUUID = getDeviceUUID(); // 👈 고유 식별자 호출
 
           // 1. 저장할 새 데이터 객체
           const newData = {
+            uuid: localUUID, // 👈 DB 페이로드에 식별자 추가
             name: finalName,
             wave: Number(wave),
             gold: Math.floor(gold),
@@ -3515,7 +3546,8 @@
 
           // 2. DB에서 같은 닉네임의 기록이 있는지 검색
           const rankingsRef = collection(db, "rankings");
-          const q = query(rankingsRef, where("name", "==", finalName));
+
+          const q = query(rankingsRef, where("uuid", "==", localUUID));
           const snapshot = await getDocs(q);
 
           if (!snapshot.empty) {
@@ -3535,6 +3567,7 @@
               await updateDoc(doc(db, "rankings", existingDoc.id), newData);
               console.log("최고 기록 갱신 성공!");
             } else {
+              alert(`기존 최고 기록(W${existingData.wave}, ${existingData.gold}G)에 미치지 못해 랭킹이 갱신되지 않았습니다.`);
               console.log("기존 기록이 더 높아 저장하지 않습니다.");
             }
           } else {
