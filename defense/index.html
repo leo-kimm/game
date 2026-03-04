@@ -552,6 +552,8 @@
           <div class="stat-item"><span>⭐ 최고 강화</span><b id="resMaxLevel">0</b></div>
           <div class="stat-item"><span>💰 누적 골드</span><b id="resGold" style="color:#ffd700;">0G</b></div>
           <div class="stat-item"><span>🏗️ 건설 타워</span><b id="resTowers">0</b></div>
+          <div class="stat-item"><span>👾 몬스터 처치</span><b id="resKills">0</b></div>
+          <div class="stat-item"><span>👹 보스 처치</span><b id="resBossKills">0</b></div>
         </div>
 
         <input type="text" id="playerName" placeholder="AAA" maxlength="3" autocomplete="off" inputmode="url"
@@ -900,6 +902,7 @@
 
       const G = {
         gameState: 'MENU', isTutorialDone: false,
+        totalKills: 0, totalBossKills: 0,
         gold: 250, totalGoldEarned: 250, lives: 20, wave: 0, inWave: false, isResting: false, restTimer: 0, time: 0,
         gameSpeed: 1, // Time Scaling 1~3x
         upgradePoints: 1, // Start with 1 Point
@@ -1141,6 +1144,7 @@
             G.enemies.forEach(enemy => {
               if (enemy.alive && !enemy.isBoss) {
                 enemy.hp = 0; enemy.alive = false; wiped++;
+                G.totalKills++;
                 addFloatText("💥", enemy.x, enemy.y);
                 let totalMult = (G.overclockActive ? OVERCLOCK_KILL_GOLD_MULT : 1) * (G.finisherActive ? G.finisherKillGoldMult : 1);
                 let reward = Math.floor(enemy.reward * totalMult);
@@ -1692,6 +1696,8 @@
         document.getElementById('resMaxLevel').innerText = maxLevel;
         document.getElementById('resGold').innerText = Math.floor(G.totalGoldEarned || 0) + 'G';
         document.getElementById('resTowers').innerText = tCount;
+        document.getElementById('resKills').innerText = G.totalKills;
+        document.getElementById('resBossKills').innerText = G.totalBossKills;
 
         // 랭크 계산
         let grade = 'F';
@@ -1728,6 +1734,7 @@
 
       // 결과 창 버튼 이벤트 리스너 (Firebase API 연동용 래핑)
       async function extractAndSaveScore() {
+        console.log("Ranking attempt started...");
         if (!window.defenseRankingAPI) {
           alert("📡 서버 통신 모듈을 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
           throw new Error("Firebase API Not Loaded"); // 에러를 던져서 세이브 삭제 방지
@@ -1786,6 +1793,7 @@
         } catch (error) {
           // 전송 실패 시 로컬 세이브를 지우지 않고 유저가 다시 시도할 수 있도록 롤백
           console.error("랭킹 등록 트랜잭션 실패:", error);
+          alert("시스템 오류: " + error.message);
           // 버튼 상태만 원상복구
         } finally {
           btn.disabled = false;
@@ -1989,6 +1997,7 @@
                 if (e.hp <= 0 && e.alive) {
                   e.hp = 0; // Will be cleanly caught and processed by the existing death logic elsewhere or right here.
                   // Safely trigger standard death logic:
+                  if (!e.isTutorial) { if (e.isBoss) G.totalBossKills++; else G.totalKills++; }
                   e.alive = false;
                   if (!e.isBoss || e.bossType !== 10) G.currentFinishedCount++;
                   BossHandler.onDeath(e, G);
@@ -2151,6 +2160,7 @@
                     // 반경 120px 내의 적 처치 (x: 270, y: 790 기준)
                     if (enemy.alive && Math.hypot(enemy.x - 270, enemy.y - 790) < 120 && !enemy.isStealth) {
                       enemy.hp = 0;
+                      if (enemy.isBoss) G.totalBossKills++; else G.totalKills++;
                       enemy.alive = false;
                       addFloatText("⚠CRUSH⚠", enemy.x, enemy.y - 15);
                       BossHandler.onDeath(enemy, G);
@@ -2494,6 +2504,7 @@
             return;
           }
 
+          if (!e.isTutorial) { if (e.isBoss) G.totalBossKills++; else G.totalKills++; }
           e.alive = false;
 
           if (!e.isBoss || e.bossType !== 10) G.currentFinishedCount++; // Kill count
@@ -2515,6 +2526,7 @@
 
 
       function resetGame() {
+        G.totalKills = 0; G.totalBossKills = 0;
         G.gold = 350; G.totalGoldEarned = 350; G.lives = 20; G.wave = 0; G.inWave = false;
         G.isResting = false; G.restTimer = 0;
         G.upgradePoints = 3; // Reset to 3
@@ -3492,26 +3504,27 @@
       saveScore: async (name, wave, gold, rankBadge) => {
         try {
           const finalName = name || '무명 사령관';
-          const device = typeof getDeviceInfo === 'function' ? getDeviceInfo() : {};
-          const playTimeSec = G.playStartTime ? (Date.now() - G.playStartTime) / 1000 : 0;
-          const localUUID = getDeviceUUID(); // 👈 고유 식별자 호출
+          const device = typeof window.getDeviceInfo === 'function' ? window.getDeviceInfo() : {};
+          const playTimeSec = window.G.playStartTime ? (Date.now() - window.G.playStartTime) / 1000 : 0;
+          const localUUID = getDeviceUUID(); // 👈 고유 식별자 호출 안전 처리
 
           // 1. 저장할 새 데이터 객체
           const newData = {
             uuid: localUUID, // 👈 DB 페이로드에 식별자 추가
             name: finalName,
-            wave: Number(wave),
-            gold: Math.floor(gold),
+            wave: Math.floor(Number(wave) || 0) + 10000,
+            total_kills: Number(window.G.totalKills || 0) + Number(window.G.totalBossKills || 0),
+            gold: Math.floor(Number(gold) || 0),
             rankBadge: rankBadge,
             timestamp: serverTimestamp(),
             version: "1.0.0",
             result: (rankBadge === 'S' || rankBadge === 'A' || rankBadge === 'B') && wave >= 100 ? "WIN" : "FAIL",
             play_time: Number(playTimeSec.toFixed(3)),
-            build_count: G.buildCount || 0,
-            sell_count: G.sellCount || 0,
-            gacha_count: G.gachaCount || 0,
-            death_pos: G.deathPos || { x: 0, y: 0 },
-            reason: G.deathReason || "Unknown",
+            build_count: window.G.buildCount || 0,
+            sell_count: window.G.sellCount || 0,
+            gacha_count: window.G.gachaCount || 0,
+            death_pos: window.G.deathPos || { x: 0, y: 0 },
+            reason: window.G.deathReason || "Unknown",
             browser: device.browser || "Unknown",
             os: device.os || "Unknown",
             platform: device.platform || "Unknown",
@@ -3524,6 +3537,10 @@
 
           const q = query(rankingsRef, where("uuid", "==", localUUID));
           const snapshot = await getDocs(q);
+
+          // 데이터 타입 강제 변환 (Firestore 엄격한 타입 검사 대비)
+          newData.wave = Number(newData.wave);
+          newData.total_kills = Number(newData.total_kills);
 
           if (!snapshot.empty) {
             // 3-A. 기존 기록이 있는 경우: 점수 비교
@@ -3541,6 +3558,7 @@
               // 더 높은 점수일 경우에만 덮어쓰기 (Update)
               await updateDoc(doc(db, "rankings", existingDoc.id), newData);
               console.log("최고 기록 갱신 성공!");
+              alert("랭킹 등록 성공!");
             } else {
               alert(`기존 최고 기록(W${existingData.wave}, ${existingData.gold}G)에 미치지 못해 랭킹이 갱신되지 않았습니다.`);
               console.log("기존 기록이 더 높아 저장하지 않습니다.");
@@ -3549,9 +3567,11 @@
             // 3-B. 기존 기록이 없는 경우: 새로 생성 (Add)
             await addDoc(rankingsRef, newData);
             console.log("새로운 랭커 등록 완료!");
+            alert("랭킹 등록 성공!");
           }
         } catch (e) {
           console.error("Error saving score: ", e);
+          alert("Firestore 등록 실패: " + e.message + "\n(데이터 형식을 확인하세요)");
         }
       },
 
@@ -3581,6 +3601,7 @@
 
           docs.sort((a, b) => {
             if (b.wave !== a.wave) return b.wave - a.wave;
+            if ((b.total_kills || 0) !== (a.total_kills || 0)) return (b.total_kills || 0) - (a.total_kills || 0);
             return b.gold - a.gold;
           });
           const top10 = docs.slice(0, 10);
@@ -3593,15 +3614,22 @@
             else if (place === 2) rankColor = '#c0c0c0';
             else if (place === 3) rankColor = '#cd7f32';
 
+            const isPhase = data.wave >= 10000; const displayWave = isPhase ? data.wave - 10000 : data.wave; const waveLabel = isPhase ? 'PHASE' : 'WAVE';
+            const displayKills = data.total_kills !== undefined ? data.total_kills.toLocaleString() : '-';
+
             html += `
-              <div style="background:rgba(255,255,255,0.05); padding:10px 15px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:12px;">
-                  <b style="font-size:20px; color:${rankColor}; width:24px;">${place}</b>
-                  <span style="font-size:16px; color:#fff; font-weight:bold;">${data.name}</span>
+              <div style="background:rgba(255,255,255,0.05); padding:10px 15px; border-radius:8px; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    <b style="font-size:20px; color:${rankColor}; width:24px;">${place}</b>
+                    <span style="font-size:16px; color:#fff; font-weight:bold;">${data.name}</span>
+                  </div>
+                  <div style="font-size:12px; font-weight:bold; color:${data.rankBadge === 'S' ? '#ffcc00' : (data.rankBadge === 'F' ? '#ff4d4d' : '#aaa')};">[RANK ${data.rankBadge}]</div>
                 </div>
-                <div style="text-align:right;">
-                  <div style="color:#7aa6ff; font-weight:bold;">W${data.wave} <span style=\"font-size:12px; color:${data.rankBadge === 'S' ? '#ffcc00' : (data.rankBadge === 'F' ? '#ff4d4d' : '#aaa')};\">[${data.rankBadge}]</span></div>
-                  <div style="color:#ffd700; font-size:12px;">${Math.floor(data.gold)}G</div>
+                <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:8px; display:flex; justify-content:space-between; font-size:13px;">
+                  <span style="color:#7aa6ff; font-weight:bold;">🌊 ${waveLabel} ${displayWave}</span>
+                  <span style="color:#e8ecff;">⚔️ ${displayKills} 킬</span>
+                  <span style="color:#ffd700;">💰 ${Math.floor(data.gold).toLocaleString()}G</span>
                 </div>
               </div>
             `;
@@ -3610,6 +3638,7 @@
           listDiv.innerHTML = html;
         } catch (e) {
           console.error("Error loading rankings: ", e);
+          alert("오류 발생: " + e.message);
           listDiv.innerHTML = '<div style="text-align:center; color:#ff4d4d; padding:20px;">데이터를 불러오는 중 오류가 발생했습니다.</div>';
         }
       }
