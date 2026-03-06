@@ -39,7 +39,7 @@
     /* UI Overlay elements minimized */
     #toast {
       position: absolute;
-      top: 10px;
+      top: 80px;
       left: 50%;
       transform: translateX(-50%);
       background: #E53935;
@@ -252,11 +252,22 @@
       }
 
       let uniqueColors = [];
+      // 화면에 보이게 내려온(y > 60) 구슬만 후보로 필터링
       for (let i = 0; i < balls.length; i++) {
-        if (!uniqueColors.includes(balls[i].colorObj)) {
+        if (balls[i].y > 60 && !uniqueColors.includes(balls[i].colorObj)) {
           uniqueColors.push(balls[i].colorObj);
         }
       }
+
+      // 혹시 막 생성되어 모두 y <= 60에 있다면 전체에서 후보 찾기
+      if (uniqueColors.length === 0) {
+        for (let i = 0; i < balls.length; i++) {
+          if (!uniqueColors.includes(balls[i].colorObj)) {
+            uniqueColors.push(balls[i].colorObj);
+          }
+        }
+      }
+
       targetColorObj = uniqueColors[Math.floor(Math.random() * uniqueColors.length)];
       return targetColorObj;
     }
@@ -739,9 +750,9 @@
         const time = Date.now() / 250;
 
         ctx.font = '30px sans-serif';
-        ctx.fillText('🧊', canvas.width / 2 - 80, canvas.height / 2 - 150 + Math.sin(time) * 10);
-        ctx.fillText('🟧', canvas.width / 2 + 80, canvas.height / 2 - 130 + Math.cos(time) * 10);
-        ctx.fillText('🌿', canvas.width / 2 - 40, canvas.height / 2 - 200 + Math.sin(time * 1.5) * 15);
+        ctx.fillText('🧊', canvas.width / 2 - 80, canvas.height / 2 - 100 + Math.sin(time) * 10);
+        ctx.fillText('🟧', canvas.width / 2 + 80, canvas.height / 2 - 80 + Math.cos(time) * 10);
+        ctx.fillText('🌿', canvas.width / 2 - 40, canvas.height / 2 - 130 + Math.sin(time * 1.5) * 15);
 
         ctx.save();
         ctx.translate(canvas.width / 2, canvas.height / 2 - 50);
@@ -905,23 +916,27 @@
 
         // 텍스트 스타일: 붓글씨 느낌의 세리프 폰트와 금색
         ctx.fillStyle = '#ffecb3';
-        ctx.font = 'bold 18px serif';
         ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
 
+        // 1번째 줄: 스테이지 & 점수
+        ctx.font = 'bold 15px serif';
+        ctx.fillText(`Stage: ${currentStage} | Score: ${totalScore.toLocaleString()}`, 10, 24);
+
+        // 2번째 줄: 시간
+        ctx.font = '14px serif';
         if (stageDef && stageDef.isInfiniteMode) {
-          ctx.fillText(`Stage: ${currentStage} | Survive: ${(currentStageTime / 1000).toFixed(2)}s | Score: ${totalScore.toLocaleString()}`, 12, 30);
+          ctx.fillText(`Survive: ${(currentStageTime / 1000).toFixed(1)}s`, 10, 46);
         } else {
           let displayedTime = totalClearTime + currentStageTime;
-          ctx.fillText(`Stage: ${currentStage} | Total: ${(displayedTime / 1000).toFixed(2)}s | Score: ${totalScore.toLocaleString()}`, 12, 30);
+          ctx.fillText(`Total Time: ${(displayedTime / 1000).toFixed(1)}s`, 10, 46);
         }
 
         ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
+        ctx.font = 'bold 16px serif';
         if (targetColorObj) {
-          let targetLabel = targetColorObj ? targetColorObj.name : "";
-          ctx.fillText(targetLabel, canvas.width - 35, 30);
-          drawKimchi(ctx, canvas.width - 15, 30, 15, targetColorObj);
+          let targetLabel = targetColorObj.name;
+          ctx.fillText(targetLabel, canvas.width - 35, 35);
+          drawKimchi(ctx, canvas.width - 15, 35, 15, targetColorObj);
         }
 
         ctx.textBaseline = 'alphabetic'; // Reset for rest of app
@@ -1312,8 +1327,9 @@
               break;
             }
           }
-          if (!hasSameColor && !stageDef.isInfiniteMode) {
+          if (!hasSameColor) {
             updateTargetColor();
+            infiniteModeTargetTimer = 0; // 타이머 초기화
           }
 
           selectedBalls = []; // Reset after processing
