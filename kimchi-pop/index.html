@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kimchi Pop</title>
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #111;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      touch-action: none;
+      /* 모바일 브라우저 스크롤 방지 */
+    }
+
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      background-color: #222;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* UI Overlay elements minimized */
+    #toast {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #E53935;
+      color: #fff;
+      border: 3px solid #fff;
+      font-size: 22px;
+      padding: 10px 20px;
+      border-radius: 30px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+      font-weight: bold;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    @keyframes pop {
+      0% {
+        transform: translate(-50%, 20px) scale(0.8);
+        opacity: 0;
+      }
+
+      20% {
+        transform: translate(-50%, -10px) scale(1.1);
+        opacity: 1;
+      }
+
+      100% {
+        transform: translate(-50%, -5px) scale(1);
+        opacity: 1;
+      }
+    }
+
+    .toast-pop {
+      animation: pop 0.4s ease-out forwards;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    <div id="toast"></div>
+  </div>
+
+  <script>
+    /**
+     * [게임 설정 및 상수]
+     */
+    const CONFIG = {
+      GRAVITY: 0.6,
+      FRICTION: 0.95,
+      RESTITUTION: 0.1, // 반발 계수 (낮을수록 덜 튐)
+      BALL_RADIUS: 35,
+      MAX_BALLS: 200,
+      TARGET_INTERVAL: 5000,
+      COLORS: [
+        { name: '배추김치', hex: '#E53935', type: 'BAECHU' },
+        { name: '동치미', hex: '#F5F5F5', type: 'DONGCHIMI' },
+        { name: '열무김치', hex: '#43A047', type: 'YEOLMU' },
+        { name: '총각김치', hex: '#FF7043', type: 'CHONGGAK' },
+        { name: '깍두기', hex: '#E64A19', type: 'KKAKDUGI' }
+      ]
+    };
+
+    let FALL_SPEED = 8;
+
+    const STATE = { MENU: 0, PLAYING: 1, ENDING: 2, READY: 3, STAGE_CLEAR: 4 };
+
+    const JAR_MARGIN = 20;
+    const FLOOR_MARGIN = 130;
+
+    /**
+     * [전역 상태]
+     */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const toastEl = document.getElementById('toast');
+
+    let gameState = STATE.MENU;
+    let readyTimer = 0;
+    let endingTimer = 0;
+
+    let totalClearTime = 0;
+    let currentStageTime = 0;
+    let nextStageBtn = { x: 0, y: 0, w: 200, h: 50 };
+    let bestClearTime = parseFloat(localStorage.getItem('kimchiPopBestClearTime')) || 0;
+    let bestSurvivalTime = parseFloat(localStorage.getItem('kimchiPopBestSurvivalTime')) || 0;
+
+    let balls = [];
+    let particles = [];
+    let targetColorObj = null;
+    let selectedBalls = [];
+    let isSwiping = false;
+    let inventory = [];
+
+    let totalScore = 0;
+    let agingMultiplier = 1.0;
+
+    let currentStage = 1;
+    const STAGE_CONFIG = [
+      { colors: 2, total: 20 },
+      { colors: 3, total: 20 },
+      { colors: 4, total: 20 },
+      { colors: 5, total: 20 },
+      { colors: 5, total: 20, isInfiniteMode: true }
+    ];
+
+    let lastTime = 0;
+    let spawnTimer = 0;
+    let infiniteModeTargetTimer = 0;
+
+    // 캔버스 사이즈 동적 초기화
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    /**
+     * [클래스: 물리 구슬]
+     */
+    class Ball {
+      constructor(x, y, radius, colorObj) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.r = radius;
+        this.colorObj = colorObj;
+      }
+    }
+
+    class Particle {
+      constructor(x, y, colorHex) {
+        this.x = x; this.y = y;
+        this.vx = (Math.random() - 0.5) * 15;
+        this.vy = (Math.random() - 0.5) * 15;
+        this.life = 1.0;
+        this.colorHex = colorHex;
+        this.size = Math.random() * 8 + 4;
+      }
+    }
+
+    /**
+     * [공통 헬퍼]
+     */
+    function showToast(msg) {
+      toastEl.innerText = msg;
+      toastEl.classList.remove('toast-pop');
+      void toastEl.offsetWidth; // trigger reflow
+      toastEl.classList.add('toast-pop');
+      toastEl.style.opacity = 1;
+      setTimeout(() => {
+        toastEl.style.opacity = 0;
+        setTimeout(() => toastEl.classList.remove('toast-pop'), 300);
+      }, 1000);
+    }
+
+    function checkAndSaveBestSurvival() {
+      if (currentStageTime > bestSurvivalTime) {
+        bestSurvivalTime = currentStageTime;
+        localStorage.setItem('kimchiPopBestSurvivalTime', bestSurvivalTime);
+        showToast('New Survival Record!');
+      }
+    }
+
+    function checkAndSaveBestClear() {
+      if (bestClearTime === 0 || totalClearTime < bestClearTime) {
+        bestClearTime = totalClearTime;
+        localStorage.setItem('kimchiPopBestClearTime', bestClearTime);
+      }
+    }
+
+    function initStage(stageIndex) {
+      balls = [];
+      let config = STAGE_CONFIG[stageIndex];
+
+      let availableColors = [...CONFIG.COLORS];
+      availableColors.sort(() => Math.random() - 0.5);
+      let numColors = Math.min(config.colors, availableColors.length);
+      let selectedColors = availableColors.slice(0, numColors);
+
+      for (let i = 0; i < config.total; i++) {
+        let rx = JAR_MARGIN + 50 + Math.random() * (canvas.width - JAR_MARGIN * 2 - 100);
+        let ry = canvas.height - 100 - Math.random() * 150;
+        let randomColor = selectedColors[Math.floor(Math.random() * selectedColors.length)];
+        let newBall = new Ball(rx, ry, CONFIG.BALL_RADIUS, randomColor);
+        newBall.vx = 0;
+        newBall.vy = 0;
+        balls.push(newBall);
+      }
+
+      gameState = STATE.PLAYING;
+      spawnTimer = 0;
+      infiniteModeTargetTimer = 0;
+      currentStageTime = 0;
+      updateTargetColor();
+    }
+
+    function updateTargetColor() {
+      if (balls.length === 0) {
+        let stageDef = STAGE_CONFIG[currentStage - 1];
+        if (!stageDef || !stageDef.isInfiniteMode) {
+          gameState = STATE.STAGE_CLEAR;
+          readyTimer = 2000;
+        }
+        return null;
+      }
+
+      let uniqueColors = [];
+      for (let i = 0; i < balls.length; i++) {
+        if (!uniqueColors.includes(balls[i].colorObj)) {
+          uniqueColors.push(balls[i].colorObj);
+        }
+      }
+      targetColorObj = uniqueColors[Math.floor(Math.random() * uniqueColors.length)];
+      return targetColorObj;
+    }
+
+    function spawnPenalty(colorObj, count = 3) {
+      const gap = CONFIG.BALL_RADIUS * 2 + 10;
+      for (let i = 0; i < count; i++) {
+        let spawnX = canvas.width / 2;
+        let spawnY = -50 - (i * gap);
+        let newBall = new Ball(spawnX, spawnY, CONFIG.BALL_RADIUS, colorObj);
+        newBall.vy = FALL_SPEED;
+        newBall.vx = 0;
+        balls.push(newBall);
+      }
+      showToast('kimchi 더먹어');
+    }
+
+    function checkGameOver() {
+      let jarTop = canvas.height * 0.35;
+      for (let i = 0; i < balls.length; i++) {
+        let b = balls[i];
+        if (b.y < jarTop + 50 && (b.x < JAR_MARGIN - 10 || b.x > canvas.width - JAR_MARGIN + 10)) {
+          return true;
+        }
+      }
+      if (balls.length > CONFIG.MAX_BALLS) return true;
+      return false;
+    }
+
+    /**
+     * [물리 업데이트]
+     */
+    function updatePhysics(dt) {
+      let jarTop = canvas.height * 0.35;
+
+      // 1. 중력 및 위치 업데이트
+      for (let i = balls.length - 1; i >= 0; i--) {
+        let b = balls[i];
+        if (b.y < jarTop) {
+          b.vy = FALL_SPEED;
+          b.vx = 0;
+        } else {
+          b.vy += CONFIG.GRAVITY;
+        }
+        b.vx *= CONFIG.FRICTION;
+        b.vy *= CONFIG.FRICTION;
+        b.x += b.vx;
+        b.y += b.vy;
+
+        if (b.y > jarTop) {
+          // 벽 충돌 (좌/우) - 항아리 내부에서만
+          if (b.x - b.r < JAR_MARGIN) { b.x = b.r + JAR_MARGIN; b.vx *= -CONFIG.RESTITUTION; }
+          if (b.x + b.r > canvas.width - JAR_MARGIN) { b.x = canvas.width - JAR_MARGIN - b.r; b.vx *= -CONFIG.RESTITUTION; }
+        }
+
+        // 바닥 충돌
+        if (b.x > JAR_MARGIN && b.x < canvas.width - JAR_MARGIN) {
+          if (b.y + b.r > canvas.height - FLOOR_MARGIN) { b.y = canvas.height - FLOOR_MARGIN - b.r; b.vy *= -CONFIG.RESTITUTION; }
+        }
+
+        if (b.y > canvas.height + 100) {
+          balls.splice(i, 1);
+        }
+      }
+
+      // 2. 구슬 간 충돌 해결 (거리 기반 겹침 밀어내기)
+      // 안정성을 위해 2회 반복 연산(Iteration)
+      for (let iter = 0; iter < 2; iter++) {
+        for (let i = 0; i < balls.length; i++) {
+          for (let j = i + 1; j < balls.length; j++) {
+            let b1 = balls[i];
+            let b2 = balls[j];
+            let dx = b2.x - b1.x;
+            let dy = b2.y - b1.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            let minDist = b1.r + b2.r;
+
+            if (dist < minDist) {
+              let overlap = minDist - dist;
+              let nx = dx / dist;
+              let ny = dy / dist;
+
+              // 서로 반반씩 밀어냄
+              b1.x -= nx * overlap * 0.5;
+              b1.y -= ny * overlap * 0.5;
+              b2.x += nx * overlap * 0.5;
+              b2.y += ny * overlap * 0.5;
+
+              // 속도 감쇠
+              b1.vx *= 0.8; b1.vy *= 0.8;
+              b2.vx *= 0.8; b2.vy *= 0.8;
+            }
+          }
+        }
+      }
+    }
+
+    /**
+     * [김치 문양 그리기]
+     */
+    /**
+     * [김치 오브제 통합 렌더링 함수]
+     * 모든 수치는 반지름 r에 비례(r * n)하여 UI와 실제 구슬의 디자인을 일치시킴
+     */
+    function drawKimchi(ctx, x, y, r, typeObj) {
+      let type = typeObj.type;
+      let hex = typeObj.hex;
+
+      ctx.save();
+      ctx.translate(x, y);
+
+      // 기본 그림자 (안착감)
+      ctx.beginPath();
+      ctx.arc(2, 2, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fill();
+
+      // 김치 기본 원형
+      ctx.beginPath();
+      if (type === 'BAECHU') {
+        const points = 20;
+        for (let i = 0; i <= points; i++) {
+          let angle = (i / points) * Math.PI * 2;
+          let wave = (i % 2 === 0) ? 0.92 : 1.05;
+          let rx = Math.cos(angle) * r * 0.85 * wave;
+          let ry = Math.sin(angle) * r * 0.85 * wave;
+          if (i === 0) ctx.moveTo(rx, ry);
+          else ctx.lineTo(rx, ry);
+        }
+        ctx.closePath();
+      } else {
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+      }
+      ctx.fillStyle = hex;
+      ctx.fill();
+
+      // 내부 디테일 (클리핑을 사용하여 원 밖으로 나가지 않게 함)
+      ctx.save();
+      ctx.beginPath();
+      if (type === 'BAECHU') {
+        const points = 20;
+        for (let i = 0; i <= points; i++) {
+          let angle = (i / points) * Math.PI * 2;
+          let wave = (i % 2 === 0) ? 0.92 : 1.05;
+          let rx = Math.cos(angle) * r * 0.85 * wave;
+          let ry = Math.sin(angle) * r * 0.85 * wave;
+          if (i === 0) ctx.moveTo(rx, ry);
+          else ctx.lineTo(rx, ry);
+        }
+        ctx.closePath();
+      } else {
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+      }
+      ctx.clip();
+
+      if (type === 'BAECHU') {
+        // 중앙 잎맥 (연한 핑크/오렌지)
+        ctx.strokeStyle = '#ffccbc';
+        ctx.lineWidth = r * 0.15;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, r * 0.8);
+        ctx.lineTo(0, -r * 0.8); // 중심 줄기
+        ctx.stroke();
+
+        // 잔가지 잎맥
+        ctx.lineWidth = r * 0.06;
+        for (let j = -2; j <= 2; j++) {
+          let h = j * r * 0.3;
+          ctx.beginPath();
+          ctx.moveTo(0, h);
+          ctx.lineTo(-r * 0.4, h - r * 0.2);
+          ctx.moveTo(0, h);
+          ctx.lineTo(r * 0.4, h - r * 0.2);
+          ctx.stroke();
+        }
+
+        // 고명 (초록 쪽파 & 검붉은 고춧가루)
+        for (let k = 0; k < 12; k++) {
+          ctx.fillStyle = (k % 2 === 0) ? '#4CAF50' : '#8B0000';
+          let gx = (Math.random() - 0.5) * r * 1.3;
+          let gy = (Math.random() - 0.5) * r * 1.3;
+          ctx.beginPath();
+          ctx.arc(gx, gy, r * 0.05, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      else if (type === 'DONGCHIMI') {
+        // 맑은 국물 그라데이션
+        let grad = ctx.createRadialGradient(0, 0, 0, 0, 0, r);
+        grad.addColorStop(0, '#FFFFFF');
+        grad.addColorStop(1, '#E0F7FA');
+        ctx.fillStyle = grad;
+        ctx.fill();
+        // 무 단면
+        ctx.fillStyle = '#F9FBE7';
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.65, 0, Math.PI * 2);
+        ctx.fill();
+        // 실고추 & 쪽파 고명
+        ctx.fillStyle = '#D32F2F'; // 실고추
+        ctx.fillRect(-r * 0.4, -r * 0.1, r * 0.5, r * 0.05);
+        ctx.fillStyle = '#388E3C'; // 쪽파
+        ctx.fillRect(r * 0.1, r * 0.2, r * 0.2, r * 0.2);
+      }
+      else if (type === 'YEOLMU') {
+        // 열무 줄기 결
+        ctx.strokeStyle = '#1B5E20';
+        ctx.lineWidth = r * 0.12;
+        ctx.beginPath();
+        for (let i = -1; i <= 1; i++) {
+          ctx.moveTo(i * (r * 0.3), r);
+          ctx.lineTo(i * (r * 0.2), -r);
+        }
+        ctx.stroke();
+        // 잎사귀 표현
+        ctx.fillStyle = '#81C784';
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.ellipse(-r * 0.4, -r * 0.2, r * 0.3, r * 0.6, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(r * 0.4, r * 0.1, r * 0.2, r * 0.5, -Math.PI / 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
+      else if (type === 'CHONGGAK') {
+        // 무 하단 그라데이션 (하얀 무 부분)
+        let grad = ctx.createLinearGradient(0, r, 0, -r);
+        grad.addColorStop(0, '#FFFFFF');
+        grad.addColorStop(0.5, hex);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        // 무청 (초록색 꼬리) - 위쪽으로 솟음
+        ctx.fillStyle = '#2E7D32';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(-r * 0.5, -r * 0.8, -r * 0.2, -r * 1.4, 0, -r * 1.2);
+        ctx.bezierCurveTo(r * 0.2, -r * 1.4, r * 0.5, -r * 0.8, 0, 0);
+        ctx.fill();
+      }
+      else if (type === 'KKAKDUGI') {
+        // 깍두기 정육면체 느낌 (밝은 면과 어두운 면)
+        ctx.fillStyle = '#FFFDE7'; // Creamy white radish interior
+        let sz = r * 0.6;
+        ctx.fillRect(-sz, -sz, sz * 2, sz * 2);
+        // 입체 선 (그림자 및 하이라이트)
+        ctx.strokeStyle = hex; // Spicy red edge
+        ctx.lineWidth = r * 0.1;
+        ctx.strokeRect(-sz, -sz, sz * 2, sz * 2);
+        ctx.beginPath();
+        ctx.moveTo(-sz, -sz); ctx.lineTo(sz, sz); // 대각선으로 입체감 부여
+        ctx.stroke();
+      }
+
+      ctx.restore(); // 클리핑 해제
+
+      // 공통: 신선한 광택 (Juicy Gloss)
+      let gloss = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 0, -r * 0.3, -r * 0.3, r * 0.8);
+      gloss.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
+      gloss.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = gloss;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 테두리 마무리
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    /**
+     * [태극기 문양 그리기]
+     */
+    function drawTaegeuk(ctx, x, y, radius) {
+      // 위쪽 붉은색 (Red)
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI, true);
+      ctx.arc(x - radius / 2, y, radius / 2, Math.PI, 0, true);
+      ctx.arc(x + radius / 2, y, radius / 2, Math.PI, 0, false);
+      ctx.fillStyle = 'rgba(229, 57, 53, 0.2)';
+      ctx.fill();
+
+      // 아래쪽 푸른색 (Blue)
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI, false);
+      ctx.arc(x - radius / 2, y, radius / 2, Math.PI, 0, true);
+      ctx.arc(x + radius / 2, y, radius / 2, Math.PI, 0, false);
+      ctx.fillStyle = 'rgba(67, 160, 71, 0.2)';
+      ctx.fill();
+    }
+
+    /**
+     * [아이템 그리기: 마늘 (GARLIC)]
+     */
+    function drawGarlic(ctx, x, y, r) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Root
+      ctx.fillStyle = '#8D6E63';
+      ctx.beginPath();
+      ctx.arc(0, r * 0.8, r * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cloves (3 main cloves overlapping left/right/front)
+      ctx.strokeStyle = '#E6CEAC';
+      ctx.lineWidth = 1;
+
+      // Left clove
+      ctx.fillStyle = '#FFF9C4';
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.5);
+      ctx.bezierCurveTo(-r * 0.9, -r * 0.2, -r * 0.9, r * 0.8, -r * 0.2, r * 0.8);
+      ctx.bezierCurveTo(-r * 0.1, r * 0.8, 0, r * 0.6, 0, 0);
+      ctx.fill();
+      ctx.stroke();
+
+      // Right clove
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.5);
+      ctx.bezierCurveTo(r * 0.9, -r * 0.2, r * 0.9, r * 0.8, r * 0.2, r * 0.8);
+      ctx.bezierCurveTo(r * 0.1, r * 0.8, 0, r * 0.6, 0, 0);
+      ctx.fill();
+      ctx.stroke();
+
+      // Center front clove
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.6);
+      ctx.bezierCurveTo(-r * 0.4, -r * 0.1, -r * 0.4, r * 0.9, 0, r * 0.9);
+      ctx.bezierCurveTo(r * 0.4, r * 0.9, r * 0.4, -r * 0.1, 0, -r * 0.6);
+      ctx.fill();
+      ctx.stroke();
+
+      // Sprout tip
+      ctx.fillStyle = '#81C784';
+      ctx.beginPath();
+      ctx.moveTo(0, -r * 0.6);
+      ctx.quadraticCurveTo(r * 0.2, -r * 0.9, r * 0.1, -r * 1.1);
+      ctx.quadraticCurveTo(-r * 0.1, -r * 0.9, 0, -r * 0.6);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    /**
+     * [아이템 그리기: 새우젓 (SHRIMP)]
+     */
+    function drawShrimp(ctx, x, y, r) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Rotate slightly inward
+      ctx.rotate(-Math.PI / 6);
+
+      ctx.strokeStyle = '#D84315';
+      ctx.lineWidth = Math.max(1, r * 0.05);
+
+      // Whiskers
+      ctx.beginPath();
+      ctx.moveTo(r * 0.4, -r * 0.3);
+      ctx.quadraticCurveTo(r * 0.8, -r * 0.6, r * 0.9, r * 0.2);
+      ctx.moveTo(r * 0.4, -r * 0.3);
+      ctx.quadraticCurveTo(r * 1.0, -r * 0.4, r * 0.8, r * 0.4);
+      ctx.stroke();
+
+      // Body (curved crescent)
+      ctx.fillStyle = '#FFAB91';
+      ctx.beginPath();
+      ctx.moveTo(r * 0.4, -r * 0.3); // Head
+      ctx.bezierCurveTo(-r * 0.8, -r * 0.8, -r * 0.9, r * 0.5, -r * 0.2, r * 0.8); // Outer back
+      ctx.bezierCurveTo(-r * 0.4, r * 0.2, -r * 0.2, 0, r * 0.4, -r * 0.3); // Inner belly
+      ctx.fill();
+      ctx.stroke();
+
+      // Segment lines
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.2, -r * 0.5); ctx.lineTo(0, -r * 0.1);
+      ctx.moveTo(-r * 0.5, -r * 0.1); ctx.lineTo(-r * 0.2, r * 0.2);
+      ctx.moveTo(-r * 0.4, r * 0.4); ctx.lineTo(-r * 0.1, r * 0.6);
+      ctx.stroke();
+
+      // Legs
+      ctx.beginPath();
+      for (let i = 0; i < 4; i++) {
+        let lx = -r * 0.2 + i * (r * 0.15);
+        let ly = r * 0.2 + (i * 0.05);
+        ctx.moveTo(lx, ly);
+        ctx.lineTo(lx - r * 0.1, ly + r * 0.2);
+      }
+      ctx.stroke();
+
+      // Eye
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.arc(r * 0.25, -r * 0.2, r * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    /**
+     * [시그니처 김치 아이콘 함수]
+     */
+    function drawSignatureKimchi(ctx, x, y, r) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // 배경 접시 (연한 하늘색)
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = '#f0f7ff';
+      ctx.fill();
+
+      // 배추 몸통 (삐죽삐죽한 물결 테두리)
+      ctx.beginPath();
+      const points = 20;
+      for (let i = 0; i <= points; i++) {
+        let angle = (i / points) * Math.PI * 2;
+        // 반지름에 변화를 주어 물결 모양 생성
+        let wave = (i % 2 === 0) ? 0.92 : 1.05;
+        let rx = Math.cos(angle) * r * 0.85 * wave;
+        let ry = Math.sin(angle) * r * 1.1 * wave; // 약간 길쭉한 배추 형태
+        if (i === 0) ctx.moveTo(rx, ry);
+        else ctx.lineTo(rx, ry);
+      }
+      ctx.closePath();
+      ctx.fillStyle = '#E53935';
+      ctx.fill();
+
+      // 중앙 잎맥 (연한 핑크/오렌지)
+      ctx.strokeStyle = '#ffccbc';
+      ctx.lineWidth = r * 0.15;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(0, r * 0.8);
+      ctx.lineTo(0, -r * 0.8); // 중심 줄기
+      ctx.stroke();
+
+      // 잔가지 잎맥
+      ctx.lineWidth = r * 0.06;
+      for (let j = -2; j <= 2; j++) {
+        let h = j * r * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        ctx.lineTo(-r * 0.4, h - r * 0.2);
+        ctx.moveTo(0, h);
+        ctx.lineTo(r * 0.4, h - r * 0.2);
+        ctx.stroke();
+      }
+
+      // 고명 (초록 쪽파 & 검붉은 고춧가루)
+      for (let k = 0; k < 12; k++) {
+        ctx.fillStyle = (k % 2 === 0) ? '#4CAF50' : '#8B0000';
+        let gx = (Math.random() - 0.5) * r * 1.1;
+        let gy = (Math.random() - 0.5) * r * 1.1;
+        ctx.beginPath();
+        ctx.arc(gx, gy, r * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    /**
+     * [렌더링]
+     */
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (gameState === STATE.MENU) {
+        ctx.fillStyle = 'rgba(30, 20, 10, 0.95)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const time = Date.now() / 250;
+
+        ctx.font = '30px sans-serif';
+        ctx.fillText('🧊', canvas.width / 2 - 80, canvas.height / 2 - 150 + Math.sin(time) * 10);
+        ctx.fillText('🟧', canvas.width / 2 + 80, canvas.height / 2 - 130 + Math.cos(time) * 10);
+        ctx.fillText('🌿', canvas.width / 2 - 40, canvas.height / 2 - 200 + Math.sin(time * 1.5) * 15);
+
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2 - 50);
+        let s = 1 + Math.sin(time) * 0.08;
+        ctx.scale(s, s);
+
+        ctx.strokeStyle = '#e6c200';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 0; i < 16; i++) {
+          let a = (i / 16) * Math.PI * 2 + time * 0.5;
+          ctx.moveTo(Math.cos(a) * 50, Math.sin(a) * 50);
+          ctx.lineTo(Math.cos(a) * 150, Math.sin(a) * 150);
+        }
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        drawSignatureKimchi(ctx, 0, -50, 80);
+
+        // 떠다니는 5가지 김치 오르빗 애니메이션
+        const orbitRadius = 160;
+        const orbiterRadius = 25;
+        for (let i = 0; i < CONFIG.COLORS.length; i++) {
+          let angle = (i / CONFIG.COLORS.length) * Math.PI * 2 + (time * 0.2);
+          let orbitX = Math.cos(angle) * orbitRadius;
+          let orbitY = -50 + Math.sin(angle) * orbitRadius;
+          drawKimchi(ctx, orbitX, orbitY, orbiterRadius, CONFIG.COLORS[i]);
+        }
+
+        ctx.font = 'bold 45px serif';
+        ctx.fillStyle = '#E53935';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 6;
+        ctx.strokeText('KIMCHI POP', 0, 70);
+        ctx.fillText('KIMCHI POP', 0, 70);
+        ctx.restore();
+
+        ctx.fillStyle = '#d2b48c';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 2);
+        ctx.fillText('화면을 터치하여 김장 시작', canvas.width / 2, canvas.height / 2 + 100);
+        ctx.globalAlpha = 1.0;
+        return;
+      }
+
+      ctx.fillStyle = 'rgba(80, 50, 30, 0.3)';
+      ctx.strokeStyle = '#4a2c16';
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      const tY = canvas.height * 0.35; // Top
+      const bY = canvas.height - FLOOR_MARGIN; // Bottom
+      ctx.moveTo(JAR_MARGIN, tY);
+      // Left Belly -> Bottom -> Right Belly
+      ctx.bezierCurveTo(JAR_MARGIN - 40, tY + 100, JAR_MARGIN - 30, bY - 30, JAR_MARGIN + 50, bY);
+      ctx.lineTo(canvas.width - JAR_MARGIN - 50, bY);
+      ctx.bezierCurveTo(canvas.width - JAR_MARGIN + 30, bY - 30, canvas.width - JAR_MARGIN + 40, tY + 100, canvas.width - JAR_MARGIN, tY);
+      ctx.fill();
+      ctx.stroke();
+      // Rim detail
+      ctx.strokeRect(JAR_MARGIN - 10, tY - 10, (canvas.width - JAR_MARGIN * 2) + 20, 15);
+
+      // 구슬 렌더링
+      for (let i = 0; i < balls.length; i++) {
+        let b = balls[i];
+        drawKimchi(ctx, b.x, b.y, b.r, b.colorObj);
+      }
+
+      // Swipe 연결선 및 하이라이트 효과 렌더링
+      if (gameState === STATE.PLAYING && isSwiping && selectedBalls.length > 0) {
+        // 연결선 그림
+        ctx.beginPath();
+        ctx.strokeStyle = targetColorObj.hex;
+        ctx.lineWidth = 12;
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = 0.6;
+        for (let i = 0; i < selectedBalls.length; i++) {
+          let b = selectedBalls[i];
+          if (i === 0) ctx.moveTo(b.x, b.y);
+          else ctx.lineTo(b.x, b.y);
+        }
+        ctx.stroke();
+
+        // 선택된 구슬 강조 (글로우)
+        ctx.globalAlpha = 1.0;
+        for (let i = 0; i < selectedBalls.length; i++) {
+          let b = selectedBalls[i];
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r + 5, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+          ctx.lineWidth = 4;
+          ctx.stroke();
+        }
+      }
+
+      particles.forEach(p => {
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.colorHex;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1.0;
+
+      // 인벤토리 UI 렌더링 (하단 바 영역)
+      if (gameState === STATE.PLAYING) {
+        const invY = canvas.height - 65;
+        const invR = 35;
+        const startX = canvas.width / 2 - 90;
+        const gap = 90;
+
+        ctx.textAlign = 'center';
+        for (let i = 0; i < 3; i++) {
+          let cx = startX + i * gap;
+
+          // Glowing border
+          ctx.save();
+          ctx.shadowBlur = 10 + Math.sin(Date.now() / 200) * 5;
+          ctx.shadowColor = '#FFD700';
+
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+          ctx.beginPath();
+          ctx.arc(cx, invY, invR, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = '#FFD700';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.restore();
+
+          if (inventory[i]) {
+            if (inventory[i] === 'GARLIC') drawGarlic(ctx, cx, invY, invR * 0.7);
+            else if (inventory[i] === 'SHRIMP') drawShrimp(ctx, cx, invY, invR * 0.7);
+          }
+        }
+      }
+
+      // UI 렌더링 (플레이/엔딩 공통 상단 UI)
+      if (gameState === STATE.PLAYING || gameState === STATE.ENDING || gameState === STATE.STAGE_CLEAR) {
+        // 상단 바 배경 (짙은 나무색)
+        ctx.fillStyle = '#3e2723';
+        ctx.fillRect(0, 0, canvas.width, 60);
+
+        // 안쪽 테두리 장식
+        ctx.strokeStyle = '#5d4037';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(4, 4, canvas.width - 8, 52);
+
+        // 전통 격자 무늬 바닥 선 장식
+        ctx.strokeStyle = '#d2b48c';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = 0; i < canvas.width; i += 12) {
+          ctx.moveTo(i, 54);
+          ctx.lineTo(i + 6, 60);
+          ctx.moveTo(i + 6, 54);
+          ctx.lineTo(i, 60);
+        }
+        ctx.stroke();
+
+        let stageDef = STAGE_CONFIG[currentStage - 1];
+
+        // 텍스트 스타일: 붓글씨 느낌의 세리프 폰트와 금색
+        ctx.fillStyle = '#ffecb3';
+        ctx.font = 'bold 18px serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+
+        if (stageDef && stageDef.isInfiniteMode) {
+          ctx.fillText(`Stage: ${currentStage} | Survive: ${(currentStageTime / 1000).toFixed(2)}s | Score: ${totalScore.toLocaleString()}`, 12, 30);
+        } else {
+          let displayedTime = totalClearTime + currentStageTime;
+          ctx.fillText(`Stage: ${currentStage} | Total: ${(displayedTime / 1000).toFixed(2)}s | Score: ${totalScore.toLocaleString()}`, 12, 30);
+        }
+
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        if (targetColorObj) {
+          let targetLabel = targetColorObj ? targetColorObj.name : "";
+          ctx.fillText(targetLabel, canvas.width - 35, 30);
+          drawKimchi(ctx, canvas.width - 15, 30, 15, targetColorObj);
+        }
+
+        ctx.textBaseline = 'alphabetic'; // Reset for rest of app
+
+        if (stageDef && stageDef.isInfiniteMode) {
+          ctx.fillStyle = '#f00';
+          ctx.font = 'bold 20px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('무한 김치 모드', canvas.width / 2, 85);
+        }
+      }
+
+      if (gameState === STATE.ENDING) {
+        ctx.fillStyle = 'rgba(43, 29, 20, 0.98)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        drawTaegeuk(ctx, canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) * 0.35);
+
+        // Report Panel glowing gold border
+        let boxW = 340;
+        let boxH = 430;
+        let boxX = canvas.width / 2 - boxW / 2;
+        let boxY = canvas.height / 2 - boxH / 2 - 20;
+
+        ctx.save();
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#FFD700';
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxW, boxH, 15);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.textAlign = 'center';
+
+        ctx.font = 'bold 36px serif';
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText('🧄 Kimchi REPORT 🦐', canvas.width / 2, boxY + 60);
+
+        // SCORE DISPLAY (Prominent)
+        ctx.font = 'bold 36px serif';
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText(`최종 점수: ${totalScore.toLocaleString()} 점`, canvas.width / 2, boxY + 140);
+
+        ctx.font = 'bold 20px serif';
+        ctx.fillStyle = '#d2b48c';
+        ctx.fillText('🧄 김장에 걸린 시간 🧄', canvas.width / 2, boxY + 210);
+
+        ctx.font = 'bold 24px serif';
+        ctx.fillStyle = '#fff';
+        let clearTimeDisplay = (currentStage === 5) ? totalClearTime : (totalClearTime + currentStageTime);
+        ctx.fillText(`${(clearTimeDisplay / 1000).toFixed(2)}s`, canvas.width / 2, boxY + 245);
+
+        ctx.font = 'bold 20px serif';
+        ctx.fillStyle = '#d2b48c';
+        ctx.fillText('🦐 장독대 버틴 시간 🦐', canvas.width / 2, boxY + 295);
+
+        ctx.font = 'bold 24px serif';
+        ctx.fillStyle = '#E53935';
+        let survivalTimeDisplay = (currentStage === 5) ? currentStageTime : 0;
+        ctx.fillText(`${(survivalTimeDisplay / 1000).toFixed(2)}s`, canvas.width / 2, boxY + 330);
+
+        ctx.strokeStyle = '#b8860b';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2 - 120, boxY + 370);
+        ctx.lineTo(canvas.width / 2 + 120, boxY + 370);
+        ctx.stroke();
+
+        ctx.font = 'bold 22px serif';
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText('올 겨울 김장 마스터! 🥇', canvas.width / 2, boxY + 410);
+
+        if (endingTimer > 1000) {
+          ctx.fillStyle = '#d2b48c';
+          ctx.font = 'bold 16px serif';
+          ctx.globalAlpha = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+          ctx.fillText('Tap to Restart', canvas.width / 2, boxY + boxH + 40);
+          ctx.globalAlpha = 1.0;
+        }
+      }
+
+      if (gameState === STATE.READY) {
+        ctx.fillStyle = '#fff';
+        ctx.font = '40px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('READY...', canvas.width / 2, canvas.height / 2);
+      }
+
+      if (gameState === STATE.STAGE_CLEAR) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        let boxW = 280;
+        let boxH = 200;
+        let boxX = canvas.width / 2 - boxW / 2;
+        let boxY = canvas.height / 2 - boxH / 2;
+
+        ctx.fillStyle = '#E53935';
+        ctx.beginPath();
+        ctx.roundRect(boxX, boxY, boxW, boxH, 20);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 30px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`Stage ${currentStage} 완료!`, canvas.width / 2, canvas.height / 2 - 30);
+
+        ctx.font = '20px sans-serif';
+        let displayedTime = totalClearTime + currentStageTime;
+        ctx.fillText(`현재 총 시간: ${(displayedTime / 1000).toFixed(2)}s`, canvas.width / 2, canvas.height / 2 + 10);
+
+        let btnW = 200;
+        let btnH = 50;
+        nextStageBtn.x = canvas.width / 2 - btnW / 2;
+        nextStageBtn.y = canvas.height / 2 + 40;
+        nextStageBtn.w = btnW;
+        nextStageBtn.h = btnH;
+
+        ctx.fillStyle = '#d2b48c';
+        ctx.beginPath();
+        ctx.roundRect(nextStageBtn.x, nextStageBtn.y, nextStageBtn.w, nextStageBtn.h, 10);
+        ctx.fill();
+
+        ctx.fillStyle = '#3e2723';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillText('이어서 김장하기', canvas.width / 2, nextStageBtn.y + 33);
+      }
+    }
+
+    /**
+     * [메인 루프]
+     */
+    function tick(timestamp) {
+      let dt = timestamp - lastTime;
+      lastTime = timestamp;
+
+      if (gameState === STATE.ENDING) {
+        endingTimer += dt;
+      }
+
+      if (gameState === STATE.STAGE_CLEAR) {
+        updatePhysics(dt);
+      }
+
+      if (gameState === STATE.PLAYING) {
+        currentStageTime += dt;
+
+        let stageDef = STAGE_CONFIG[currentStage - 1];
+        if (stageDef.isInfiniteMode) {
+          spawnTimer += dt;
+          if (spawnTimer > 400) {
+            spawnTimer = 0;
+            let randomColor = CONFIG.COLORS[Math.floor(Math.random() * CONFIG.COLORS.length)];
+            let spawnX = canvas.width / 2;
+            let newBall = new Ball(spawnX, -50, CONFIG.BALL_RADIUS, randomColor);
+            newBall.vy = FALL_SPEED;
+            balls.push(newBall);
+          }
+          infiniteModeTargetTimer += dt;
+          if (infiniteModeTargetTimer > 5000) {
+            infiniteModeTargetTimer = 0;
+            updateTargetColor();
+          }
+        }
+
+        const targetExists = balls.some(b => b.colorObj === targetColorObj);
+        if (!targetExists && balls.length > 0) {
+          updateTargetColor();
+        }
+
+        updatePhysics(dt);
+
+        if (checkGameOver()) {
+          gameState = STATE.ENDING;
+          endingTimer = 0;
+          let stageDef = STAGE_CONFIG[currentStage - 1];
+          if (stageDef && stageDef.isInfiniteMode) {
+            checkAndSaveBestSurvival();
+          } else {
+            // Failed before infinite mode
+            totalClearTime += currentStageTime;
+          }
+        }
+      }
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx; p.y += p.vy;
+        p.life -= 0.05;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      draw();
+      requestAnimationFrame(tick); // 루프는 절대 끊지 않음
+    }
+
+    /**
+     * [입력 라우팅]
+     */
+    canvas.addEventListener('pointerdown', (e) => {
+      if (gameState === STATE.MENU) {
+        currentStage = 1;
+        totalClearTime = 0;
+        currentStageTime = 0;
+        totalScore = 0;
+        agingMultiplier = 1.0;
+        inventory = [];
+        initStage(0);
+        return;
+      }
+
+      if (gameState === STATE.STAGE_CLEAR) {
+        const rect = canvas.getBoundingClientRect();
+        const touchX = e.clientX - rect.left;
+        const touchY = e.clientY - rect.top;
+        if (touchX >= nextStageBtn.x && touchX <= nextStageBtn.x + nextStageBtn.w &&
+          touchY >= nextStageBtn.y && touchY <= nextStageBtn.y + nextStageBtn.h) {
+
+          if (currentStageTime < 15000 && inventory.length < 3 && currentStage <= 4) {
+            inventory.push(Math.random() > 0.5 ? 'GARLIC' : 'SHRIMP');
+            showToast('황금 양념 획득!');
+          }
+
+          totalClearTime += currentStageTime;
+          currentStageTime = 0;
+
+          if (currentStage === 4) {
+            // Entering Stage 5 implies Stage 1-4 is cleared
+            agingMultiplier = Math.max(1.0, (80 / (totalClearTime / 1000))).toFixed(1);
+            showToast(`숙성 성공! 배율: ${agingMultiplier}배!`);
+          }
+
+          currentStage++;
+          if (currentStage > STAGE_CONFIG.length) {
+            gameState = STATE.ENDING;
+            endingTimer = 0;
+            checkAndSaveBestClear();
+          } else {
+            initStage(currentStage - 1);
+          }
+        }
+        return;
+      }
+
+      if (gameState === STATE.ENDING) {
+        if (endingTimer > 1000) {
+          gameState = STATE.MENU;
+        }
+        return;
+      }
+
+      if (gameState === STATE.PLAYING) {
+        const rect = canvas.getBoundingClientRect();
+        const touchX = e.clientX - rect.left;
+        const touchY = e.clientY - rect.top;
+
+        // 아이템 터치 판정
+        const invY = canvas.height - 65;
+        const invR = 40;
+        const startX = canvas.width / 2 - 90;
+        const gap = 90;
+        for (let i = 0; i < 3; i++) {
+          let cx = startX + i * gap;
+          let dx = touchX - cx;
+          let dy = touchY - invY;
+          if (Math.sqrt(dx * dx + dy * dy) <= invR) {
+            if (inventory[i]) {
+              let usedItem = inventory[i];
+              inventory.splice(i, 1);
+
+              if (usedItem === 'GARLIC') {
+                showToast('마늘 폭탄!');
+                for (let j = balls.length - 1; j >= 0; j--) {
+                  if (balls[j].colorObj === targetColorObj) {
+                    for (let k = 0; k < 12; k++) {
+                      particles.push(new Particle(balls[j].x, balls[j].y, balls[j].colorObj.hex));
+                    }
+                    balls.splice(j, 1);
+                  }
+                }
+                updateTargetColor();
+              } else if (usedItem === 'SHRIMP') {
+                showToast('새우젓 슬로우!');
+                FALL_SPEED = 4;
+                CONFIG.GRAVITY = 0.3;
+                setTimeout(() => {
+                  FALL_SPEED = 8;
+                  CONFIG.GRAVITY = 0.6;
+                }, 5000);
+              }
+            }
+            return; // 아이템을 터치했으면 구슬 판정 무시
+          }
+        }
+
+        selectedBalls = [];
+
+        // 뒤에서부터 순회 (화면상 앞쪽에 렌더링된 구슬 먼저 터치 판정)
+        for (let i = balls.length - 1; i >= 0; i--) {
+          let b = balls[i];
+          let dx = touchX - b.x;
+          let dy = touchY - b.y;
+          if (Math.sqrt(dx * dx + dy * dy) <= b.r) {
+            if (b.colorObj === targetColorObj) {
+              isSwiping = true;
+              selectedBalls.push(b);
+              if (navigator.vibrate) navigator.vibrate(40);
+            } else {
+              if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+              let penaltyCount = (STAGE_CONFIG[currentStage - 1].isInfiniteMode) ? 1 : 3;
+              spawnPenalty(b.colorObj, penaltyCount);
+            }
+            break; // Initiate swipe on the first ball touched
+          }
+        }
+      }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (gameState === STATE.PLAYING && isSwiping) {
+        const rect = canvas.getBoundingClientRect();
+        const touchX = e.clientX - rect.left;
+        const touchY = e.clientY - rect.top;
+
+        for (let i = balls.length - 1; i >= 0; i--) {
+          let b = balls[i];
+          let dx = touchX - b.x;
+          let dy = touchY - b.y;
+
+          if (Math.sqrt(dx * dx + dy * dy) <= b.r) {
+            if (b.colorObj === targetColorObj) {
+              if (!selectedBalls.includes(b)) {
+                selectedBalls.push(b);
+                if (navigator.vibrate) navigator.vibrate(30);
+              }
+            } else {
+              // Hit the wrong color during swipe
+              if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+              let penaltyCount = (STAGE_CONFIG[currentStage - 1].isInfiniteMode) ? 1 : 3;
+              spawnPenalty(b.colorObj, penaltyCount);
+              isSwiping = false;
+              selectedBalls = [];
+            }
+            break;
+          }
+        }
+      }
+    });
+
+    canvas.addEventListener('pointerup', (e) => {
+      if (gameState === STATE.PLAYING && isSwiping) {
+        isSwiping = false;
+
+        if (selectedBalls.length > 0) {
+          if (selectedBalls.length >= 5 && inventory.length < 3) {
+            inventory.push(Math.random() > 0.5 ? 'GARLIC' : 'SHRIMP');
+            showToast('황금 양념 획득!');
+          }
+
+          // Compute Combination Score Base Points -> Apply Aging Multiplier
+          let comboPoints = Math.pow(selectedBalls.length, 2) * 100 * agingMultiplier;
+          totalScore += Math.floor(comboPoints);
+
+          // 배열에서 지운다
+          for (let i = 0; i < selectedBalls.length; i++) {
+            let b = selectedBalls[i];
+            let index = balls.indexOf(b);
+            if (index > -1) {
+              balls.splice(index, 1);
+              // 이펙트
+              for (let k = 0; k < 12; k++) {
+                particles.push(new Particle(b.x, b.y, b.colorObj.hex));
+              }
+            }
+          }
+
+          // 다음 타겟 갱신 평가
+          let stageDef = STAGE_CONFIG[currentStage - 1];
+          let hasSameColor = false;
+          for (let j = 0; j < balls.length; j++) {
+            if (balls[j].colorObj === targetColorObj) {
+              hasSameColor = true;
+              break;
+            }
+          }
+          if (!hasSameColor && !stageDef.isInfiniteMode) {
+            updateTargetColor();
+          }
+
+          selectedBalls = []; // Reset after processing
+        }
+      }
+    });
+
+    // 시작
+    requestAnimationFrame(tick);
+  </script>
+</body>
+
+</html>
