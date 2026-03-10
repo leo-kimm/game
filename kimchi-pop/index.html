@@ -36,45 +36,47 @@
       height: 100%;
     }
 
-    /* UI Overlay elements minimized */
     #toast {
       position: absolute;
-      top: 80px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #E53935;
-      color: #fff;
-      border: 3px solid #fff;
-      font-size: 22px;
-      padding: 10px 20px;
-      border-radius: 30px;
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+      top: 20px;
+      right: 20px;
+      left: auto;
+      transform: translateX(120%);
+      background: rgba(40, 20, 10, 0.85);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      border-left: 4px solid #D4AF37;
+      border-radius: 4px;
+      color: #FFF9C4;
+      padding: 12px 18px;
+      box-shadow: -2px 4px 12px rgba(0, 0, 0, 0.4);
       z-index: 1000;
-      font-weight: bold;
-      opacity: 0;
-      transition: opacity 0.3s;
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s;
       pointer-events: none;
+      text-align: left;
+      min-width: 200px;
+      max-width: 280px;
     }
 
-    @keyframes pop {
-      0% {
-        transform: translate(-50%, 20px) scale(0.8);
-        opacity: 0;
-      }
-
-      20% {
-        transform: translate(-50%, -10px) scale(1.1);
-        opacity: 1;
-      }
-
-      100% {
-        transform: translate(-50%, -5px) scale(1);
-        opacity: 1;
-      }
+    #toast.toast-pop {
+      transform: translateX(0);
     }
 
-    .toast-pop {
-      animation: pop 0.4s ease-out forwards;
+    .toast-title {
+      font-family: 'serif';
+      font-size: 14px;
+      font-weight: bold;
+      color: #D4AF37;
+      margin-bottom: 5px;
+    }
+
+    .toast-body {
+      font-family: 'sans-serif';
+      font-size: 15px;
+      line-height: 1.4;
+      color: #fff;
+      white-space: pre-wrap;
+      word-break: keep-all;
     }
   </style>
 </head>
@@ -85,6 +87,60 @@
     <div id="toast"></div>
   </div>
 
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-analytics.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, where, updateDoc, doc } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZBBkH7oSHwxUACfc48RVoMYOtunzgWAw",
+      authDomain: "kimchi-pop.firebaseapp.com",
+      projectId: "kimchi-pop",
+      storageBucket: "kimchi-pop.firebasestorage.app",
+      messagingSenderId: "630318023371",
+      appId: "1:630318023371:web:1427b38c7305cc22f9514e",
+      measurementId: "G-VS1VPSR523"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getFirestore(app);
+
+    window.saveFirebaseScore = async (name, score, stats) => {
+      try {
+        const q = query(collection(db, "rankings"), where("name", "==", name));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          // Nickname exists
+          let existingDoc = querySnapshot.docs[0];
+          if (score > existingDoc.data().score) {
+            await updateDoc(doc(db, "rankings", existingDoc.id), { score: score, date: Date.now(), kimchiStats: stats || {} });
+            return { success: true, message: "🏆 최고 기록 경신! 랭킹이 업데이트되었습니다." };
+          } else {
+            return { success: false, message: "😅 아쉽네요! 기존 최고 기록에 미치지 못했습니다." };
+          }
+        } else {
+          // New nickname
+          await addDoc(collection(db, "rankings"), { name: name, score: score, date: Date.now(), kimchiStats: stats || {} });
+          return { success: true, message: "🏆 새로운 장인 등극! 랭킹 등록 완료!" };
+        }
+      } catch (e) {
+        console.error("Error saving score:", e);
+        return { success: false, message: "통신 오류가 발생했습니다." };
+      }
+    };
+
+    window.getFirebaseRankings = async () => {
+      try {
+        const q = query(collection(db, "rankings"), orderBy("score", "desc"), limit(10));
+        const snap = await getDocs(q);
+        let data = [];
+        snap.forEach(doc => data.push(doc.data()));
+        return data;
+      } catch (e) { console.error(e); return []; }
+    };
+  </script>
   <script>
     /**
      * [게임 설정 및 상수]
@@ -93,24 +149,39 @@
       GRAVITY: 0.6,
       FRICTION: 0.95,
       RESTITUTION: 0.1, // 반발 계수 (낮을수록 덜 튐)
-      BALL_RADIUS: 35,
-      MAX_BALLS: 200,
+      BALL_RADIUS: 30,
+      MAX_BALLS: 300,
       TARGET_INTERVAL: 5000,
       COLORS: [
         { name: '배추김치', hex: '#E53935', type: 'BAECHU' },
         { name: '동치미', hex: '#F5F5F5', type: 'DONGCHIMI' },
         { name: '열무김치', hex: '#43A047', type: 'YEOLMU' },
-        { name: '총각김치', hex: '#FF7043', type: 'CHONGGAK' },
+        { name: '총각김치', hex: '#FFD54F', type: 'CHONGGAK' },
         { name: '깍두기', hex: '#E64A19', type: 'KKAKDUGI' }
       ]
     };
 
     let FALL_SPEED = 8;
 
-    const STATE = { MENU: 0, PLAYING: 1, ENDING: 2, READY: 3, STAGE_CLEAR: 4 };
+    const STATE = { MENU: 0, PLAYING: 1, ENDING: 2, READY: 3, TUTORIAL: 4, RANKING: 5 };
+
+    let isScoreSaved = false;
+    let rankingsData = null;
+    let rankingScrollOffset = 0;
+    let isRankingScrolling = false;
+    let rankingStartY = 0;
+
+    let currentTutorialPage = 0;
+    let hasSeenTutorial = localStorage.getItem('kimchiPopTutorialSeen') === 'true';
+    const tutorialData = [
+      { title: "수라간 입문 - 제 1 장", body: "화면 위에서 떨어지는 재료를\n가볍게 터치하면 팝! 터집니다.\n\n구슬을 터뜨려 점수를 모으세요." },
+      { title: "수라간 입문 - 제 2 장", body: "같은 색상의 재료를 이어서\n스와이프 해보세요!\n\n5~6개를 이으면 숙성을 돕는 귀한\n'마늘'과 '새우젓'이 생성됩니다." },
+      { title: "수라간 입문 - 제 3 장", body: "같은 재료를 7개 이상 이으면\n마침내 '수라상 김치'가 완성됩니다.\n\n길게 이을수록 거대하고 강력한\n대왕 김치가 탄생합니다!" },
+      { title: "수라간 입문 - 제 4 장", body: "완성된 김치가 빛날 때 터치하면\n김치별로 고유한 필살기가 발동합니다.\n\n다양한 김치를 담가\n수라간 최고의 장인이 되어보세요!" }
+    ];
 
     const JAR_MARGIN = 20;
-    const FLOOR_MARGIN = 130;
+    const FLOOR_MARGIN = 30;
 
     /**
      * [전역 상태]
@@ -122,35 +193,32 @@
     let gameState = STATE.MENU;
     let readyTimer = 0;
     let endingTimer = 0;
+    let freezeTimeout = null;
 
-    let totalClearTime = 0;
     let currentStageTime = 0;
-    let nextStageBtn = { x: 0, y: 0, w: 200, h: 50 };
-    let bestClearTime = parseFloat(localStorage.getItem('kimchiPopBestClearTime')) || 0;
     let bestSurvivalTime = parseFloat(localStorage.getItem('kimchiPopBestSurvivalTime')) || 0;
 
     let balls = [];
     let particles = [];
-    let targetColorObj = null;
     let selectedBalls = [];
     let isSwiping = false;
     let inventory = [];
+    let currentSwipeColor = null;
 
     let totalScore = 0;
+    let currentScore = 0;
     let agingMultiplier = 1.0;
 
-    let currentStage = 1;
-    const STAGE_CONFIG = [
-      { colors: 2, total: 20 },
-      { colors: 3, total: 20 },
-      { colors: 4, total: 20 },
-      { colors: 5, total: 20 },
-      { colors: 5, total: 20, isInfiniteMode: true }
-    ];
+    let kimchiStats = { BAECHU: 0, DONGCHIMI: 0, YEOLMU: 0, CHONGGAK: 0, KKAKDUGI: 0 };
+    let currentPhase = 1;
+    let phaseTimer = 0;
+    let currentColors = [];
+    let baseFallSpeed = 3;
+    let baseSpawnInterval = 1000;
+    let currentSpawnInterval = 1000;
 
     let lastTime = 0;
     let spawnTimer = 0;
-    let infiniteModeTargetTimer = 0;
 
     // 캔버스 사이즈 동적 초기화
     function resize() {
@@ -171,6 +239,8 @@
         this.vy = 0;
         this.r = radius;
         this.colorObj = colorObj;
+        this.type = 'RAW';
+        this.spawnTime = Date.now();
       }
     }
 
@@ -189,15 +259,22 @@
      * [공통 헬퍼]
      */
     function showToast(msg) {
-      toastEl.innerText = msg;
+      toastEl.innerHTML = `
+        <div class="toast-title">📜 수라간 알림</div>
+        <div class="toast-body">${msg}</div>
+      `;
       toastEl.classList.remove('toast-pop');
       void toastEl.offsetWidth; // trigger reflow
       toastEl.classList.add('toast-pop');
       toastEl.style.opacity = 1;
+
+      // Calculate dynamic display time based on message length
+      let displayTime = Math.max(1500, msg.length * 60);
+
       setTimeout(() => {
         toastEl.style.opacity = 0;
         setTimeout(() => toastEl.classList.remove('toast-pop'), 300);
-      }, 1000);
+      }, displayTime);
     }
 
     function checkAndSaveBestSurvival() {
@@ -208,26 +285,46 @@
       }
     }
 
-    function checkAndSaveBestClear() {
-      if (bestClearTime === 0 || totalClearTime < bestClearTime) {
-        bestClearTime = totalClearTime;
-        localStorage.setItem('kimchiPopBestClearTime', bestClearTime);
-      }
+    function checkWipedColors(removedTypes) {
+      let changed = false;
+      removedTypes.forEach(type => {
+        let idx = currentColors.findIndex(c => c.type === type);
+        if (idx !== -1) {
+          let stillExists = balls.some(b => b.colorObj && b.colorObj.type === type);
+          if (!stillExists) {
+            let available = CONFIG.COLORS.filter(c => !currentColors.some(cc => cc.type === c.type));
+            if (available.length > 0) {
+              currentColors[idx] = available[Math.floor(Math.random() * available.length)];
+              changed = true;
+            }
+          }
+        }
+      });
+      if (changed) showToast('🎉 새로운 측실 재료 등장! 🎉');
     }
 
-    function initStage(stageIndex) {
+    function startGame() {
+      isScoreSaved = false;
+      kimchiStats = { BAECHU: 0, DONGCHIMI: 0, YEOLMU: 0, CHONGGAK: 0, KKAKDUGI: 0 };
       balls = [];
-      let config = STAGE_CONFIG[stageIndex];
+      inventory = [];
+      totalScore = 0;
+      currentStageTime = 0;
 
-      let availableColors = [...CONFIG.COLORS];
-      availableColors.sort(() => Math.random() - 0.5);
-      let numColors = Math.min(config.colors, availableColors.length);
-      let selectedColors = availableColors.slice(0, numColors);
+      currentPhase = 1;
+      phaseTimer = 0;
+      baseFallSpeed = 3;
+      baseSpawnInterval = 1000;
+      currentSpawnInterval = baseSpawnInterval;
+      FALL_SPEED = baseFallSpeed;
 
-      for (let i = 0; i < config.total; i++) {
+      let shuffled = [...CONFIG.COLORS].sort(() => 0.5 - Math.random());
+      currentColors = shuffled.slice(0, 2); // Start easy with 2 colors
+
+      for (let i = 0; i < 20; i++) {
         let rx = JAR_MARGIN + 50 + Math.random() * (canvas.width - JAR_MARGIN * 2 - 100);
         let ry = canvas.height - 100 - Math.random() * 150;
-        let randomColor = selectedColors[Math.floor(Math.random() * selectedColors.length)];
+        let randomColor = currentColors[Math.floor(Math.random() * currentColors.length)];
         let newBall = new Ball(rx, ry, CONFIG.BALL_RADIUS, randomColor);
         newBall.vx = 0;
         newBall.vy = 0;
@@ -236,53 +333,6 @@
 
       gameState = STATE.PLAYING;
       spawnTimer = 0;
-      infiniteModeTargetTimer = 0;
-      currentStageTime = 0;
-      updateTargetColor();
-    }
-
-    function updateTargetColor() {
-      if (balls.length === 0) {
-        let stageDef = STAGE_CONFIG[currentStage - 1];
-        if (!stageDef || !stageDef.isInfiniteMode) {
-          gameState = STATE.STAGE_CLEAR;
-          readyTimer = 2000;
-        }
-        return null;
-      }
-
-      let uniqueColors = [];
-      // 화면에 보이게 내려온(y > 60) 구슬만 후보로 필터링
-      for (let i = 0; i < balls.length; i++) {
-        if (balls[i].y > 60 && !uniqueColors.includes(balls[i].colorObj)) {
-          uniqueColors.push(balls[i].colorObj);
-        }
-      }
-
-      // 혹시 막 생성되어 모두 y <= 60에 있다면 전체에서 후보 찾기
-      if (uniqueColors.length === 0) {
-        for (let i = 0; i < balls.length; i++) {
-          if (!uniqueColors.includes(balls[i].colorObj)) {
-            uniqueColors.push(balls[i].colorObj);
-          }
-        }
-      }
-
-      targetColorObj = uniqueColors[Math.floor(Math.random() * uniqueColors.length)];
-      return targetColorObj;
-    }
-
-    function spawnPenalty(colorObj, count = 3) {
-      const gap = CONFIG.BALL_RADIUS * 2 + 10;
-      for (let i = 0; i < count; i++) {
-        let spawnX = canvas.width / 2;
-        let spawnY = -50 - (i * gap);
-        let newBall = new Ball(spawnX, spawnY, CONFIG.BALL_RADIUS, colorObj);
-        newBall.vy = FALL_SPEED;
-        newBall.vx = 0;
-        balls.push(newBall);
-      }
-      showToast('kimchi 더먹어');
     }
 
     function checkGameOver() {
@@ -306,14 +356,15 @@
       // 1. 중력 및 위치 업데이트
       for (let i = balls.length - 1; i >= 0; i--) {
         let b = balls[i];
-        if (b.y < jarTop) {
-          b.vy = FALL_SPEED;
-          b.vx = 0;
-        } else {
-          b.vy += CONFIG.GRAVITY;
-        }
+        let isFrozen = freezeTimeout !== null;
+        let grav = isFrozen ? 0.1 : CONFIG.GRAVITY;
+        let limitVy = isFrozen ? 2 : Math.max(8, FALL_SPEED + 4);
+
+        b.vy += grav;
         b.vx *= CONFIG.FRICTION;
         b.vy *= CONFIG.FRICTION;
+        if (b.vy > limitVy) b.vy = limitVy;
+
         b.x += b.vx;
         b.y += b.vy;
 
@@ -378,12 +429,6 @@
 
       ctx.save();
       ctx.translate(x, y);
-
-      // 기본 그림자 (안착감)
-      ctx.beginPath();
-      ctx.arc(2, 2, r, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.2)';
-      ctx.fill();
 
       // 김치 기본 원형
       ctx.beginPath();
@@ -737,11 +782,313 @@
       ctx.restore();
     }
 
+    function drawSeasoning(ctx, x, y, r) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#FFD700';
+
+      ctx.fillStyle = '#FFF9C4';
+      ctx.beginPath();
+      ctx.arc(-r * 0.4, -r * 0.2, r * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(r * 0.2, -r * 0.4, r * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#D32F2F';
+      ctx.beginPath();
+      ctx.arc(0, r * 0.3, r * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawKimchiJar(ctx, x, y, r, colorObj, age, level) {
+      ctx.save();
+      ctx.translate(x, y);
+      let s = 1.3 + ((level || 1) - 1) * 0.3;
+      ctx.scale(s, s);
+
+      let type = colorObj.type;
+      if (type === 'BAECHU' && age >= 10000) {
+        ctx.shadowBlur = 15; ctx.shadowColor = '#FFD700';
+      } else if (type === 'YEOLMU' && age <= 4000) {
+        ctx.shadowBlur = 15; ctx.shadowColor = '#00FF00';
+      } else if (type === 'DONGCHIMI' && age >= 5000 && age <= 10000) {
+        ctx.shadowBlur = 15; ctx.shadowColor = '#00FFFF';
+      } else if (type === 'CHONGGAK' && age >= 4000 && age <= 8000) {
+        ctx.shadowBlur = 15; ctx.shadowColor = '#FFA500';
+      } else if (type === 'KKAKDUGI' && age >= 6000 && age <= 12000) {
+        ctx.shadowBlur = 15; ctx.shadowColor = '#FF0000';
+      }
+
+      drawKimchi(ctx, 0, 0, r, colorObj);
+      ctx.restore();
+    }
+
+    function drawIngredient(ctx, x, y, r, colorObj) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // 1. Base color
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fillStyle = colorObj.hex;
+      ctx.fill();
+
+      // 2. Unique texture based on kimchi type
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.clip(); // Ensure patterns don't bleed outside the bead
+
+      let type = colorObj.type;
+      if (type === 'BAECHU') {
+        // Cabbage: Wavy vertical leaf veins
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.lineWidth = r * 0.12;
+        ctx.beginPath();
+        ctx.moveTo(-r * 0.2, -r); ctx.quadraticCurveTo(-r * 0.6, 0, -r * 0.2, r);
+        ctx.moveTo(r * 0.2, -r); ctx.quadraticCurveTo(r * 0.6, 0, r * 0.2, r);
+        ctx.moveTo(0, -r); ctx.lineTo(0, r);
+        ctx.stroke();
+      } else if (type === 'KKAKDUGI') {
+        // Radish Cube: Faint square shape
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = r * 0.08;
+        let sz = r * 0.45;
+        ctx.fillRect(-sz, -sz, sz * 2, sz * 2);
+        ctx.strokeRect(-sz, -sz, sz * 2, sz * 2);
+      } else if (type === 'YEOLMU') {
+        // Green Stem: Diagonal lines
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.lineWidth = r * 0.15;
+        ctx.beginPath();
+        ctx.moveTo(-r, -r); ctx.lineTo(r, r);
+        ctx.moveTo(-r * 0.5, -r); ctx.lineTo(r, r * 0.5);
+        ctx.moveTo(-r, -r * 0.5); ctx.lineTo(r * 0.5, r);
+        ctx.stroke();
+      } else if (type === 'CHONGGAK') {
+        // Whole Radish: Horizontal curves
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.lineWidth = r * 0.1;
+        ctx.beginPath();
+        for (let i = -r * 0.6; i <= r * 0.6; i += r * 0.4) {
+          ctx.moveTo(-r, i); ctx.quadraticCurveTo(0, i + r * 0.3, r, i);
+        }
+        ctx.stroke();
+      } else if (type === 'DONGCHIMI') {
+        // Ice/Cross-section: Concentric circles
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.lineWidth = r * 0.15;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.4, 0, Math.PI * 2);
+        ctx.arc(0, 0, r * 0.8, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // 3. Glossy highlight (Overlay)
+      let gloss = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 0, -r * 0.3, -r * 0.3, r * 0.8);
+      gloss.addColorStop(0, 'rgba(255, 255, 255, 0.6)');
+      gloss.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = gloss;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawTraditionalBox(ctx, boxX, boxY, boxW, boxH) {
+      ctx.save();
+      // Base background & Border
+      ctx.fillStyle = 'rgba(40, 15, 10, 0.95)';
+      ctx.strokeStyle = '#D4AF37';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.roundRect(boxX, boxY, boxW, boxH, 10);
+      ctx.fill(); ctx.stroke();
+
+      // Subtle Watermark (Concentric circles)
+      ctx.clip(); // Keep watermark inside the box
+      ctx.beginPath();
+      ctx.arc(boxX + boxW / 2, boxY + boxH / 2, boxW * 0.4, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.04)';
+      ctx.lineWidth = 20;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(boxX + boxW / 2, boxY + boxH / 2, boxW * 0.2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Inner Border
+      ctx.strokeStyle = 'rgba(212, 175, 55, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(boxX + 12, boxY + 12, boxW - 24, boxH - 24);
+
+      // Traditional Corner Ornaments
+      let corners = [
+        [boxX + 6, boxY + 6, 1, 1],
+        [boxX + boxW - 6, boxY + 6, -1, 1],
+        [boxX + 6, boxY + boxH - 6, 1, -1],
+        [boxX + boxW - 6, boxY + boxH - 6, -1, -1]
+      ];
+      ctx.fillStyle = '#D4AF37';
+      corners.forEach(c => {
+        let cx = c[0], cy = c[1], dx = c[2], dy = c[3];
+        let sz = 16;
+        ctx.fillRect(cx, cy, sz * dx, 3 * dy);
+        ctx.fillRect(cx, cy, 3 * dx, sz * dy);
+        ctx.beginPath();
+        ctx.arc(cx + 8 * dx, cy + 8 * dy, 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+
+    function drawRanking(ctx) {
+      ctx.fillStyle = 'rgba(30, 20, 10, 0.95)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      let boxW = 320; let boxH = 480;
+      let boxX = canvas.width / 2 - boxW / 2;
+      let boxY = canvas.height / 2 - boxH / 2;
+
+      drawTraditionalBox(ctx, boxX, boxY, boxW, boxH);
+
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 26px serif';
+      ctx.fillStyle = '#FFD700';
+      ctx.fillText('🏆 명예의 전당', canvas.width / 2, boxY + 50);
+
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(boxX + 30, boxY + 70); ctx.lineTo(boxX + boxW - 30, boxY + 70); ctx.stroke();
+      ctx.fillStyle = '#D4AF37';
+      ctx.save(); ctx.translate(canvas.width / 2, boxY + 70); ctx.rotate(Math.PI / 4);
+      ctx.fillRect(-5, -5, 10, 10);
+      ctx.restore();
+
+      if (!rankingsData) {
+        ctx.font = '18px sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText('랭킹 정보를 불러오는 중...', canvas.width / 2, boxY + 220);
+      } else {
+        ctx.save();
+        // Clip the scrollable list area
+        ctx.beginPath();
+        ctx.rect(boxX, boxY + 80, boxW, boxH - 120);
+        ctx.clip();
+
+        ctx.translate(0, rankingScrollOffset);
+
+        for (let i = 0; i < rankingsData.length; i++) {
+          let r = rankingsData[i];
+          let y = boxY + 110 + (i * 60); // Increased spacing for 2 lines
+
+          let titleStr = '';
+          let titleColor = '';
+          if (i === 0) { titleStr = '장원'; titleColor = '#FFD700'; }
+          else if (i === 1) { titleStr = '방안'; titleColor = '#C0C0C0'; }
+          else if (i === 2) { titleStr = '탐화'; titleColor = '#cd7f32'; }
+          else { titleStr = '급제'; titleColor = '#A0A0A0'; } // Ink/Silver-grey
+
+          // Line 1: Title. Name - Score
+          ctx.textAlign = 'left';
+          ctx.font = 'bold 18px serif';
+          ctx.fillStyle = titleColor;
+          ctx.fillText(`[${titleStr}] ${r.name}`, boxX + 24, y);
+
+          ctx.textAlign = 'right';
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 16px sans-serif';
+          ctx.fillText(`${r.score.toLocaleString()} 점`, boxX + boxW - 24, y);
+
+          // Line 2: Kimchi Stats Breakdown
+          ctx.textAlign = 'left';
+          ctx.font = '13px sans-serif';
+          ctx.fillStyle = '#d2b48c';
+
+          let statStr = "기록 없음";
+          if (r.kimchiStats) {
+            let total = Object.values(r.kimchiStats).reduce((sum, val) => sum + val, 0);
+            let b = r.kimchiStats.BAECHU || 0;
+            let d = r.kimchiStats.DONGCHIMI || 0;
+            let yl = r.kimchiStats.YEOLMU || 0;
+            let c = r.kimchiStats.CHONGGAK || 0;
+            let k = r.kimchiStats.KKAKDUGI || 0;
+            statStr = `배추${b} 동치미${d} 열무${yl} 총각${c} 깍두기${k} (총 ${total}포기)`;
+          }
+          ctx.fillText(statStr, boxX + 24, y + 20);
+        }
+        ctx.restore();
+
+        // Fading top/bottom edges of the scroll area
+        ctx.fillStyle = 'rgba(40, 15, 10, 0.8)';
+        ctx.fillRect(boxX, boxY + 80, boxW, 10);
+        ctx.fillRect(boxX, boxY + boxH - 50, boxW, 10);
+      }
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#d2b48c';
+      ctx.font = '16px sans-serif';
+      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+      ctx.fillText('화면을 터치하여 돌아가기', canvas.width / 2, boxY + boxH - 25);
+      ctx.globalAlpha = 1.0;
+    }
+
+    function drawTutorial(ctx) {
+      ctx.fillStyle = 'rgba(30, 20, 10, 0.95)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      let boxW = 320; let boxH = 400;
+      let boxX = canvas.width / 2 - boxW / 2;
+      let boxY = canvas.height / 2 - boxH / 2;
+
+      drawTraditionalBox(ctx, boxX, boxY, boxW, boxH);
+
+      let data = tutorialData[currentTutorialPage];
+
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 24px serif';
+      ctx.fillStyle = '#FFD700';
+      ctx.fillText(data.title, canvas.width / 2, boxY + 50);
+
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(boxX + 30, boxY + 70); ctx.lineTo(boxX + boxW - 30, boxY + 70); ctx.stroke();
+      ctx.fillStyle = '#D4AF37';
+      ctx.save(); ctx.translate(canvas.width / 2, boxY + 70); ctx.rotate(Math.PI / 4);
+      ctx.fillRect(-5, -5, 10, 10);
+      ctx.restore();
+
+      ctx.font = '18px sans-serif';
+      ctx.fillStyle = '#fff';
+      let lines = data.body.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], canvas.width / 2, boxY + 130 + (i * 32));
+      }
+
+      ctx.fillStyle = '#d2b48c';
+      ctx.font = '16px sans-serif';
+      ctx.fillText(`${currentTutorialPage + 1} / ${tutorialData.length}`, canvas.width / 2, boxY + boxH - 60);
+
+      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(Date.now() / 200);
+      ctx.fillText('화면을 터치하여 다음으로', canvas.width / 2, boxY + boxH - 25);
+      ctx.globalAlpha = 1.0;
+    }
+
     /**
      * [렌더링]
      */
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (gameState === STATE.RANKING) {
+        drawRanking(ctx);
+        return;
+      }
 
       if (gameState === STATE.MENU) {
         ctx.fillStyle = 'rgba(30, 20, 10, 0.95)';
@@ -761,19 +1108,11 @@
 
         ctx.strokeStyle = '#e6c200';
         ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let i = 0; i < 16; i++) {
-          let a = (i / 16) * Math.PI * 2 + time * 0.5;
-          ctx.moveTo(Math.cos(a) * 50, Math.sin(a) * 50);
-          ctx.lineTo(Math.cos(a) * 150, Math.sin(a) * 150);
-        }
-        ctx.stroke();
 
-        ctx.textAlign = 'center';
         drawSignatureKimchi(ctx, 0, -50, 80);
 
         // 떠다니는 5가지 김치 오르빗 애니메이션
-        const orbitRadius = 160;
+        const orbitRadius = 130 + Math.sin(time) * 10;
         const orbiterRadius = 25;
         for (let i = 0; i < CONFIG.COLORS.length; i++) {
           let angle = (i / CONFIG.COLORS.length) * Math.PI * 2 + (time * 0.2);
@@ -793,8 +1132,31 @@
         ctx.fillStyle = '#d2b48c';
         ctx.font = 'bold 20px sans-serif';
         ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time * 2);
-        ctx.fillText('화면을 터치하여 김장 시작', canvas.width / 2, canvas.height / 2 + 100);
+        ctx.fillText('화면을 터치하여 김장 시작', canvas.width / 2, canvas.height / 2 + 60);
         ctx.globalAlpha = 1.0;
+
+        // Royal Scroll Help Button
+        let helpY = canvas.height / 2 + 130;
+        let rankY = canvas.height / 2 + 200;
+
+        ctx.save();
+        // Scroll Paper
+        ctx.fillStyle = '#F5F5DC'; // Parchment
+        ctx.fillRect(canvas.width / 2 - 120, helpY - 20, 240, 40);
+        ctx.fillRect(canvas.width / 2 - 120, rankY - 20, 240, 40);
+        // Scroll Rollers
+        ctx.fillStyle = '#8B0000'; // Dark Red wood
+        ctx.beginPath(); ctx.roundRect(canvas.width / 2 - 130, helpY - 25, 10, 50, 5); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(canvas.width / 2 + 120, helpY - 25, 10, 50, 5); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(canvas.width / 2 - 130, rankY - 25, 10, 50, 5); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(canvas.width / 2 + 120, rankY - 25, 10, 50, 5); ctx.fill();
+
+        ctx.font = 'bold 18px serif';
+        ctx.fillStyle = '#0B0B0B'; // Ink black
+        ctx.fillText(' 어명: 수라간 비법 하사', canvas.width / 2, helpY + 6);
+        ctx.fillText('🏆 선발: 수라간 장원급제록', canvas.width / 2, rankY + 6);
+        ctx.restore();
+
         return;
       }
 
@@ -804,11 +1166,11 @@
       ctx.beginPath();
       const tY = canvas.height * 0.35; // Top
       const bY = canvas.height - FLOOR_MARGIN; // Bottom
-      ctx.moveTo(JAR_MARGIN, tY);
+      ctx.moveTo(JAR_MARGIN - 5, tY);
       // Left Belly -> Bottom -> Right Belly
-      ctx.bezierCurveTo(JAR_MARGIN - 40, tY + 100, JAR_MARGIN - 30, bY - 30, JAR_MARGIN + 50, bY);
-      ctx.lineTo(canvas.width - JAR_MARGIN - 50, bY);
-      ctx.bezierCurveTo(canvas.width - JAR_MARGIN + 30, bY - 30, canvas.width - JAR_MARGIN + 40, tY + 100, canvas.width - JAR_MARGIN, tY);
+      ctx.bezierCurveTo(JAR_MARGIN - 25, tY + 100, JAR_MARGIN - 25, bY - 30, JAR_MARGIN - 5, bY + 15);
+      ctx.lineTo(canvas.width - JAR_MARGIN + 5, bY + 15);
+      ctx.bezierCurveTo(canvas.width - JAR_MARGIN + 25, bY - 30, canvas.width - JAR_MARGIN + 25, tY + 100, canvas.width - JAR_MARGIN + 5, tY);
       ctx.fill();
       ctx.stroke();
       // Rim detail
@@ -817,14 +1179,22 @@
       // 구슬 렌더링
       for (let i = 0; i < balls.length; i++) {
         let b = balls[i];
-        drawKimchi(ctx, b.x, b.y, b.r, b.colorObj);
+        if (b.type === 'RAW') {
+          drawIngredient(ctx, b.x, b.y, b.r, b.colorObj);
+        } else if (b.type === 'GARLIC') {
+          drawGarlic(ctx, b.x, b.y, b.r);
+        } else if (b.type === 'SHRIMP') {
+          drawShrimp(ctx, b.x, b.y, b.r);
+        } else if (b.type === 'KIMCHI_JAR') {
+          drawKimchiJar(ctx, b.x, b.y, b.r, b.colorObj, Date.now() - b.spawnTime, b.level || 1);
+        }
       }
 
       // Swipe 연결선 및 하이라이트 효과 렌더링
       if (gameState === STATE.PLAYING && isSwiping && selectedBalls.length > 0) {
         // 연결선 그림
         ctx.beginPath();
-        ctx.strokeStyle = targetColorObj.hex;
+        ctx.strokeStyle = currentSwipeColor.hex;
         ctx.lineWidth = 12;
         ctx.lineJoin = 'round';
         ctx.globalAlpha = 0.6;
@@ -856,41 +1226,10 @@
       });
       ctx.globalAlpha = 1.0;
 
-      // 인벤토리 UI 렌더링 (하단 바 영역)
-      if (gameState === STATE.PLAYING) {
-        const invY = canvas.height - 65;
-        const invR = 35;
-        const startX = canvas.width / 2 - 90;
-        const gap = 90;
-
-        ctx.textAlign = 'center';
-        for (let i = 0; i < 3; i++) {
-          let cx = startX + i * gap;
-
-          // Glowing border
-          ctx.save();
-          ctx.shadowBlur = 10 + Math.sin(Date.now() / 200) * 5;
-          ctx.shadowColor = '#FFD700';
-
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-          ctx.beginPath();
-          ctx.arc(cx, invY, invR, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.strokeStyle = '#FFD700';
-          ctx.lineWidth = 3;
-          ctx.stroke();
-          ctx.restore();
-
-          if (inventory[i]) {
-            if (inventory[i] === 'GARLIC') drawGarlic(ctx, cx, invY, invR * 0.7);
-            else if (inventory[i] === 'SHRIMP') drawShrimp(ctx, cx, invY, invR * 0.7);
-          }
-        }
-      }
+      // 인벤토리 UI 제거됨
 
       // UI 렌더링 (플레이/엔딩 공통 상단 UI)
-      if (gameState === STATE.PLAYING || gameState === STATE.ENDING || gameState === STATE.STAGE_CLEAR) {
+      if (gameState === STATE.PLAYING || gameState === STATE.ENDING) {
         // 상단 바 배경 (짙은 나무색)
         ctx.fillStyle = '#3e2723';
         ctx.fillRect(0, 0, canvas.width, 60);
@@ -912,41 +1251,39 @@
         }
         ctx.stroke();
 
-        let stageDef = STAGE_CONFIG[currentStage - 1];
-
         // 텍스트 스타일: 붓글씨 느낌의 세리프 폰트와 금색
         ctx.fillStyle = '#ffecb3';
         ctx.textAlign = 'left';
 
-        // 1번째 줄: 스테이지 & 점수
+        // 1번째 줄: 페이즈 & 점수
         ctx.font = 'bold 15px serif';
-        ctx.fillText(`Stage: ${currentStage} | Score: ${totalScore.toLocaleString()}`, 10, 24);
+        ctx.fillText(`Phase: ${currentPhase} | Score: ${totalScore.toLocaleString()}`, 10, 24);
 
         // 2번째 줄: 시간
         ctx.font = '14px serif';
-        if (stageDef && stageDef.isInfiniteMode) {
-          ctx.fillText(`Survive: ${(currentStageTime / 1000).toFixed(1)}s`, 10, 46);
-        } else {
-          let displayedTime = totalClearTime + currentStageTime;
-          ctx.fillText(`Total Time: ${(displayedTime / 1000).toFixed(1)}s`, 10, 46);
-        }
+        ctx.fillText(`Survive: ${(currentStageTime / 1000).toFixed(1)}s`, 10, 46);
 
         ctx.textAlign = 'right';
         ctx.font = 'bold 16px serif';
-        if (targetColorObj) {
-          let targetLabel = targetColorObj.name;
-          ctx.fillText(targetLabel, canvas.width - 35, 35);
-          drawKimchi(ctx, canvas.width - 15, 35, 15, targetColorObj);
+
+        if (gameState === STATE.PLAYING) {
+          let btnW = 60; let btnH = 32;
+          let btnX = canvas.width - btnW - 10;
+          let btnY = 14;
+
+          ctx.fillStyle = '#5d4037';
+          ctx.beginPath(); ctx.roundRect(btnX, btnY, btnW, btnH, 5); ctx.fill();
+          ctx.strokeStyle = '#d2b48c';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#ffecb3';
+          ctx.font = 'bold 14px sans-serif';
+          ctx.fillText('홈으로', btnX + btnW / 2, btnY + 21);
         }
 
         ctx.textBaseline = 'alphabetic'; // Reset for rest of app
-
-        if (stageDef && stageDef.isInfiniteMode) {
-          ctx.fillStyle = '#f00';
-          ctx.font = 'bold 20px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('무한 김치 모드', canvas.width / 2, 85);
-        }
       }
 
       if (gameState === STATE.ENDING) {
@@ -972,50 +1309,82 @@
         ctx.restore();
 
         ctx.textAlign = 'center';
-
-        ctx.font = 'bold 36px serif';
+        ctx.font = 'bold 32px sans-serif';
         ctx.fillStyle = '#FFD700';
-        ctx.fillText('🧄 Kimchi REPORT 🦐', canvas.width / 2, boxY + 60);
+        ctx.fillText('김장 결과 보고서', canvas.width / 2, boxY + 60);
 
-        // SCORE DISPLAY (Prominent)
-        ctx.font = 'bold 36px serif';
-        ctx.fillStyle = '#FFD700';
-        ctx.fillText(`최종 점수: ${totalScore.toLocaleString()} 점`, canvas.width / 2, boxY + 140);
-
-        ctx.font = 'bold 20px serif';
-        ctx.fillStyle = '#d2b48c';
-        ctx.fillText('🧄 김장에 걸린 시간 🧄', canvas.width / 2, boxY + 210);
-
-        ctx.font = 'bold 24px serif';
+        // Score
+        ctx.font = 'bold 28px sans-serif';
         ctx.fillStyle = '#fff';
-        let clearTimeDisplay = (currentStage === 5) ? totalClearTime : (totalClearTime + currentStageTime);
-        ctx.fillText(`${(clearTimeDisplay / 1000).toFixed(2)}s`, canvas.width / 2, boxY + 245);
+        ctx.fillText(`최종 점수: ${totalScore.toLocaleString()}점`, canvas.width / 2, boxY + 110);
 
-        ctx.font = 'bold 20px serif';
-        ctx.fillStyle = '#d2b48c';
-        ctx.fillText('🦐 장독대 버틴 시간 🦐', canvas.width / 2, boxY + 295);
-
-        ctx.font = 'bold 24px serif';
-        ctx.fillStyle = '#E53935';
-        let survivalTimeDisplay = (currentStage === 5) ? currentStageTime : 0;
-        ctx.fillText(`${(survivalTimeDisplay / 1000).toFixed(2)}s`, canvas.width / 2, boxY + 330);
-
-        ctx.strokeStyle = '#b8860b';
-        ctx.lineWidth = 1;
+        // Top Divider
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(canvas.width / 2 - 120, boxY + 370);
-        ctx.lineTo(canvas.width / 2 + 120, boxY + 370);
+        ctx.moveTo(boxX + 30, boxY + 140);
+        ctx.lineTo(boxX + boxW - 30, boxY + 140);
         ctx.stroke();
 
-        ctx.font = 'bold 22px serif';
+        // Subtitle
+        ctx.font = 'bold 18px sans-serif';
+        ctx.fillStyle = '#d2b48c';
+        ctx.fillText('상세 내역', canvas.width / 2, boxY + 175);
+
+        // Vertical List
+        let totalKimchi = 0;
+        let listY = boxY + 210;
+
+        CONFIG.COLORS.forEach((c, idx) => {
+          let count = kimchiStats[c.type] || 0;
+          totalKimchi += count;
+          let yPos = listY + (idx * 32);
+
+          // Left align: Kimchi Name
+          ctx.textAlign = 'left';
+          ctx.font = 'bold 18px sans-serif';
+          ctx.fillStyle = c.hex;
+          ctx.fillText(c.name, canvas.width / 2 - 90, yPos);
+
+          // Right align: Count
+          ctx.textAlign = 'right';
+          ctx.font = '18px sans-serif';
+          ctx.fillStyle = '#fff';
+          ctx.fillText(`${count} 포기`, canvas.width / 2 + 90, yPos);
+        });
+
+        // Bottom Divider
+        ctx.beginPath();
+        ctx.moveTo(boxX + 30, listY + 160);
+        ctx.lineTo(boxX + boxW - 30, listY + 160);
+        ctx.stroke();
+
+        // Total Summary
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 24px sans-serif';
         ctx.fillStyle = '#FFD700';
-        ctx.fillText('올 겨울 김장 마스터! 🥇', canvas.width / 2, boxY + 410);
+        ctx.fillText(`총 ${totalKimchi}포기 완성!`, canvas.width / 2, listY + 205);
 
         if (endingTimer > 1000) {
+          if (!isScoreSaved) {
+            let btnY = boxY + boxH + 25;
+            ctx.save();
+            ctx.fillStyle = '#F5F5DC';
+            ctx.fillRect(canvas.width / 2 - 120, btnY - 20, 240, 40);
+            ctx.fillStyle = '#8B0000';
+            ctx.beginPath(); ctx.roundRect(canvas.width / 2 - 130, btnY - 25, 10, 50, 5); ctx.fill();
+            ctx.beginPath(); ctx.roundRect(canvas.width / 2 + 120, btnY - 25, 10, 50, 5); ctx.fill();
+            ctx.font = 'bold 18px serif';
+            ctx.fillStyle = '#0B0B0B';
+            ctx.fillText('📜 내 김장 실력 등록하기', canvas.width / 2, btnY + 6);
+            ctx.restore();
+          }
+
           ctx.fillStyle = '#d2b48c';
-          ctx.font = 'bold 16px serif';
+          ctx.font = 'bold 16px sans-serif';
           ctx.globalAlpha = 0.5 + 0.5 * Math.sin(Date.now() / 200);
-          ctx.fillText('Tap to Restart', canvas.width / 2, boxY + boxH + 40);
+          let restartY = boxY + boxH + (isScoreSaved ? 40 : 90);
+          ctx.fillText('화면을 터치하여 처음으로', canvas.width / 2, restartY);
           ctx.globalAlpha = 1.0;
         }
       }
@@ -1027,48 +1396,12 @@
         ctx.fillText('READY...', canvas.width / 2, canvas.height / 2);
       }
 
-      if (gameState === STATE.STAGE_CLEAR) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Removed STAGE_CLEAR UI
 
-        let boxW = 280;
-        let boxH = 200;
-        let boxX = canvas.width / 2 - boxW / 2;
-        let boxY = canvas.height / 2 - boxH / 2;
-
-        ctx.fillStyle = '#E53935';
-        ctx.beginPath();
-        ctx.roundRect(boxX, boxY, boxW, boxH, 20);
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 30px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(`Stage ${currentStage} 완료!`, canvas.width / 2, canvas.height / 2 - 30);
-
-        ctx.font = '20px sans-serif';
-        let displayedTime = totalClearTime + currentStageTime;
-        ctx.fillText(`현재 총 시간: ${(displayedTime / 1000).toFixed(2)}s`, canvas.width / 2, canvas.height / 2 + 10);
-
-        let btnW = 200;
-        let btnH = 50;
-        nextStageBtn.x = canvas.width / 2 - btnW / 2;
-        nextStageBtn.y = canvas.height / 2 + 40;
-        nextStageBtn.w = btnW;
-        nextStageBtn.h = btnH;
-
-        ctx.fillStyle = '#d2b48c';
-        ctx.beginPath();
-        ctx.roundRect(nextStageBtn.x, nextStageBtn.y, nextStageBtn.w, nextStageBtn.h, 10);
-        ctx.fill();
-
-        ctx.fillStyle = '#3e2723';
-        ctx.font = 'bold 20px sans-serif';
-        ctx.fillText('이어서 김장하기', canvas.width / 2, nextStageBtn.y + 33);
+      if (gameState === STATE.TUTORIAL) {
+        drawTutorial(ctx);
       }
+      if (gameState === STATE.RANKING) drawRanking(ctx);
     }
 
     /**
@@ -1082,48 +1415,81 @@
         endingTimer += dt;
       }
 
-      if (gameState === STATE.STAGE_CLEAR) {
-        updatePhysics(dt);
-      }
-
       if (gameState === STATE.PLAYING) {
         currentStageTime += dt;
+        phaseTimer += dt;
 
-        let stageDef = STAGE_CONFIG[currentStage - 1];
-        if (stageDef.isInfiniteMode) {
-          spawnTimer += dt;
-          if (spawnTimer > 400) {
-            spawnTimer = 0;
-            let randomColor = CONFIG.COLORS[Math.floor(Math.random() * CONFIG.COLORS.length)];
-            let spawnX = canvas.width / 2;
-            let newBall = new Ball(spawnX, -50, CONFIG.BALL_RADIUS, randomColor);
+        if (phaseTimer > 30000) {
+          phaseTimer -= 30000;
+          currentPhase++;
+
+          if (currentPhase === 2) {
+            baseFallSpeed = 4;
+            baseSpawnInterval = 800;
+            showToast(`제 ${currentPhase} 장 - 수라간 열기 상승!`);
+          } else if (currentPhase === 3) {
+            let available = CONFIG.COLORS.filter(c => !currentColors.some(cc => cc.type === c.type));
+            if (available.length > 0) {
+              currentColors.push(available[Math.floor(Math.random() * available.length)]);
+            }
+            baseFallSpeed = 5;
+            baseSpawnInterval = 650;
+            showToast(`제 ${currentPhase} 장 - 세 번째 재료 등장!`);
+          } else {
+            baseFallSpeed = Math.min(13, baseFallSpeed + 1.2);
+            baseSpawnInterval = Math.max(200, baseSpawnInterval * 0.85);
+            showToast(`제 ${currentPhase} 장 - 낙하 속도 및 물량 폭발!`);
+          }
+
+          if (!freezeTimeout) {
+            FALL_SPEED = baseFallSpeed;
+            currentSpawnInterval = baseSpawnInterval;
+          }
+        }
+
+        spawnTimer += dt;
+        if (spawnTimer > currentSpawnInterval) {
+          spawnTimer = 0;
+          for (let k = 0; k < 2; k++) {
+            let randomColor = currentColors[Math.floor(Math.random() * currentColors.length)];
+            let spawnX = JAR_MARGIN + 40 + Math.random() * (canvas.width - JAR_MARGIN * 2 - 80);
+            let newBall = new Ball(spawnX, -50 - (k * 40), CONFIG.BALL_RADIUS, randomColor);
             newBall.vy = FALL_SPEED;
             balls.push(newBall);
           }
-          infiniteModeTargetTimer += dt;
-          if (infiniteModeTargetTimer > 5000) {
-            infiniteModeTargetTimer = 0;
-            updateTargetColor();
-          }
-        }
-
-        const targetExists = balls.some(b => b.colorObj === targetColorObj);
-        if (!targetExists && balls.length > 0) {
-          updateTargetColor();
         }
 
         updatePhysics(dt);
+
+        // All Clear Bonus Check
+        if (balls.length === 0) {
+          showToast('🏆 장독대 완벽 청소!\n+5,000 보너스 및 재료 폭포!');
+          totalScore += 5000;
+
+          // Cancel Freeze effect if active so balls can fall fast
+          if (freezeTimeout) {
+            clearTimeout(freezeTimeout);
+            freezeTimeout = null;
+            FALL_SPEED = baseFallSpeed;
+            currentSpawnInterval = baseSpawnInterval;
+          }
+
+          // Instantly drop 15 balls at once (scattered Y positions)
+          for (let i = 0; i < 15; i++) {
+            let randomColor = currentColors[Math.floor(Math.random() * currentColors.length)];
+            let spawnX = JAR_MARGIN + 40 + Math.random() * (canvas.width - JAR_MARGIN * 2 - 80);
+            let spawnY = -50 - (Math.random() * 300);
+            let newBall = new Ball(spawnX, spawnY, CONFIG.BALL_RADIUS, randomColor);
+            newBall.vy = Math.max(FALL_SPEED, 8) + Math.random() * 5;
+            balls.push(newBall);
+          }
+          spawnTimer = 0;
+        }
 
         if (checkGameOver()) {
           gameState = STATE.ENDING;
           endingTimer = 0;
-          let stageDef = STAGE_CONFIG[currentStage - 1];
-          if (stageDef && stageDef.isInfiniteMode) {
-            checkAndSaveBestSurvival();
-          } else {
-            // Failed before infinite mode
-            totalClearTime += currentStageTime;
-          }
+          checkAndSaveBestSurvival();
         }
       }
 
@@ -1143,53 +1509,95 @@
      */
     canvas.addEventListener('pointerdown', (e) => {
       if (gameState === STATE.MENU) {
-        currentStage = 1;
-        totalClearTime = 0;
-        currentStageTime = 0;
-        totalScore = 0;
-        agingMultiplier = 1.0;
-        inventory = [];
-        initStage(0);
-        return;
-      }
-
-      if (gameState === STATE.STAGE_CLEAR) {
         const rect = canvas.getBoundingClientRect();
-        const touchX = e.clientX - rect.left;
         const touchY = e.clientY - rect.top;
-        if (touchX >= nextStageBtn.x && touchX <= nextStageBtn.x + nextStageBtn.w &&
-          touchY >= nextStageBtn.y && touchY <= nextStageBtn.y + nextStageBtn.h) {
+        const helpY = canvas.height / 2 + 160;
+        const rankY = canvas.height / 2 + 200;
 
-          if (currentStageTime < 15000 && inventory.length < 3 && currentStage <= 4) {
-            inventory.push(Math.random() > 0.5 ? 'GARLIC' : 'SHRIMP');
-            showToast('황금 양념 획득!');
-          }
+        if (Math.abs(touchY - helpY) < 30) {
+          gameState = STATE.TUTORIAL; currentTutorialPage = 0; return;
+        }
+        if (Math.abs(touchY - rankY) < 30) {
+          gameState = STATE.RANKING; rankingsData = null;
+          window.getFirebaseRankings().then(data => { rankingsData = data; });
+          return;
+        }
 
-          totalClearTime += currentStageTime;
-          currentStageTime = 0;
-
-          if (currentStage === 4) {
-            // Entering Stage 5 implies Stage 1-4 is cleared
-            agingMultiplier = Math.max(1.0, (80 / (totalClearTime / 1000))).toFixed(1);
-            showToast(`숙성 성공! 배율: ${agingMultiplier}배!`);
-          }
-
-          currentStage++;
-          if (currentStage > STAGE_CONFIG.length) {
-            gameState = STATE.ENDING;
-            endingTimer = 0;
-            checkAndSaveBestClear();
-          } else {
-            initStage(currentStage - 1);
-          }
+        if (!hasSeenTutorial) { gameState = STATE.TUTORIAL; currentTutorialPage = 0; }
+        else { agingMultiplier = 1.0; startGame(); }
+        return;
+      } else if (gameState === STATE.TUTORIAL) {
+        currentTutorialPage++;
+        if (navigator.vibrate) navigator.vibrate(20);
+        if (currentTutorialPage >= tutorialData.length) {
+          localStorage.setItem('kimchiPopTutorialSeen', 'true');
+          hasSeenTutorial = true;
+          agingMultiplier = 1.0;
+          startGame();
         }
         return;
       }
 
       if (gameState === STATE.ENDING) {
         if (endingTimer > 1000) {
+          const rect = canvas.getBoundingClientRect();
+          const touchY = e.clientY - rect.top;
+          let boxH = 430; let boxY = canvas.height / 2 - boxH / 2 - 20;
+
+          if (!isScoreSaved && Math.abs(touchY - (boxY + boxH + 25)) < 30) {
+            let savedName = localStorage.getItem('kimchiPopLastNickname') || "수라간장인";
+            let name = prompt("명예의 전당 닉네임 (한글 2~5자, 자음/모음 단독 불가):", savedName);
+
+            if (name !== null) {
+              name = name.trim();
+              const nameRegex = /^[가-힣]{2,5}$/;
+              const bannedWords = ['바보', '멍청이', '시발', '씨발', '병신', '개새', '쓰레기', '지랄', '좆', '애미', '느금', '섹스', '스섹', '색스', '섹수', '섹슷', '샛스', '셋스', '보지', '자지', '봊이', '잦이'];
+
+              let isValid = true;
+
+              if (!nameRegex.test(name)) {
+                alert('경고: 닉네임은 완성된 한글 2자~5자로만 입력해야 합니다. (특수문자, 숫자, 자음/모음 단독 사용 불가)');
+                isValid = false;
+              } else {
+                for (let word of bannedWords) {
+                  if (name.includes(word)) {
+                    alert('경고: 사용할 수 없는 단어가 포함되어 있습니다.');
+                    isValid = false;
+                    break;
+                  }
+                }
+              }
+
+              if (isValid) {
+                localStorage.setItem('kimchiPopLastNickname', name);
+                isScoreSaved = true; // Hide button immediately to prevent spam clicks
+
+                window.saveFirebaseScore(name, totalScore, kimchiStats).then(result => {
+                  showToast(result.message);
+                });
+              }
+            }
+            return;
+          }
           gameState = STATE.MENU;
         }
+        return;
+      }
+
+      if (gameState === STATE.RANKING) {
+        let boxH = 480;
+        let boxY = canvas.height / 2 - boxH / 2;
+        const rect = canvas.getBoundingClientRect();
+        const touchY = e.clientY - rect.top;
+
+        // Check if tapping outside the box or on the bottom text to return
+        if (touchY < boxY || touchY > boxY + boxH || Math.abs(touchY - (boxY + boxH - 25)) < 30) {
+          gameState = STATE.MENU;
+          return;
+        }
+
+        isRankingScrolling = true;
+        rankingStartY = touchY;
         return;
       }
 
@@ -1198,43 +1606,16 @@
         const touchX = e.clientX - rect.left;
         const touchY = e.clientY - rect.top;
 
-        // 아이템 터치 판정
-        const invY = canvas.height - 65;
-        const invR = 40;
-        const startX = canvas.width / 2 - 90;
-        const gap = 90;
-        for (let i = 0; i < 3; i++) {
-          let cx = startX + i * gap;
-          let dx = touchX - cx;
-          let dy = touchY - invY;
-          if (Math.sqrt(dx * dx + dy * dy) <= invR) {
-            if (inventory[i]) {
-              let usedItem = inventory[i];
-              inventory.splice(i, 1);
+        let btnW = 60; let btnH = 32;
+        let btnX = canvas.width - btnW - 10;
+        let btnY = 14;
 
-              if (usedItem === 'GARLIC') {
-                showToast('마늘 폭탄!');
-                for (let j = balls.length - 1; j >= 0; j--) {
-                  if (balls[j].colorObj === targetColorObj) {
-                    for (let k = 0; k < 12; k++) {
-                      particles.push(new Particle(balls[j].x, balls[j].y, balls[j].colorObj.hex));
-                    }
-                    balls.splice(j, 1);
-                  }
-                }
-                updateTargetColor();
-              } else if (usedItem === 'SHRIMP') {
-                showToast('새우젓 슬로우!');
-                FALL_SPEED = 4;
-                CONFIG.GRAVITY = 0.3;
-                setTimeout(() => {
-                  FALL_SPEED = 8;
-                  CONFIG.GRAVITY = 0.6;
-                }, 5000);
-              }
-            }
-            return; // 아이템을 터치했으면 구슬 판정 무시
+        // Check if Home button is tapped
+        if (touchX >= btnX && touchX <= btnX + btnW && touchY >= btnY && touchY <= btnY + btnH) {
+          if (confirm("김장을 중단하고 메인 화면으로 돌아가시겠습니까?\n(현재 기록은 저장되지 않습니다)")) {
+            gameState = STATE.MENU;
           }
+          return; // Consume the touch event
         }
 
         selectedBalls = [];
@@ -1244,16 +1625,92 @@
           let b = balls[i];
           let dx = touchX - b.x;
           let dy = touchY - b.y;
-          if (Math.sqrt(dx * dx + dy * dy) <= b.r) {
-            if (b.colorObj === targetColorObj) {
-              isSwiping = true;
-              selectedBalls.push(b);
-              if (navigator.vibrate) navigator.vibrate(40);
-            } else {
-              if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-              let penaltyCount = (STAGE_CONFIG[currentStage - 1].isInfiniteMode) ? 1 : 3;
-              spawnPenalty(b.colorObj, penaltyCount);
+          if (Math.sqrt(dx * dx + dy * dy) <= b.r + 10) {
+            if (b.type === 'GARLIC' || b.type === 'SHRIMP' || b.type === 'KIMCHI_JAR') {
+              let effectBalls = [];
+              let age = Date.now() - b.spawnTime;
+              let isMassive = false;
+              let lvl = b.level || 1;
+              let rMult = lvl === 3 ? 2.0 : (lvl === 2 ? 1.5 : 1.0);
+
+              if (b.type === 'GARLIC') {
+                showToast('🧄 귀한 의성 마늘 득템!\n숙성 시간이 3초 단축됩니다.');
+                balls.forEach(obj => { if (obj.type === 'KIMCHI_JAR') obj.spawnTime -= 3000; });
+                effectBalls = balls.filter(obj => Math.hypot(obj.x - b.x, obj.y - b.y) < 80);
+              } else if (b.type === 'SHRIMP') {
+                showToast('🦐 최상급 광천 새우젓 득템!\n숙성 시간이 5초 단축됩니다.');
+                balls.forEach(obj => { if (obj.type === 'KIMCHI_JAR') obj.spawnTime -= 5000; });
+                effectBalls = balls.filter(obj => Math.hypot(obj.x - b.x, obj.y - b.y) < 100);
+              } else {
+                let type = b.colorObj.type;
+                if (type === 'BAECHU' && age >= 10000) {
+                  showToast(`🔥 묵은지 대폭발! (Lv.${lvl})`);
+                  effectBalls = balls.filter(obj => obj.type === 'RAW');
+                  isMassive = true;
+                } else if (type === 'YEOLMU' && age <= 4000) {
+                  // Find active colors that are NOT Yeolmu
+                  let otherColors = currentColors.filter(c => c.type !== 'YEOLMU');
+                  // Fallback to its own color only if it's the only color left (edge case)
+                  let targetColor = otherColors.length > 0 ? otherColors[Math.floor(Math.random() * otherColors.length)] : b.colorObj;
+
+                  showToast(`🌿 생열무의 헌신! (${targetColor.name} 지원, Lv.${lvl})`);
+
+                  // Filter raw balls that are not already the target color
+                  let raws = balls.filter(obj => obj.type === 'RAW' && obj.colorObj.type !== targetColor.type);
+                  // Shuffle the raw balls to convert them randomly across the board
+                  raws.sort(() => 0.5 - Math.random());
+
+                  // Convert up to 10 * lvl balls
+                  for (let i = 0; i < Math.min(10 * lvl, raws.length); i++) {
+                    raws[i].colorObj = targetColor;
+                  }
+                  effectBalls = [b];
+                } else if (type === 'DONGCHIMI' && age >= 5000 && age <= 10000) {
+                  showToast(`❄️ 극한의 프리즈! (Lv.${lvl}, ${5 * lvl}초)`);
+                  effectBalls = [b];
+                  FALL_SPEED = 1; currentSpawnInterval = baseSpawnInterval * 5;
+                  if (freezeTimeout) clearTimeout(freezeTimeout);
+                  freezeTimeout = setTimeout(() => {
+                    freezeTimeout = null;
+                    FALL_SPEED = baseFallSpeed;
+                    currentSpawnInterval = baseSpawnInterval;
+                  }, 5000 * lvl);
+                } else if (type === 'CHONGGAK' && age >= 4000 && age <= 8000) {
+                  showToast(`⚡ 무청 채찍! (Lv.${lvl}, ${20 * lvl}연타)`);
+                  let raws = balls.filter(obj => obj.type === 'RAW');
+                  effectBalls = raws.sort(() => 0.5 - Math.random()).slice(0, 20 * lvl);
+                  isMassive = true;
+                } else if (type === 'KKAKDUGI' && age >= 6000 && age <= 12000) {
+                  showToast(`🔥 국밥 연쇄! (Lv.${lvl})`);
+                  balls.forEach(obj => { if (obj.type === 'KIMCHI_JAR') obj.spawnTime -= 20000; });
+                  effectBalls = balls.filter(obj => Math.hypot(obj.x - b.x, obj.y - b.y) < 150 * rMult);
+                } else {
+                  effectBalls = balls.filter(obj => Math.hypot(obj.x - b.x, obj.y - b.y) < b.r + 10);
+                }
+              }
+
+              if (!effectBalls.includes(b)) effectBalls.push(b);
+
+              totalScore += (effectBalls.length * 150) * lvl;
+              let pCount = isMassive ? 2 : 8; // Limit particles for performance
+
+              for (let j = balls.length - 1; j >= 0; j--) {
+                if (effectBalls.includes(balls[j])) {
+                  for (let k = 0; k < pCount; k++) particles.push(new Particle(balls[j].x, balls[j].y, balls[j].colorObj.hex));
+                  balls.splice(j, 1);
+                }
+              }
+
+              let removedTypes = new Set(effectBalls.map(b => b.colorObj && b.colorObj.type).filter(Boolean));
+              checkWipedColors(removedTypes);
+
+              return;
             }
+
+            isSwiping = true;
+            selectedBalls.push(b);
+            currentSwipeColor = b.colorObj;
+            if (navigator.vibrate) navigator.vibrate(40);
             break; // Initiate swipe on the first ball touched
           }
         }
@@ -1261,6 +1718,27 @@
     });
 
     canvas.addEventListener('pointermove', (e) => {
+      if (gameState === STATE.RANKING && isRankingScrolling) {
+        const rect = canvas.getBoundingClientRect();
+        const touchY = e.clientY - rect.top;
+        let dy = touchY - rankingStartY;
+        rankingStartY = touchY;
+
+        rankingScrollOffset += dy;
+
+        // Clamp scrolling
+        let maxScroll = 0;
+        if (rankingsData && rankingsData.length > 0) {
+          let contentHeight = rankingsData.length * 60;
+          let viewHeight = 480 - 120; // boxH - 120
+          maxScroll = Math.min(0, viewHeight - contentHeight);
+        }
+
+        if (rankingScrollOffset > 0) rankingScrollOffset = 0;
+        if (rankingScrollOffset < maxScroll) rankingScrollOffset = maxScroll;
+        return;
+      }
+
       if (gameState === STATE.PLAYING && isSwiping) {
         const rect = canvas.getBoundingClientRect();
         const touchX = e.clientX - rect.left;
@@ -1268,24 +1746,30 @@
 
         for (let i = balls.length - 1; i >= 0; i--) {
           let b = balls[i];
+          if (b.type !== 'RAW') continue;
           let dx = touchX - b.x;
           let dy = touchY - b.y;
 
-          if (Math.sqrt(dx * dx + dy * dy) <= b.r) {
-            if (b.colorObj === targetColorObj) {
-              if (!selectedBalls.includes(b)) {
+          if (Math.hypot(dx, dy) <= b.r + 20) {
+            let lastBall = selectedBalls[selectedBalls.length - 1];
+            let prevBall = selectedBalls.length > 1 ? selectedBalls[selectedBalls.length - 2] : null;
+
+            if (b === prevBall) {
+              // Backtrack (undo last selection)
+              selectedBalls.pop();
+              if (navigator.vibrate) navigator.vibrate(20);
+              break; // Found a valid interaction, stop searching
+            } else if (b.colorObj === currentSwipeColor && !selectedBalls.includes(b)) {
+              // Adjacency check (increased from 2.8 to 3.2 for a more forgiving, magnetic feel)
+              if (Math.hypot(b.x - lastBall.x, b.y - lastBall.y) <= b.r * 3.2) {
                 selectedBalls.push(b);
                 if (navigator.vibrate) navigator.vibrate(30);
+                break; // Found a valid interaction, stop searching
               }
-            } else {
-              // Hit the wrong color during swipe
-              if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-              let penaltyCount = (STAGE_CONFIG[currentStage - 1].isInfiniteMode) ? 1 : 3;
-              spawnPenalty(b.colorObj, penaltyCount);
-              isSwiping = false;
-              selectedBalls = [];
             }
-            break;
+            // NO UNCONDITIONAL BREAK HERE!
+            // If the ball is the wrong color or too far, we ignore it and continue the loop 
+            // to check if there is a correct ball underneath it.
           }
         }
       }
@@ -1296,10 +1780,11 @@
         isSwiping = false;
 
         if (selectedBalls.length > 0) {
-          if (selectedBalls.length >= 5 && inventory.length < 3) {
-            inventory.push(Math.random() > 0.5 ? 'GARLIC' : 'SHRIMP');
-            showToast('황금 양념 획득!');
-          }
+          let lastBall = selectedBalls[selectedBalls.length - 1];
+          let spawnX = lastBall.x;
+          let spawnY = lastBall.y;
+          let spawnColor = lastBall.colorObj;
+          let count = selectedBalls.length;
 
           // Compute Combination Score Base Points -> Apply Aging Multiplier
           let comboPoints = Math.pow(selectedBalls.length, 2) * 100 * agingMultiplier;
@@ -1318,22 +1803,63 @@
             }
           }
 
-          // 다음 타겟 갱신 평가
-          let stageDef = STAGE_CONFIG[currentStage - 1];
-          let hasSameColor = false;
-          for (let j = 0; j < balls.length; j++) {
-            if (balls[j].colorObj === targetColorObj) {
-              hasSameColor = true;
-              break;
+          let removedTypes = new Set(selectedBalls.map(b => b.colorObj && b.colorObj.type).filter(Boolean));
+          checkWipedColors(removedTypes);
+
+          let jarCount = balls.filter(b => b.type === 'KIMCHI_JAR').length;
+          let itemCount = balls.filter(b => b.type === 'GARLIC' || b.type === 'SHRIMP').length;
+
+          if (count >= 7) {
+            if (jarCount < 3) {
+              let newJar = new Ball(spawnX, spawnY, CONFIG.BALL_RADIUS, spawnColor);
+              newJar.type = 'KIMCHI_JAR';
+              if (count >= 15) newJar.level = 3;
+              else if (count >= 11) newJar.level = 2;
+              else newJar.level = 1;
+
+              kimchiStats[spawnColor.type] = (kimchiStats[spawnColor.type] || 0) + 1;
+              balls.push(newJar);
+
+              let totalCount = kimchiStats[spawnColor.type];
+              showToast(`🎉 ${spawnColor.name} 완성! (Lv.${newJar.level}) 🎉\n총 ${totalCount}포기`);
             }
-          }
-          if (!hasSameColor) {
-            updateTargetColor();
-            infiniteModeTargetTimer = 0; // 타이머 초기화
+          } else if (count >= 5) {
+            if (itemCount < 3) {
+              let newItem = new Ball(spawnX, spawnY, CONFIG.BALL_RADIUS, spawnColor);
+              newItem.type = Math.random() > 0.5 ? 'GARLIC' : 'SHRIMP';
+              balls.push(newItem);
+              showToast(newItem.type === 'GARLIC' ? '🧄 귀한 의성 마늘 득템!\n숙성 시간이 3초 단축됩니다.' : '🦐 최상급 광천 새우젓 득템!\n숙성 시간이 5초 단축됩니다.');
+            }
           }
 
           selectedBalls = []; // Reset after processing
         }
+      }
+      if (gameState === STATE.RANKING) {
+        isRankingScrolling = false;
+        return;
+      }
+    });
+
+    canvas.addEventListener('pointerleave', (e) => {
+      if (gameState === STATE.RANKING) {
+        isRankingScrolling = false;
+      }
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      if (gameState === STATE.RANKING) {
+        rankingScrollOffset -= e.deltaY;
+
+        let maxScroll = 0;
+        if (rankingsData && rankingsData.length > 0) {
+          let contentHeight = rankingsData.length * 60;
+          let viewHeight = 480 - 120; // boxH - 120
+          maxScroll = Math.min(0, viewHeight - contentHeight);
+        }
+
+        if (rankingScrollOffset > 0) rankingScrollOffset = 0;
+        if (rankingScrollOffset < maxScroll) rankingScrollOffset = maxScroll;
       }
     });
 
