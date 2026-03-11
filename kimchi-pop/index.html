@@ -355,13 +355,15 @@
       let jarTop = canvas.height * 0.35;
       let isOverflowing = false;
 
-      for (let i = 0; i < balls.length; i++) {
-        let b = balls[i];
-        // 방금 생성된 구슬(y < 50) 제외
-        // 입구 위쪽(y < jarTop)에서 거의 멈춰있는(vx, vy < 0.5) 구슬이 있는지 체크
-        if (b.y > 50 && b.y < jarTop && Math.abs(b.vy) < 0.5 && Math.abs(b.vx) < 0.5) {
-          isOverflowing = true;
-          break;
+      if (balls.length > 60) {
+        for (let i = 0; i < balls.length; i++) {
+          let b = balls[i];
+          // 방금 생성된 구슬(y < 50) 제외
+          // 입구 위쪽(y < jarTop)에서 거의 멈춰있는(vx, vy < 0.5) 구슬이 있는지 체크
+          if (b.y > 0 && b.y < jarTop && Math.abs(b.vy) < 0.2 && Math.abs(b.vx) < 0.2) {
+            isOverflowing = true;
+            break;
+          }
         }
       }
 
@@ -407,7 +409,7 @@
 
         // 2. 구슬 간 충돌 해결 (거리 기반 겹침 밀어내기)
         // 안정성을 위해 2회 반복 연산(Iteration)
-        for (let iter = 0; iter < 2; iter++) {
+        for (let iter = 0; iter < 3; iter++) {
           for (let i = 0; i < balls.length; i++) {
             for (let j = i + 1; j < balls.length; j++) {
               let b1 = balls[i];
@@ -429,8 +431,8 @@
                 b2.y += ny * overlap * 0.5;
 
                 // 속도 감쇠
-                b1.vx *= 0.8; b1.vy *= 0.8;
-                b2.vx *= 0.8; b2.vy *= 0.8;
+                b1.vx *= 0.99; b1.vy *= 0.99;
+                b2.vx *= 0.99; b2.vy *= 0.99;
               }
             }
           }
@@ -1175,7 +1177,7 @@
 
         ctx.font = 'bold 18px serif';
         ctx.fillStyle = '#0B0B0B'; // Ink black
-        ctx.fillText(' 어명: 수라간 비법 하사', canvas.width / 2, helpY + 6);
+        ctx.fillText('📜 어명: 수라간 비법 하사', canvas.width / 2, helpY + 6);
         ctx.fillText('🏆 선발: 수라간 장원급제록', canvas.width / 2, rankY + 6);
         ctx.restore();
 
