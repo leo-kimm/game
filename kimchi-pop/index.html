@@ -191,6 +191,7 @@
     const toastEl = document.getElementById('toast');
 
     let gameState = STATE.MENU;
+    let gameOverTimer = 0; // New timer for safety buffer
     let readyTimer = 0;
     let endingTimer = 0;
     let freezeTimeout = null;
@@ -200,6 +201,7 @@
 
     let balls = [];
     let particles = [];
+    let floatingTexts = [];
     let selectedBalls = [];
     let isSwiping = false;
     let inventory = [];
@@ -255,6 +257,18 @@
       }
     }
 
+    class FloatingText {
+      constructor(x, y, text, color, size) {
+        this.x = x;
+        this.y = y;
+        this.text = text;
+        this.color = color;
+        this.size = size;
+        this.life = 1.0;
+        this.vy = -1.5;
+      }
+    }
+
     /**
      * [공통 헬퍼]
      */
@@ -307,6 +321,8 @@
       isScoreSaved = false;
       kimchiStats = { BAECHU: 0, DONGCHIMI: 0, YEOLMU: 0, CHONGGAK: 0, KKAKDUGI: 0 };
       balls = [];
+      particles = [];
+      floatingTexts = [];
       inventory = [];
       totalScore = 0;
       currentStageTime = 0;
@@ -337,14 +353,22 @@
 
     function checkGameOver() {
       let jarTop = canvas.height * 0.35;
+      let isOverflowing = false;
+
       for (let i = 0; i < balls.length; i++) {
         let b = balls[i];
-        if (b.y < jarTop + 50 && (b.x < JAR_MARGIN - 10 || b.x > canvas.width - JAR_MARGIN + 10)) {
-          return true;
+        // 방금 생성된 구슬(y < 50) 제외
+        // 입구 위쪽(y < jarTop)에서 거의 멈춰있는(vx, vy < 0.5) 구슬이 있는지 체크
+        if (b.y > 50 && b.y < jarTop && Math.abs(b.vy) < 0.5 && Math.abs(b.vx) < 0.5) {
+          isOverflowing = true;
+          break;
         }
       }
+
+      // 구슬 개수가 물리적 한계를 넘었을 때도 즉시 체크
       if (balls.length > CONFIG.MAX_BALLS) return true;
-      return false;
+
+      return isOverflowing;
     }
 
     /**
@@ -368,11 +392,9 @@
         b.x += b.vx;
         b.y += b.vy;
 
-        if (b.y > jarTop) {
-          // 벽 충돌 (좌/우) - 항아리 내부에서만
-          if (b.x - b.r < JAR_MARGIN) { b.x = b.r + JAR_MARGIN; b.vx *= -CONFIG.RESTITUTION; }
-          if (b.x + b.r > canvas.width - JAR_MARGIN) { b.x = canvas.width - JAR_MARGIN - b.r; b.vx *= -CONFIG.RESTITUTION; }
-        }
+        // 벽 충돌 (좌/우) - 공중 포함 전체 적용!
+        if (b.x - b.r < JAR_MARGIN) { b.x = b.r + JAR_MARGIN; b.vx *= -CONFIG.RESTITUTION; }
+        if (b.x + b.r > canvas.width - JAR_MARGIN) { b.x = canvas.width - JAR_MARGIN - b.r; b.vx *= -CONFIG.RESTITUTION; }
 
         // 바닥 충돌
         if (b.x > JAR_MARGIN && b.x < canvas.width - JAR_MARGIN) {
@@ -382,34 +404,34 @@
         if (b.y > canvas.height + 100) {
           balls.splice(i, 1);
         }
-      }
 
-      // 2. 구슬 간 충돌 해결 (거리 기반 겹침 밀어내기)
-      // 안정성을 위해 2회 반복 연산(Iteration)
-      for (let iter = 0; iter < 2; iter++) {
-        for (let i = 0; i < balls.length; i++) {
-          for (let j = i + 1; j < balls.length; j++) {
-            let b1 = balls[i];
-            let b2 = balls[j];
-            let dx = b2.x - b1.x;
-            let dy = b2.y - b1.y;
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            let minDist = b1.r + b2.r;
+        // 2. 구슬 간 충돌 해결 (거리 기반 겹침 밀어내기)
+        // 안정성을 위해 2회 반복 연산(Iteration)
+        for (let iter = 0; iter < 2; iter++) {
+          for (let i = 0; i < balls.length; i++) {
+            for (let j = i + 1; j < balls.length; j++) {
+              let b1 = balls[i];
+              let b2 = balls[j];
+              let dx = b2.x - b1.x;
+              let dy = b2.y - b1.y;
+              let dist = Math.sqrt(dx * dx + dy * dy);
+              let minDist = b1.r + b2.r;
 
-            if (dist < minDist) {
-              let overlap = minDist - dist;
-              let nx = dx / dist;
-              let ny = dy / dist;
+              if (dist < minDist) {
+                let overlap = minDist - dist;
+                let nx = dx / dist;
+                let ny = dy / dist;
 
-              // 서로 반반씩 밀어냄
-              b1.x -= nx * overlap * 0.5;
-              b1.y -= ny * overlap * 0.5;
-              b2.x += nx * overlap * 0.5;
-              b2.y += ny * overlap * 0.5;
+                // 서로 반반씩 밀어냄
+                b1.x -= nx * overlap * 0.5;
+                b1.y -= ny * overlap * 0.5;
+                b2.x += nx * overlap * 0.5;
+                b2.y += ny * overlap * 0.5;
 
-              // 속도 감쇠
-              b1.vx *= 0.8; b1.vy *= 0.8;
-              b2.vx *= 0.8; b2.vy *= 0.8;
+                // 속도 감쇠
+                b1.vx *= 0.8; b1.vy *= 0.8;
+                b2.vx *= 0.8; b2.vy *= 0.8;
+              }
             }
           }
         }
@@ -1176,6 +1198,19 @@
       // Rim detail
       ctx.strokeRect(JAR_MARGIN - 10, tY - 10, (canvas.width - JAR_MARGIN * 2) + 20, 15);
 
+      // 위험 경고 라인 그리기 (타이머 작동 시 붉게 점멸)
+      if (gameOverTimer > 0) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 0, 0, ${0.3 + 0.7 * Math.sin(Date.now() / 100)})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 5]);
+        ctx.beginPath();
+        ctx.moveTo(JAR_MARGIN, canvas.height * 0.35);
+        ctx.lineTo(canvas.width - JAR_MARGIN, canvas.height * 0.35);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       // 구슬 렌더링
       for (let i = 0; i < balls.length; i++) {
         let b = balls[i];
@@ -1223,6 +1258,18 @@
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
+      });
+      ctx.globalAlpha = 1.0;
+
+      floatingTexts.forEach(ft => {
+        ctx.globalAlpha = Math.max(0, ft.life);
+        ctx.fillStyle = ft.color;
+        ctx.strokeStyle = '#2b1d14';
+        ctx.lineWidth = 4;
+        ctx.font = `bold ${ft.size}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.strokeText(ft.text, ft.x, ft.y);
+        ctx.fillText(ft.text, ft.x, ft.y);
       });
       ctx.globalAlpha = 1.0;
 
@@ -1487,9 +1534,16 @@
         }
 
         if (checkGameOver()) {
-          gameState = STATE.ENDING;
-          endingTimer = 0;
-          checkAndSaveBestSurvival();
+          gameOverTimer += dt;
+          if (gameOverTimer > 3000) { // 3초 동안 위험 상태 지속 시 종료
+            gameState = STATE.ENDING;
+            endingTimer = 0;
+            gameOverTimer = 0;
+            checkAndSaveBestSurvival();
+            showToast('🛑 게임 오버! 항아리가 넘쳤습니다.');
+          }
+        } else {
+          gameOverTimer = 0; // 위험 구역에서 벗어나면 타이머 초기화
         }
       }
 
@@ -1498,6 +1552,13 @@
         p.x += p.vx; p.y += p.vy;
         p.life -= 0.05;
         if (p.life <= 0) particles.splice(i, 1);
+      }
+
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        let ft = floatingTexts[i];
+        ft.y += ft.vy;
+        ft.life -= 0.015;
+        if (ft.life <= 0) floatingTexts.splice(i, 1);
       }
 
       draw();
@@ -1691,7 +1752,11 @@
 
               if (!effectBalls.includes(b)) effectBalls.push(b);
 
-              totalScore += (effectBalls.length * 150) * lvl;
+              let popScore = (effectBalls.length * 300 * lvl) + (1000 * lvl);
+              totalScore += popScore;
+              let popMsg = b.type === 'KIMCHI_JAR' ? `김치 콤보! ${effectBalls.length}combo!` : `아이템 획득! +${popScore}`;
+              floatingTexts.push(new FloatingText(b.x, b.y - 20, popMsg, '#FFD700', 20 + lvl * 4));
+
               let pCount = isMassive ? 2 : 8; // Limit particles for performance
 
               for (let j = balls.length - 1; j >= 0; j--) {
@@ -1787,8 +1852,12 @@
           let count = selectedBalls.length;
 
           // Compute Combination Score Base Points -> Apply Aging Multiplier
-          let comboPoints = Math.pow(selectedBalls.length, 2) * 100 * agingMultiplier;
+          let comboPoints = count < 3 ? count * 10 : count * 40 * agingMultiplier;
           totalScore += Math.floor(comboPoints);
+
+          if (count >= 3) {
+            floatingTexts.push(new FloatingText(spawnX, spawnY - 20, `${count}combo! +${Math.floor(comboPoints)}`, spawnColor.hex, Math.min(40, 16 + count * 2)));
+          }
 
           // 배열에서 지운다
           for (let i = 0; i < selectedBalls.length; i++) {
