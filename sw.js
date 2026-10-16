@@ -1,4 +1,4 @@
-const CACHE_NAME = 'leo-arcade-v4';
+const CACHE_NAME = 'leo-arcade-v5';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,8 +6,9 @@ const ASSETS_TO_CACHE = [
   './luge/index.html',
   './defense/index.html',
   './kimchi-pop/index.html',
-  './icon-192.png',
-  './icon-512.png'
+  './ballforge/index.html',
+  './icon-192.jpg',
+  './icon-512.jpg'
   // 만약 css 파일이나 다른 이미지가 있다면 여기에 추가
 ];
 
