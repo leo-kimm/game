@@ -32,6 +32,8 @@
     .between-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(220px,.8fr);gap:12px;align-items:stretch}.between-shop{border:1px solid #3c4d6b;border-radius:13px;background:#101a30;padding:13px;text-align:left}.shop-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}.shop-head b{font-size:12px;letter-spacing:.08em}.shop-wallet{font-size:12px;font-weight:1000;color:var(--gold)}.shop-list{display:grid;gap:7px}.shop-item{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;border:1px solid #31425f;background:#17243e;border-radius:10px;padding:9px 10px;color:var(--text);text-align:left}.shop-item:hover:not(:disabled){background:#203354;border-color:#587398}.shop-item:disabled{cursor:not-allowed;opacity:.46}.shop-item b{display:block;font-size:11px}.shop-item small{display:block;color:#8fa4c2;font-size:9px;margin-top:3px}.shop-cost{white-space:nowrap;font-size:10px;font-weight:1000;color:var(--gold)}.upgrade-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:13px;flex-wrap:wrap}.next-wave{border:1px solid #66efd4;background:linear-gradient(110deg,#147a71,#2869b8);color:#fff;border-radius:9px;padding:10px 18px;font-size:11px;font-weight:1000}.next-wave:disabled{opacity:.35;cursor:not-allowed}.evolution-done{min-height:195px;display:grid;place-items:center;border:1px dashed #4b7b72;border-radius:13px;background:#102a2b;color:#9bf4d4;font-size:12px;font-weight:900;line-height:1.8;padding:18px;text-align:center}
     @media(max-width:720px){.between-grid{grid-template-columns:1fr}.between-shop{order:2}.card-list{grid-template-columns:repeat(3,minmax(145px,1fr));overflow-x:auto;padding-bottom:4px}.evo-card{min-width:145px}}
     .outcome{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.outcome div{padding:13px 8px;background:#1b2948;border:1px solid #344767;border-radius:10px}.outcome small{display:block;font-size:10px;color:#88a1c2}.outcome b{display:block;font-size:23px;font-variant-numeric:tabular-nums;margin-top:7px}.gameover-title{color:#ff97ac}.victory-title{color:#86fbba}.pause-hint{font-size:12px;color:#9fb4d5;margin:14px 0 24px;line-height:1.8}
+    .menu-actions{display:flex;justify-content:center;gap:9px;flex-wrap:wrap}.menu-actions .big-btn{min-width:190px}.ranking-shell{max-width:570px;padding:18px;border:1px solid #435778;border-radius:16px;background:linear-gradient(150deg,#111d35f7,#0c142af7);box-shadow:0 22px 70px #000a}.ranking-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;text-align:left;margin-bottom:13px}.ranking-head .modal-sub{margin-bottom:0}.close-ranking{flex:none;width:40px;height:40px;border:1px solid #496184;border-radius:10px;background:#172641;color:#dceaff;font-size:19px;font-weight:900}.ranking-table{width:100%;min-width:0;border:1px solid #334563;border-radius:12px;overflow:hidden;background:#0d172b}.ranking-columns,.ranking-row{display:grid;grid-template-columns:38px minmax(0,1fr) minmax(84px,auto) 55px;align-items:center;gap:7px;min-width:0}.ranking-columns{padding:8px 10px;background:#192640;color:#7891b4;font-size:9px;font-weight:1000;letter-spacing:.08em}.ranking-list{max-height:min(52vh,430px);overflow-y:auto}.ranking-row{padding:9px 10px;border-top:1px solid #293a56;text-align:left;font-size:11px}.ranking-row:first-child{border-top:0}.ranking-position{color:#8edfff;font-size:12px;font-weight:1000;text-align:center}.ranking-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#edf6ff;font-weight:900}.ranking-score{text-align:right;color:#ffe18b;font-weight:1000;font-variant-numeric:tabular-nums;white-space:nowrap}.ranking-wave{text-align:right;color:#9db7d8;font-weight:900;white-space:nowrap}.clear-badge{display:inline-block;margin-left:5px;padding:2px 4px;border-radius:5px;background:#61441f;color:#ffe099;font-size:7px;vertical-align:1px}.ranking-state{padding:28px 12px;color:#91a6c4;font-size:12px;line-height:1.7}.ranking-state.error{color:#ff9db1}.result-rank-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;max-width:440px;margin:0 auto 13px}.nickname-input{min-width:0;height:45px;border:1px solid #425a7d;border-radius:10px;background:#0d1930;color:#edf6ff;padding:0 13px;font:inherit;font-size:13px;outline:none}.nickname-input:focus{border-color:#63e9f7;box-shadow:0 0 0 2px #49e9f72b}.nickname-input::placeholder{color:#667c9e}.submit-score{min-height:45px;border:1px solid #f0c561;border-radius:10px;background:linear-gradient(120deg,#9a6b19,#5951bb);color:#fff;padding:9px 15px;font-size:11px;font-weight:1000;white-space:nowrap}.submit-score:disabled{cursor:not-allowed;opacity:.5}.submit-status{grid-column:1/-1;min-height:17px;color:#8fa8c8;font-size:10px;line-height:1.5}.submit-status.success{color:#85efba}.submit-status.error{color:#ff9db1}
+    @media(max-width:600px){.menu-actions{gap:7px}.menu-actions .big-btn{width:min(100%,230px)}.ranking-shell{padding:13px 9px}.ranking-columns,.ranking-row{grid-template-columns:30px minmax(0,1fr) minmax(72px,auto) 45px;gap:4px;padding-inline:7px}.ranking-row{font-size:10px}.ranking-score{font-size:9px}.ranking-wave{font-size:9px}.clear-badge{display:block;width:max-content;margin:3px 0 0}.result-rank-form{grid-template-columns:1fr;margin-bottom:9px}.nickname-input,.submit-score{width:100%;min-height:46px}.submit-status{grid-column:1}.ranking-list{max-height:46vh}}
     .toast{position:absolute;z-index:5;top:20%;left:50%;transform:translateX(-50%);font-size:14px;font-weight:900;letter-spacing:.06em;white-space:nowrap;pointer-events:none;text-shadow:0 2px 12px #000;color:#c7faff;opacity:0;transition:opacity .16s}.toast.visible{opacity:1}
     @media(max-width:1020px){.layout{grid-template-columns:minmax(0,800px)}.sidebar{display:grid;grid-template-columns:1fr 1fr 1fr}.shell{max-width:840px}.sidebar .side-body{padding:9px 10px}}
     @media(max-width:600px){.shell{padding:10px 7px 20px}.top{padding:2px 4px;margin-bottom:9px}.brand-orb{width:29px;height:29px}.brand h1{font-size:15px}.brand small{font-size:8px;letter-spacing:.11em}.actions{gap:5px}.ui-btn{font-size:10px;padding:7px 8px}.game-panel{border-radius:10px}.hud{padding:8px 0}.hud-label{font-size:8px}.hud-value{font-size:15px;margin-top:1px}.hud-value.health{font-size:13px;letter-spacing:-.06em}.bottom{padding:7px 10px;gap:8px;min-height:51px}.level-tag{font-size:10px}.next-push{min-width:79px;font-size:9px}.xp-label{font-size:9px}.sidebar{grid-template-columns:1fr 1fr;gap:8px}.sidebar .side-card:last-child{grid-column:span 2}.side-head{font-size:10px;padding:9px}.ability-name{font-size:10px}.ability-ico{width:25px;height:25px}.ability{gap:5px}.side-empty{font-size:10px;padding:8px 0}.synergy{padding:8px}.synergy b{font-size:10px}.overlay{padding:7px}.overlay-inner{padding:5px}.menu-mark{height:48px;width:48px;margin-bottom:10px}.eyebrow{font-size:8px;margin-bottom:6px}.splash-title{font-size:32px}.splash-sub{font-size:9px;margin:6px 0 9px}.menu-desc{font-size:10px;line-height:1.6;margin-bottom:11px}.pill-row{margin-bottom:12px}.pill{padding:4px 7px;font-size:8px}.big-btn{padding:10px 25px;min-width:180px;font-size:12px}.menu-foot{font-size:9px;margin-top:9px}.modal-heading{font-size:20px}.modal-sub{font-size:10px;margin-bottom:10px}.card-list{gap:5px}.evo-card{padding:8px 4px;gap:4px;min-height:141px;border-radius:8px}.evo-ico{font-size:23px}.evo-name{font-size:10px}.evo-desc{font-size:9px;line-height:1.3}.evo-card .rarity{font-size:8px}.evo-level{font-size:8px;padding-top:4px}.draft-foot{margin-top:8px}.reroll{padding:7px 12px}.outcome{margin:9px 0;gap:6px}.outcome div{padding:7px 5px}.outcome b{font-size:16px}.tips{font-size:9px;margin-top:8px}}
@@ -132,7 +134,7 @@
             <div class="splash-sub">BRICK INVASION</div>
             <p class="menu-desc">진격하는 벽돌 군단을 막아내십시오.<br>공을 진화시키고, 능력을 조합하고, 33웨이브를 돌파하세요.</p>
             <div class="pill-row"><span class="pill">⚡ 웨이브당 진화 1회</span><span class="pill">🪙 골드 강화</span><span class="pill">👾 보스 + 최종 3페이즈</span><span class="pill">🏆 최고 기록</span></div>
-            <button type="button" class="big-btn" id="startBtn">▶ 게임 시작</button>
+            <div class="menu-actions"><button type="button" class="big-btn" id="startBtn">▶ 게임 시작</button><button type="button" class="big-btn alt" id="rankingBtn">🏆 RANKING</button></div>
             <div class="menu-foot">PC: 마우스/← → 이동 · 모바일: 손가락 드래그 또는 좌우 버튼 · 움직이며 받아치면 공 방향 조절 · 발사 버튼/SPACE</div>
           </div>
         </div>
@@ -158,7 +160,8 @@
           </div>
         </div>
         <div class="overlay hidden" id="pausedOverlay"><div class="overlay-inner"><div class="eyebrow">SYSTEM PAUSED</div><h2 class="modal-heading">일시정지</h2><p class="pause-hint">전투가 정지되었습니다.<br>P / ESC 키로 계속할 수 있습니다.</p><button type="button" class="big-btn" id="resumeBtn">▶ 계속하기</button><div style="margin-top:12px"><button type="button" class="big-btn alt" id="restartPauseBtn">처음부터 다시 시작</button></div></div></div>
-        <div class="overlay hidden" id="resultOverlay"><div class="overlay-inner"><div class="eyebrow" id="resultEyebrow">RUN COMPLETE</div><h2 class="modal-heading gameover-title" id="resultTitle">GAME OVER</h2><p class="modal-sub" id="resultSub">다음 번에는 더 강하게 진화할 수 있습니다.</p><div class="outcome"><div><small>도달 웨이브</small><b id="resultWave">1</b></div><div><small>최종 점수</small><b id="resultScore">0</b></div><div><small>최고 기록</small><b id="resultBest">0</b></div></div><button type="button" class="big-btn" id="retryBtn">↻ 다시 도전</button><div class="menu-foot">획득한 능력은 매번 달라집니다.</div></div></div>
+        <div class="overlay hidden" id="resultOverlay"><div class="overlay-inner"><div class="eyebrow" id="resultEyebrow">RUN COMPLETE</div><h2 class="modal-heading gameover-title" id="resultTitle">GAME OVER</h2><p class="modal-sub" id="resultSub">다음 번에는 더 강하게 진화할 수 있습니다.</p><div class="outcome"><div><small>도달 웨이브</small><b id="resultWave">1</b></div><div><small>최종 점수</small><b id="resultScore">0</b></div><div><small>최고 기록</small><b id="resultBest">0</b></div></div><div class="result-rank-form"><input class="nickname-input" id="rankingNickname" type="text" maxlength="12" autocomplete="nickname" placeholder="사령관 이름 입력" aria-label="랭킹 닉네임"><button type="button" class="submit-score" id="submitScoreBtn" disabled>🏆 기록 등록</button><div class="submit-status" id="submitStatus" aria-live="polite"></div></div><button type="button" class="big-btn" id="retryBtn">↻ 다시 도전</button><div class="menu-foot">획득한 능력은 매번 달라집니다.</div></div></div>
+        <div class="overlay hidden" id="rankingOverlay" role="dialog" aria-modal="true" aria-labelledby="rankingTitle" aria-hidden="true"><div class="overlay-inner ranking-shell"><div class="ranking-head"><div><div class="eyebrow">GLOBAL COMMANDERS</div><h2 class="modal-heading" id="rankingTitle">🏆 TOP 20 RANKING</h2><p class="modal-sub">최고 점수를 기록한 사령관들입니다.</p></div><button type="button" class="close-ranking" id="closeRankingBtn" aria-label="랭킹 닫기">×</button></div><div class="ranking-table"><div class="ranking-columns"><span>RANK</span><span>NAME</span><span style="text-align:right">SCORE</span><span style="text-align:right">WAVE</span></div><div class="ranking-list" id="rankingList"><div class="ranking-state">랭킹을 불러오는 중입니다.</div></div></div></div></div>
       </div>
       <div class="mobile-controls" id="mobileControls" aria-label="모바일 조작 패널">
         <div class="mobile-control-head">
@@ -420,11 +423,11 @@ function spawnWave(){
  if(isBossWave(s.wave)&&s.prep.breach){s.breach.value=s.breach.need*.20;s.prep.breach=false;eventToast('BREACH CHARGE · 20% START','#ffd879')}
  createBall(s.paddle.x,s.paddle.y-15,0,0,true);syncHUD();syncSide()
 }
-function startGame(){s=initialState();s.phase='playing';spawnWave();allHide();sound('select')}
+function startGame(){window.BALLFORGE_RANKING?.resetRun();s=initialState();s.phase='playing';spawnWave();allHide();sound('select')}
 function pauseToggle(){if(s.phase==='playing'){s.phase='paused';el.paused.classList.remove('hidden')}else if(s.phase==='paused'){s.phase='playing';el.paused.classList.add('hidden')}}
 function hitPlayer(){if(s.invuln>0)return;if(s.shield>0){s.shield--;eventToast('SHIELD BLOCK','#72efff');sound('paddle');s.invuln=.75;return;}s.hp--;s.invuln=1;particle(s.paddle.x,s.paddle.y,'#ff6f9c',18,195);s.shake=7;s.combo=0;sound('damage');if(s.hp<=0)endRun(false);else eventToast('HEALTH -1','#ff879c')}
 function whenBallsLost(){if(s.phase!=='playing')return;hitPlayer();if(s.phase==='playing'){s.combatActive=false;s.enemyShots.length=0;s.friendlyShots.length=0;s.balls.length=0;createBall(s.paddle.x,s.paddle.y-15,0,0,true);eventToast('READY · 발사 후 전투 재개','#9feeff')}}
-function endRun(won){s.phase='result';if(s.score>s.best){s.best=s.score;saveBest(s.best)};allHide();$('resultEyebrow').textContent=won?'CAMPAIGN COMPLETE':'RUN TERMINATED';$('resultTitle').textContent=won?'VICTORY!':'GAME OVER';$('resultTitle').className='modal-heading '+(won?'victory-title':'gameover-title');$('resultSub').textContent=won?s.maxWave+'웨이브를 모두 격파하셨습니다. 최종 빌드를 완성하셨습니다!':'진화는 매번 달라집니다. 새로운 조합으로 다시 도전해보십시오.';$('resultWave').textContent=s.wave;$('resultScore').textContent=fmt(s.score);$('resultBest').textContent=fmt(s.best);el.result.classList.remove('hidden');sound(won?'win':'damage');syncHUD()}
+function endRun(won){s.phase='result';if(s.score>s.best){s.best=s.score;saveBest(s.best)};allHide();$('resultEyebrow').textContent=won?'CAMPAIGN COMPLETE':'RUN TERMINATED';$('resultTitle').textContent=won?'VICTORY!':'GAME OVER';$('resultTitle').className='modal-heading '+(won?'victory-title':'gameover-title');$('resultSub').textContent=won?s.maxWave+'웨이브를 모두 격파하셨습니다. 최종 빌드를 완성하셨습니다!':'진화는 매번 달라집니다. 새로운 조합으로 다시 도전해보십시오.';$('resultWave').textContent=s.wave;$('resultScore').textContent=fmt(s.score);$('resultBest').textContent=fmt(s.best);window.BALLFORGE_RANKING?.setResult({score:s.score,wave:s.wave,cleared:won});el.result.classList.remove('hidden');sound(won?'win':'damage');syncHUD()}
 function gainXP(n){s.xp+=n;while(s.xp>=s.xpNeed){s.xp-=s.xpNeed;s.level++;s.xpNeed=Math.floor(70+Math.pow(s.level-1,1.23)*43);const bonus=25+s.level*7;s.gold+=bonus;eventToast('LEVEL '+s.level+' · +'+bonus+' GOLD','#ffd77d')} }
 function dealDamage(b,damage,src='ball'){if(b.dead||damage<=0)return false;if(b.boss&&isBossWave(s.wave)&&src!=='ball')return false;if(b.boss&&s.bricks.some(e=>!e.dead&&e.guard)){if(src==='ball')ring(b.x+b.w/2,b.y+b.h/2,'#ffd47a',28,.12);return false}
  if(b.shield>0){const n=Math.min(b.shield,damage);b.shield-=n;damage-=n;particle(b.x+b.w/2,b.y+b.h/2,'#89cdff',3,50)}
@@ -707,6 +710,139 @@ $('startBtn').addEventListener('click',startGame);$('retryBtn').addEventListener
 let resizeRAF=0;window.addEventListener('resize',()=>{cancelAnimationFrame(resizeRAF);resizeRAF=requestAnimationFrame(()=>{setupCanvas();syncMobileControls()})});setupCanvas();requestAnimationFrame(setupCanvas);syncMobileControls();syncSide();syncHUD();requestAnimationFrame(frame);
 // Read-only diagnostics for automated smoke tests and development; no gameplay controls exposed.
 window.__BALLFORGE_DEBUG__={state:()=>({phase:s.phase,wave:s.wave,hp:s.hp,score:s.score,level:s.level,bricks:s.bricks.filter(b=>!b.dead).length,walls:s.walls.filter(w=>!w.broken).length,reflectors:s.reflectors.length,breach:{...s.breach},balls:s.balls.length,clearPending:s.clearPending,rewards:s.rewardQueue.length,gold:s.gold,shop:{...s.shop},evolutionChosen:s.evolutionChosen,combatActive:s.combatActive,combatTime:s.combatTime,prep:{...s.prep},bossName:s.bossName}),gotoWave:w=>{s=initialState();s.wave=clamp(Math.floor(w||1),1,s.maxWave);s.phase='playing';spawnWave();allHide();return s.wave},setPower:(id,lv)=>{if(SKILLS[id])s.powers[id]=clamp(Math.floor(lv||0),0,SKILLS[id].max);syncSide();return s.powers[id]||0},breachHit:(i=0)=>{const w=s.walls[i];return w?hitMazeWall(w,w.x+w.w/2,w.y+w.h/2):false},version:'2.0.0-two-step-upgrade'};
+})();
+</script>
+<script type="module">
+const rankingOverlay=document.getElementById('rankingOverlay');
+const rankingList=document.getElementById('rankingList');
+const rankingBtn=document.getElementById('rankingBtn');
+const closeRankingBtn=document.getElementById('closeRankingBtn');
+const nicknameInput=document.getElementById('rankingNickname');
+const submitScoreBtn=document.getElementById('submitScoreBtn');
+const submitStatus=document.getElementById('submitStatus');
+const numberFormat=new Intl.NumberFormat('ko-KR');
+let currentResult=null,runSequence=0,handledRun=0,lastRankingFocus=null;
+let db=null,auth=null,firebaseApi=null,firebaseError=null,authError=null,authPromise=null;
+
+function setSubmitStatus(message,type=''){
+  submitStatus.textContent=message;
+  submitStatus.className='submit-status'+(type?' '+type:'');
+}
+function setRankingState(message,type=''){
+  rankingList.replaceChildren();
+  const state=document.createElement('div');
+  state.className='ranking-state'+(type?' '+type:'');
+  state.textContent=message;
+  rankingList.append(state);
+}
+function closeRanking(){
+  rankingOverlay.classList.add('hidden');
+  rankingOverlay.setAttribute('aria-hidden','true');
+  lastRankingFocus?.focus();
+}
+function safeName(value){
+  const name=String(value??'').trim().slice(0,12);
+  return name||'무명 사령관';
+}
+function validatedResult(result){
+  const score=Number(result?.score),wave=Number(result?.wave);
+  if(!Number.isFinite(score)||score<0)throw new Error('유효하지 않은 점수입니다.');
+  if(!Number.isFinite(wave)||wave<1||wave>33)throw new Error('유효하지 않은 웨이브입니다.');
+  return{score:Math.floor(score),wave:Math.floor(wave),cleared:Boolean(result.cleared)};
+}
+function renderRankings(snapshot){
+  rankingList.replaceChildren();
+  if(snapshot.empty){setRankingState('아직 등록된 기록이 없습니다.');return}
+  const fragment=document.createDocumentFragment();
+  snapshot.docs.forEach((entry,index)=>{
+    const data=entry.data(),row=document.createElement('div');
+    row.className='ranking-row';
+    const rank=document.createElement('span');rank.className='ranking-position';rank.textContent=String(index+1);
+    const name=document.createElement('span');name.className='ranking-name';name.textContent=safeName(data.name);
+    if(data.cleared===true){const badge=document.createElement('span');badge.className='clear-badge';badge.textContent='👑 CLEAR';name.append(badge)}
+    const score=document.createElement('span');score.className='ranking-score';score.textContent=numberFormat.format(Math.max(0,Math.floor(Number(data.score)||0)));
+    const wave=document.createElement('span');wave.className='ranking-wave';wave.textContent='W'+Math.min(33,Math.max(1,Math.floor(Number(data.wave)||1)));
+    row.append(rank,name,score,wave);fragment.append(row);
+  });
+  rankingList.append(fragment);
+}
+
+async function ensureAnonymousUser(){
+  if(auth?.currentUser)return auth.currentUser;
+  if(authPromise)return authPromise;
+  authPromise=new Promise((resolve,reject)=>{
+    let signInStarted=false,unsubscribe=()=>{};
+    unsubscribe=firebaseApi.onAuthStateChanged(auth,user=>{
+      if(user){unsubscribe();resolve(user);return}
+      if(signInStarted)return;
+      signInStarted=true;
+      firebaseApi.signInAnonymously(auth).then(credential=>{unsubscribe();resolve(credential.user)}).catch(error=>{unsubscribe();reject(error)});
+    },reject);
+  }).catch(error=>{authError=error;authPromise=null;throw error});
+  return authPromise;
+}
+async function loadRankings(){
+  setRankingState('랭킹을 불러오는 중입니다.');
+  await firebaseReady;
+  if(!db)throw firebaseError||new Error('Firebase connection unavailable');
+  const rankings=firebaseApi.query(firebaseApi.collection(db,'ballforge_rankings'),firebaseApi.orderBy('score','desc'),firebaseApi.limit(20));
+  renderRankings(await firebaseApi.getDocs(rankings));
+}
+async function openRanking(){
+  lastRankingFocus=document.activeElement;
+  rankingOverlay.classList.remove('hidden');
+  rankingOverlay.setAttribute('aria-hidden','false');
+  closeRankingBtn.focus();
+  try{await loadRankings()}catch(error){console.error('[BALLFORGE] Ranking load failed:',error);setRankingState('랭킹 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.','error')}
+}
+async function submitResult(){
+  if(!currentResult||handledRun===currentResult.run)return;
+  let result;
+  try{result=validatedResult(currentResult)}catch(error){setSubmitStatus(error.message,'error');return}
+  submitScoreBtn.disabled=true;setSubmitStatus('기록을 확인하는 중입니다.');
+  try{
+    await firebaseReady;
+    if(!db||!auth)throw firebaseError||new Error('Firebase connection unavailable');
+    const user=await ensureAnonymousUser();
+    const ref=firebaseApi.doc(db,'ballforge_rankings',user.uid);
+    const saved=await firebaseApi.getDoc(ref);
+    if(saved.exists()&&Number(saved.data().score)>result.score){handledRun=currentResult.run;setSubmitStatus('기존 최고 기록이 더 높습니다.','success');return}
+    await firebaseApi.setDoc(ref,{uid:user.uid,name:safeName(nicknameInput.value),score:result.score,wave:result.wave,cleared:result.cleared,gameVersion:'2.0',updatedAt:firebaseApi.serverTimestamp()});
+    handledRun=currentResult.run;setSubmitStatus('기록이 등록되었습니다.','success');
+  }catch(error){console.error('[BALLFORGE] Ranking submit failed:',error);setSubmitStatus(authError?'익명 인증에 실패했습니다. 잠시 후 다시 시도해 주세요.':'랭킹 서버에 연결할 수 없습니다.','error');submitScoreBtn.disabled=false}
+}
+
+window.BALLFORGE_RANKING={
+  resetRun(){currentResult=null;handledRun=0;submitScoreBtn.disabled=true;setSubmitStatus('')},
+  setResult(result){try{currentResult={...validatedResult(result),run:++runSequence};handledRun=0;submitScoreBtn.disabled=false;setSubmitStatus('닉네임을 입력하고 기록을 등록하세요.')}catch(error){currentResult=null;submitScoreBtn.disabled=true;setSubmitStatus('이 기록은 등록할 수 없습니다.','error');console.error('[BALLFORGE] Invalid ranking result:',error)}}
+};
+rankingBtn.addEventListener('click',openRanking);
+closeRankingBtn.addEventListener('click',closeRanking);
+rankingOverlay.addEventListener('click',event=>{if(event.target===rankingOverlay)closeRanking()});
+submitScoreBtn.addEventListener('click',submitResult);
+nicknameInput.addEventListener('keydown',event=>{if(event.key==='Enter'&&!submitScoreBtn.disabled)submitResult()});
+window.addEventListener('keydown',event=>{if(event.key==='Escape'&&!rankingOverlay.classList.contains('hidden')){event.preventDefault();closeRanking()}});
+
+const firebaseConfig={
+  apiKey:'AIzaSyBuAFWO2R4yqovAVqccJTOx8MI2wxdMs3U',
+  authDomain:'ballforge-bda2a.firebaseapp.com',
+  projectId:'ballforge-bda2a',
+  storageBucket:'ballforge-bda2a.firebasestorage.app',
+  messagingSenderId:'861244650470',
+  appId:'1:861244650470:web:07a85c8ceae1eba9cc9c27',
+  measurementId:'G-88B158Q138'
+};
+const firebaseReady=(async()=>{
+  try{
+    const[{initializeApp},{getAuth,signInAnonymously,onAuthStateChanged},{getFirestore,doc,getDoc,setDoc,collection,query,orderBy,limit,getDocs,serverTimestamp}]=await Promise.all([
+      import('https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js'),
+      import('https://www.gstatic.com/firebasejs/13.0.0/firebase-auth.js'),
+      import('https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js')
+    ]);
+    firebaseApi={signInAnonymously,onAuthStateChanged,doc,getDoc,setDoc,collection,query,orderBy,limit,getDocs,serverTimestamp};
+    const app=initializeApp(firebaseConfig);auth=getAuth(app);db=getFirestore(app);
+    ensureAnonymousUser().catch(error=>console.error('[BALLFORGE] Anonymous auth failed:',error));
+  }catch(error){firebaseError=error;console.error('[BALLFORGE] Firebase initialization failed:',error)}
 })();
 </script>
 </body>
